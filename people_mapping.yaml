@@ -1,0 +1,44 @@
+persons:
+  raph:
+    display_name: "Raph"
+    aliases:
+      - "San Chapo FC"
+      - "San Chapo"
+      - "issy ci boubou"
+  manu:
+    display_name: "Manu"
+    aliases:
+      - "PIMPAMRAMI"
+      - "Olympique de McCourt"
+  pierre:
+    display_name: "Pierre"
+    aliases:
+      - "Lulu FC"
+      - "Lulu Football Club"
+  damien:
+    display_name: "Damien"
+    aliases:
+      - "Stade Malherbe Milan"
+      - "Stade Malherbe de Milan"
+  francois:
+    display_name: "François"
+    aliases:
+      - "Chien Chaud"
+      - "Chien Chaud FC"
+      - "Les Malabars"
+  marc:
+    display_name: "Marc"
+    aliases:
+      - "FC Miller"
+      - "Miler FC"
+      - "Miller FC"
+  greg:
+    display_name: "Greg"
+    aliases:
+      - "Cup"
+      - "NAPPY FC"
+  nico:
+    display_name: "Nico"
+    aliases:
+      - "Puntagliera"
+      - "Punta"
