@@ -227,7 +227,7 @@ Pas de validation que la valeur correspond à une division en DB.
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
-- [ ] Script `generate_pages.py` centralisé pour régénérer tous les HTML
+- [x] Script `generate_pages.py` centralisé — classement_cumul + classement_chronologique ✅
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 
 ### Niveau 2 — Analyse avancée
