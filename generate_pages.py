@@ -19,6 +19,7 @@ import yaml
 from mpg_db import get_conn
 from mpg_legacy_engine import (
     list_included_divisions, fetch_matches, compute_mpg_season_standings,
+    compute_streaks,
 )
 from mpg_people import DEFAULT_MAPPING_PATH
 
@@ -434,6 +435,38 @@ def generate_records() -> None:
     print(f"  ✓ records.html  ({len(r['all_perf'])} perf, {len(r['records'])} records)")
 
 
+# ── builders streaks ───────────────────────────────────────────────────────────
+
+def build_streaks_data(conn) -> list[dict]:
+    """Retourne STREAKS trié par best_win DESC pour streaks.html."""
+    raw = compute_streaks(conn)
+    display = _load_display_names()
+    rows = []
+    for pid in PLAYER_ORDER:
+        s = raw.get(pid)
+        if not s:
+            continue
+        rows.append({
+            "pid":            pid,
+            "name":           display.get(pid, pid),
+            "color":          PLAYER_COLORS[pid],
+            "best_win":       s["best_win"],
+            "best_unbeaten":  s["best_unbeaten"],
+            "best_loss":      s["best_loss"],
+            "current_type":   s["current_type"],
+            "current_length": s["current_length"],
+        })
+    return sorted(rows, key=lambda r: (-r["best_win"], -r["best_unbeaten"]))
+
+
+def generate_streaks() -> None:
+    with get_conn() as conn:
+        data = build_streaks_data(conn)
+    inject_const(BASE_DIR / "streaks.html", "STREAKS", data)
+    best = max(data, key=lambda r: r["best_win"])
+    print(f"  ✓ streaks.html  (meilleure série V : {best['name']} ({best['best_win']}))")
+
+
 # ── builders h2h ──────────────────────────────────────────────────────────────
 
 def _h2h_cell_style(w: int, d: int, total: int) -> tuple[str, str]:
@@ -702,6 +735,7 @@ PAGES: dict[str, callable] = {
     "hall_of_fame":             generate_halls,
     "hall_of_shame":            generate_halls,
     "records":                  generate_records,
+    "streaks":                  generate_streaks,
     "h2h":                      generate_h2h,
     "bonus_impact":             generate_bonus_impact,
 }
