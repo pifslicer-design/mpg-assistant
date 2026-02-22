@@ -8,8 +8,8 @@
 Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, depuis 2016).
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmares) → pages HTML statiques.
 
-**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 11/11 tests passants.
-**Bug connu** : `list_included_divisions()` dans `mpg_legacy_engine.py` inclut la saison en cours.
+**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 12/12 tests passants.
+**Bug résolu** : `list_included_divisions()` filtre désormais `is_current=1` par défaut (paramètre `include_current=False`).
 
 ---
 
@@ -172,13 +172,13 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 
 > ⚠️ Marc en 2e ELO malgré bilan négatif (93W/118L) — artefact à investiguer.
 
-### Palmares CLI (19 saisons — inclut _18_1 partielle, BUG)
+### Palmares CLI (18 saisons — is_current exclu, corrigé)
 
 | Joueur | Titres | Chapeaux |
 |---|---|---|
 | François | 5 | 1 |
 | Raph | 4 | 2 |
-| Damien | **3** ← inclut titre GW1-2 _18_1 | 0 |
+| Damien | 2 | 0 |
 | Greg | 2 | 3 |
 | Nico | 2 | 0 |
 | Marc | 1 | 6 |
@@ -189,12 +189,12 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 
 ## 5. BUGS CONNUS & RISQUES
 
-### 🔴 BUG — `list_included_divisions` ignore `is_current`
+### ✅ RÉSOLU — `list_included_divisions` ignorait `is_current`
 
 **Fichier** : `mpg_legacy_engine.py:98`
-**Impact** : CLI `--legacy / --elo / --h2h` incluent _18_1 (8 matchs, saison en cours)
-**Symptôme** : Damien = 3 titres CLI vs 2 dans HTML. ELO décalé.
-**Fix** : Ajouter `include_current=False` à `list_included_divisions`, filtrer `is_current=0`.
+**Fix appliqué** : Ajout du paramètre `include_current: bool = False` + clause `is_current=0`.
+**Résultat** : Damien = 2 titres (correct). ELO recalculé sur 18 divisions. 12/12 tests passants.
+**Test** : `test_current_exclusion_default()` dans `test_legacy_engine.py`.
 
 ### 🟡 RISQUE — `mpg_stats.py` utilise `finalResult`
 
@@ -224,10 +224,10 @@ Pas de validation que la valeur correspond à une division en DB.
 
 ### Niveau 1 — Stabilisation (prioritaire)
 
-- [ ] Fix `list_included_divisions` : ajouter `include_current=False`
+- [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [ ] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores
 - [ ] Script `generate_pages.py` centralisé pour régénérer tous les HTML
-- [ ] Test `is_current` exclusion dans `test_legacy_engine.py`
+- [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 
 ### Niveau 2 — Analyse avancée
 

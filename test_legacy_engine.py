@@ -12,7 +12,8 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).parent / "mpg.db"
 
-COVID_DIVISION = "mpg_division_QU0SUZ6HQPB_6_1"
+COVID_DIVISION   = "mpg_division_QU0SUZ6HQPB_6_1"
+CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"
 
 
 def _conn():
@@ -29,7 +30,7 @@ def test_covid_exclusion_default():
 
     with _conn() as conn:
         included_default = list_included_divisions(conn, include_covid=False, include_incomplete=False)
-        included_all     = list_included_divisions(conn, include_covid=True,  include_incomplete=True)
+        included_all     = list_included_divisions(conn, include_covid=True,  include_incomplete=True, include_current=True)
 
     assert COVID_DIVISION not in included_default, (
         f"{COVID_DIVISION} ne devrait pas être dans les divisions incluses par défaut"
@@ -45,7 +46,29 @@ def test_covid_exclusion_default():
     )
 
 
-# ── Test 2 : palmarès — 8 personnes ──────────────────────────────────────────
+# ── Test 2 : exclusion saison en cours par défaut ────────────────────────────
+
+def test_current_exclusion_default():
+    """La saison en cours (is_current=1) est exclue par défaut et incluse avec include_current=True."""
+    from mpg_legacy_engine import list_included_divisions
+
+    with _conn() as conn:
+        included_default  = list_included_divisions(conn)
+        included_with_cur = list_included_divisions(conn, include_current=True)
+
+    assert CURRENT_DIVISION not in included_default, (
+        f"{CURRENT_DIVISION} ne devrait pas être dans les divisions incluses par défaut"
+    )
+    assert CURRENT_DIVISION in included_with_cur, (
+        f"{CURRENT_DIVISION} devrait apparaître avec include_current=True"
+    )
+    print(
+        f"  ✓ exclusion saison en cours : {len(included_default)} divisions par défaut, "
+        f"{len(included_with_cur)} avec include_current=True"
+    )
+
+
+# ── Test 3 : palmarès — 8 personnes ──────────────────────────────────────────
 
 def test_palmares_persons():
     """compute_palmares retourne exactement 8 personnes (8 joueurs mappés)."""
@@ -277,6 +300,7 @@ def test_resolve_person_id():
 
 TESTS = [
     test_covid_exclusion_default,
+    test_current_exclusion_default,    # nouveau — détecte le bug is_current ignoré
     test_palmares_persons,
     test_palmares_titles_consistency,
     test_palmares_pts_not_identical,       # nouveau — détecte le bug finalResult

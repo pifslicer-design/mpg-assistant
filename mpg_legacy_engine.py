@@ -99,6 +99,7 @@ def list_included_divisions(
     conn,
     include_covid: bool = False,
     include_incomplete: bool = False,
+    include_current: bool = False,
 ) -> list[str]:
     """Retourne les division_ids validées selon les flags d'inclusion."""
     clauses = ["1=1"]
@@ -106,6 +107,8 @@ def list_included_divisions(
         clauses.append("is_covid=0")
     if not include_incomplete:
         clauses.append("is_incomplete=0")
+    if not include_current:
+        clauses.append("is_current=0")
     where = " AND ".join(clauses)
     rows = conn.execute(
         f"SELECT division_id FROM divisions_metadata WHERE {where} ORDER BY season, division_id"
