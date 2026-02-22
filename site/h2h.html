@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H2H — Face-à-face</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#4054CC; --green:#45C945;
+  --grad:linear-gradient(135deg,#4054CC 0%,#45C945 100%);
+  --bg:#F4F6F8; --surface:#FFFFFF; --border:#D8DAE8;
+  --text:#1A1F2E; --muted:#959DAF;
+  --red:#C0303A;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);}
+
+header{background:var(--grad);padding:40px 24px 48px;text-align:center;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 50%,rgba(255,255,255,.08) 0%,transparent 60%);}
+.hbadge{display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:14px;}
+header h1{font-size:clamp(24px,4vw,40px);font-weight:900;color:#fff;letter-spacing:-.5px;}
+header p{margin-top:10px;font-size:15px;color:rgba(255,255,255,.8);font-weight:600;}
+
+main{max-width:1100px;margin:-20px auto 40px;padding:0 20px;position:relative;z-index:1;}
+
+/* MATRIX */
+.matrix-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(64,84,204,.08);overflow-x:auto;}
+.matrix-title{font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;}
+.legend{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);}
+.leg-swatch{width:28px;height:16px;border-radius:4px;border:1.5px solid;}
+
+table{border-collapse:separate;border-spacing:3px;width:100%;}
+
+th.corner{width:80px;}
+th.col-header{
+  font-size:12px;font-weight:800;text-align:center;padding:6px 4px;
+  white-space:nowrap;border-radius:8px;background:rgba(0,0,0,.03);
+  border:1.5px solid transparent;
+}
+th.col-header .dot{display:block;width:8px;height:8px;border-radius:50%;background:var(--pc);margin:0 auto 4px;}
+th.col-total{font-size:12px;font-weight:800;color:var(--muted);text-align:center;padding:6px 8px;}
+
+td.player-label{
+  font-size:13px;font-weight:800;white-space:nowrap;padding:6px 10px;
+  border-radius:8px;background:rgba(0,0,0,.02);
+  border-left:3px solid var(--pc);
+}
+td.player-label .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pc);margin-right:6px;vertical-align:middle;}
+
+td.cell{
+  text-align:center;padding:7px 4px;border-radius:8px;border:1.5px solid;
+  cursor:default;transition:transform .12s;
+}
+td.cell:hover{transform:scale(1.06);z-index:5;position:relative;}
+.record{display:block;font-size:11.5px;font-weight:800;white-space:nowrap;}
+.gd{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-top:1px;}
+
+td.diag{text-align:center;color:var(--border);font-size:18px;}
+td.empty{text-align:center;color:var(--border);font-size:13px;}
+
+td.total-cell{
+  padding:6px 10px;border-radius:8px;
+  background:linear-gradient(135deg,rgba(64,84,204,.06),rgba(69,201,69,.06));
+  border:1.5px solid var(--border);text-align:center;
+}
+.total-record{display:block;font-size:12px;font-weight:800;white-space:nowrap;}
+.total-pts{display:block;font-size:10px;font-weight:700;color:var(--muted);margin-top:2px;}
+
+/* READING TIP */
+.reading-tip{
+  background:#EEF1FF;border:1px solid #C5CBF5;border-radius:10px;
+  padding:10px 16px;font-size:12px;font-weight:700;color:var(--blue);
+  margin-bottom:20px;display:flex;align-items:center;gap:8px;
+}
+
+/* SUMMARY CARDS */
+.summary-section{margin-top:28px;}
+.section-title{font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 6px rgba(64,84,204,.06);}
+.sc-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,0,0,.02);border-bottom:1px solid var(--border);}
+.sc-dot{width:10px;height:10px;border-radius:50%;background:var(--pc);flex-shrink:0;}
+.sc-name{font-size:15px;font-weight:900;flex:1;}
+.sc-record{font-size:11px;font-weight:700;color:var(--muted);}
+.sc-body{padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.sc-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.sc-label{font-weight:700;color:var(--muted);}
+.sc-val{font-weight:800;}
+.sc-val small{font-weight:600;font-size:11px;color:var(--muted);}
+
+footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
+footer a{color:var(--blue);text-decoration:none;font-weight:700;}
+footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;}
+
+@media(max-width:600px){
+  .record{font-size:10px;}
+  td.player-label{font-size:11px;padding:4px 6px;}
+  th.col-header{font-size:10px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="position:absolute;top:16px;left:20px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);text-decoration:none;background:rgba(255,255,255,0.18);padding:4px 12px;border-radius:16px;">← Accueil</a>
+  <div class="hbadge">18 saisons · hors COVID</div>
+  <h1>Face-à-face H2H</h1>
+  <p>Bilan de chaque duel entre les 8 joueurs · toutes saisons terminées</p>
+  <p style="margin-top:10px;font-size:13px;color:rgba(255,255,255,0.72);font-weight:600;">Raph écrase Marc 23V-6V — le duel le plus déséquilibré · Nico-Manu : 22V-8V · Raph mène le classement général avec 46,4% de victoires</p>
+</header>
+
+<main>
+  <div class="matrix-wrap">
+    <div class="matrix-title">Matrice H2H — lire par ligne (V N D du joueur en ligne contre le joueur en colonne)</div>
+    <div class="reading-tip">
+      💡 Chaque case = bilan du joueur en <strong>ligne</strong> contre le joueur en <strong>colonne</strong> (V = victoire, N = nul, D = défaite) · Différence de buts en dessous
+    </div>
+    <div class="legend">
+      <span class="leg-item"><span class="leg-swatch" style="background:rgba(69,201,69,.35);border-color:rgba(69,201,69,.7)"></span>Domine</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:rgba(150,150,150,.1);border-color:rgba(150,150,150,.3)"></span>Équilibré</span>
+      <span class="leg-item"><span class="leg-swatch" style="background:rgba(192,48,58,.35);border-color:rgba(192,48,58,.7)"></span>Dominé</span>
+    </div>
+    <table>
+      <tr><th class="corner">↓ vs →</th><th class="col-header" style="--pc:#C0303A"><span class="dot"></span>Raph</th><th class="col-header" style="--pc:#2E6A99"><span class="dot"></span>Nico</th><th class="col-header" style="--pc:#1E5C3A"><span class="dot"></span>François</th><th class="col-header" style="--pc:#C08A00"><span class="dot"></span>Damien</th><th class="col-header" style="--pc:#D4643A"><span class="dot"></span>Greg</th><th class="col-header" style="--pc:#1A3D50"><span class="dot"></span>Marc</th><th class="col-header" style="--pc:#2A8FA0"><span class="dot"></span>Pierre</th><th class="col-header" style="--pc:#7A1A1E"><span class="dot"></span>Manu</th><th class="col-total">Total</th></tr>
+      <tr><td class="player-label" style="--pc:#C0303A"><span class="dot"></span>Raph</td><td class="diag">—</td><td class="cell" style="background:rgba(69,201,69,0.15);border-color:rgba(69,201,69,0.45)" title="Raph vs Nico: 18V 7N 11D | GD: +8 | 36 matchs"><span class="record">18V&nbsp;7N&nbsp;11D</span><span class="gd">+8</span></td><td class="cell" style="background:rgba(192,48,58,0.20);border-color:rgba(192,48,58,0.51)" title="Raph vs François: 10V 9N 17D | GD: -24 | 36 matchs"><span class="record">10V&nbsp;9N&nbsp;17D</span><span class="gd">-24</span></td><td class="cell" style="background:rgba(69,201,69,0.11);border-color:rgba(69,201,69,0.41)" title="Raph vs Damien: 17V 4N 15D | GD: -2 | 36 matchs"><span class="record">17V&nbsp;4N&nbsp;15D</span><span class="gd">-2</span></td><td class="cell" style="background:rgba(69,201,69,0.12);border-color:rgba(69,201,69,0.42)" title="Raph vs Greg: 17V 6N 13D | GD: +22 | 36 matchs"><span class="record">17V&nbsp;6N&nbsp;13D</span><span class="gd">+22</span></td><td class="cell" style="background:rgba(69,201,69,0.24);border-color:rgba(69,201,69,0.56)" title="Raph vs Marc: 23V 7N 6D | GD: +25 | 36 matchs"><span class="record">23V&nbsp;7N&nbsp;6D</span><span class="gd">+25</span></td><td class="cell" style="background:rgba(150,150,150,0.1);border-color:rgba(150,150,150,0.3)" title="Raph vs Pierre: 16V 6N 14D | GD: +4 | 36 matchs"><span class="record">16V&nbsp;6N&nbsp;14D</span><span class="gd">+4</span></td><td class="cell" style="background:rgba(69,201,69,0.11);border-color:rgba(69,201,69,0.41)" title="Raph vs Manu: 16V 8N 12D | GD: +19 | 36 matchs"><span class="record">16V&nbsp;8N&nbsp;12D</span><span class="gd">+19</span></td><td class="total-cell"><span class="total-record">117V 47N 88D</span><span class="total-pts">398 pts · +52</span></td></tr>
+<tr><td class="player-label" style="--pc:#2E6A99"><span class="dot"></span>Nico</td><td class="cell" style="background:rgba(192,48,58,0.19);border-color:rgba(192,48,58,0.50)" title="Nico vs Raph: 11V 7N 18D | GD: -8 | 36 matchs"><span class="record">11V&nbsp;7N&nbsp;18D</span><span class="gd">-8</span></td><td class="diag">—</td><td class="cell" style="background:rgba(69,201,69,0.16);border-color:rgba(69,201,69,0.47)" title="Nico vs François: 19V 7N 10D | GD: +15 | 36 matchs"><span class="record">19V&nbsp;7N&nbsp;10D</span><span class="gd">+15</span></td><td class="cell" style="background:rgba(192,48,58,0.12);border-color:rgba(192,48,58,0.42)" title="Nico vs Damien: 15V 6N 15D | GD: -6 | 36 matchs"><span class="record">15V&nbsp;6N&nbsp;15D</span><span class="gd">-6</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.43)" title="Nico vs Greg: 13V 11N 12D | GD: +7 | 36 matchs"><span class="record">13V&nbsp;11N&nbsp;12D</span><span class="gd">+7</span></td><td class="cell" style="background:rgba(69,201,69,0.13);border-color:rgba(69,201,69,0.43)" title="Nico vs Marc: 18V 4N 14D | GD: +13 | 36 matchs"><span class="record">18V&nbsp;4N&nbsp;14D</span><span class="gd">+13</span></td><td class="cell" style="background:rgba(192,48,58,0.11);border-color:rgba(192,48,58,0.41)" title="Nico vs Pierre: 16V 5N 15D | GD: +5 | 36 matchs"><span class="record">16V&nbsp;5N&nbsp;15D</span><span class="gd">+5</span></td><td class="cell" style="background:rgba(69,201,69,0.22);border-color:rgba(69,201,69,0.53)" title="Nico vs Manu: 22V 6N 8D | GD: +27 | 36 matchs"><span class="record">22V&nbsp;6N&nbsp;8D</span><span class="gd">+27</span></td><td class="total-cell"><span class="total-record">114V 46N 92D</span><span class="total-pts">388 pts · +53</span></td></tr>
+<tr><td class="player-label" style="--pc:#1E5C3A"><span class="dot"></span>François</td><td class="cell" style="background:rgba(69,201,69,0.14);border-color:rgba(69,201,69,0.44)" title="François vs Raph: 17V 9N 10D | GD: +24 | 36 matchs"><span class="record">17V&nbsp;9N&nbsp;10D</span><span class="gd">+24</span></td><td class="cell" style="background:rgba(192,48,58,0.21);border-color:rgba(192,48,58,0.53)" title="François vs Nico: 10V 7N 19D | GD: -15 | 36 matchs"><span class="record">10V&nbsp;7N&nbsp;19D</span><span class="gd">-15</span></td><td class="diag">—</td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.43)" title="François vs Damien: 13V 11N 12D | GD: -1 | 36 matchs"><span class="record">13V&nbsp;11N&nbsp;12D</span><span class="gd">-1</span></td><td class="cell" style="background:rgba(69,201,69,0.13);border-color:rgba(69,201,69,0.44)" title="François vs Greg: 17V 8N 11D | GD: +26 | 36 matchs"><span class="record">17V&nbsp;8N&nbsp;11D</span><span class="gd">+26</span></td><td class="cell" style="background:rgba(192,48,58,0.18);border-color:rgba(192,48,58,0.49)" title="François vs Marc: 12V 6N 18D | GD: -7 | 36 matchs"><span class="record">12V&nbsp;6N&nbsp;18D</span><span class="gd">-7</span></td><td class="cell" style="background:rgba(69,201,69,0.18);border-color:rgba(69,201,69,0.50)" title="François vs Pierre: 21V 4N 11D | GD: +28 | 36 matchs"><span class="record">21V&nbsp;4N&nbsp;11D</span><span class="gd">+28</span></td><td class="cell" style="background:rgba(69,201,69,0.17);border-color:rgba(69,201,69,0.48)" title="François vs Manu: 19V 8N 9D | GD: +17 | 36 matchs"><span class="record">19V&nbsp;8N&nbsp;9D</span><span class="gd">+17</span></td><td class="total-cell"><span class="total-record">109V 53N 90D</span><span class="total-pts">380 pts · +72</span></td></tr>
+<tr><td class="player-label" style="--pc:#C08A00"><span class="dot"></span>Damien</td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.44)" title="Damien vs Raph: 15V 4N 17D | GD: +2 | 36 matchs"><span class="record">15V&nbsp;4N&nbsp;17D</span><span class="gd">+2</span></td><td class="cell" style="background:rgba(192,48,58,0.12);border-color:rgba(192,48,58,0.42)" title="Damien vs Nico: 15V 6N 15D | GD: +6 | 36 matchs"><span class="record">15V&nbsp;6N&nbsp;15D</span><span class="gd">+6</span></td><td class="cell" style="background:rgba(192,48,58,0.15);border-color:rgba(192,48,58,0.45)" title="Damien vs François: 12V 11N 13D | GD: +1 | 36 matchs"><span class="record">12V&nbsp;11N&nbsp;13D</span><span class="gd">+1</span></td><td class="diag">—</td><td class="cell" style="background:rgba(69,201,69,0.14);border-color:rgba(69,201,69,0.44)" title="Damien vs Greg: 18V 6N 12D | GD: +14 | 36 matchs"><span class="record">18V&nbsp;6N&nbsp;12D</span><span class="gd">+14</span></td><td class="cell" style="background:rgba(192,48,58,0.11);border-color:rgba(192,48,58,0.41)" title="Damien vs Marc: 15V 8N 13D | GD: -12 | 36 matchs"><span class="record">15V&nbsp;8N&nbsp;13D</span><span class="gd">-12</span></td><td class="cell" style="background:rgba(69,201,69,0.16);border-color:rgba(69,201,69,0.47)" title="Damien vs Pierre: 19V 7N 10D | GD: +46 | 36 matchs"><span class="record">19V&nbsp;7N&nbsp;10D</span><span class="gd">+46</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.43)" title="Damien vs Manu: 14V 8N 14D | GD: -2 | 36 matchs"><span class="record">14V&nbsp;8N&nbsp;14D</span><span class="gd">-2</span></td><td class="total-cell"><span class="total-record">108V 50N 94D</span><span class="total-pts">374 pts · +55</span></td></tr>
+<tr><td class="player-label" style="--pc:#D4643A"><span class="dot"></span>Greg</td><td class="cell" style="background:rgba(192,48,58,0.16);border-color:rgba(192,48,58,0.47)" title="Greg vs Raph: 13V 6N 17D | GD: -22 | 36 matchs"><span class="record">13V&nbsp;6N&nbsp;17D</span><span class="gd">-22</span></td><td class="cell" style="background:rgba(192,48,58,0.15);border-color:rgba(192,48,58,0.45)" title="Greg vs Nico: 12V 11N 13D | GD: -7 | 36 matchs"><span class="record">12V&nbsp;11N&nbsp;13D</span><span class="gd">-7</span></td><td class="cell" style="background:rgba(192,48,58,0.18);border-color:rgba(192,48,58,0.50)" title="Greg vs François: 11V 8N 17D | GD: -26 | 36 matchs"><span class="record">11V&nbsp;8N&nbsp;17D</span><span class="gd">-26</span></td><td class="cell" style="background:rgba(192,48,58,0.18);border-color:rgba(192,48,58,0.49)" title="Greg vs Damien: 12V 6N 18D | GD: -14 | 36 matchs"><span class="record">12V&nbsp;6N&nbsp;18D</span><span class="gd">-14</span></td><td class="diag">—</td><td class="cell" style="background:rgba(69,201,69,0.16);border-color:rgba(69,201,69,0.47)" title="Greg vs Marc: 19V 6N 11D | GD: +14 | 36 matchs"><span class="record">19V&nbsp;6N&nbsp;11D</span><span class="gd">+14</span></td><td class="cell" style="background:rgba(69,201,69,0.11);border-color:rgba(69,201,69,0.41)" title="Greg vs Pierre: 17V 4N 15D | GD: +7 | 36 matchs"><span class="record">17V&nbsp;4N&nbsp;15D</span><span class="gd">+7</span></td><td class="cell" style="background:rgba(69,201,69,0.15);border-color:rgba(69,201,69,0.46)" title="Greg vs Manu: 19V 5N 12D | GD: +15 | 36 matchs"><span class="record">19V&nbsp;5N&nbsp;12D</span><span class="gd">+15</span></td><td class="total-cell"><span class="total-record">103V 46N 103D</span><span class="total-pts">355 pts · -33</span></td></tr>
+<tr><td class="player-label" style="--pc:#1A3D50"><span class="dot"></span>Marc</td><td class="cell" style="background:rgba(192,48,58,0.29);border-color:rgba(192,48,58,0.61)" title="Marc vs Raph: 6V 7N 23D | GD: -25 | 36 matchs"><span class="record">6V&nbsp;7N&nbsp;23D</span><span class="gd">-25</span></td><td class="cell" style="background:rgba(192,48,58,0.15);border-color:rgba(192,48,58,0.46)" title="Marc vs Nico: 14V 4N 18D | GD: -13 | 36 matchs"><span class="record">14V&nbsp;4N&nbsp;18D</span><span class="gd">-13</span></td><td class="cell" style="background:rgba(69,201,69,0.14);border-color:rgba(69,201,69,0.44)" title="Marc vs François: 18V 6N 12D | GD: +7 | 36 matchs"><span class="record">18V&nbsp;6N&nbsp;12D</span><span class="gd">+7</span></td><td class="cell" style="background:rgba(192,48,58,0.15);border-color:rgba(192,48,58,0.45)" title="Marc vs Damien: 13V 8N 15D | GD: +12 | 36 matchs"><span class="record">13V&nbsp;8N&nbsp;15D</span><span class="gd">+12</span></td><td class="cell" style="background:rgba(192,48,58,0.20);border-color:rgba(192,48,58,0.51)" title="Marc vs Greg: 11V 6N 19D | GD: -14 | 36 matchs"><span class="record">11V&nbsp;6N&nbsp;19D</span><span class="gd">-14</span></td><td class="diag">—</td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.44)" title="Marc vs Pierre: 15V 4N 17D | GD: +9 | 36 matchs"><span class="record">15V&nbsp;4N&nbsp;17D</span><span class="gd">+9</span></td><td class="cell" style="background:rgba(192,48,58,0.11);border-color:rgba(192,48,58,0.41)" title="Marc vs Manu: 15V 7N 14D | GD: -3 | 36 matchs"><span class="record">15V&nbsp;7N&nbsp;14D</span><span class="gd">-3</span></td><td class="total-cell"><span class="total-record">92V 42N 118D</span><span class="total-pts">318 pts · -27</span></td></tr>
+<tr><td class="player-label" style="--pc:#2A8FA0"><span class="dot"></span>Pierre</td><td class="cell" style="background:rgba(192,48,58,0.14);border-color:rgba(192,48,58,0.44)" title="Pierre vs Raph: 14V 6N 16D | GD: -4 | 36 matchs"><span class="record">14V&nbsp;6N&nbsp;16D</span><span class="gd">-4</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.43)" title="Pierre vs Nico: 15V 5N 16D | GD: -5 | 36 matchs"><span class="record">15V&nbsp;5N&nbsp;16D</span><span class="gd">-5</span></td><td class="cell" style="background:rgba(192,48,58,0.21);border-color:rgba(192,48,58,0.53)" title="Pierre vs François: 11V 4N 21D | GD: -28 | 36 matchs"><span class="record">11V&nbsp;4N&nbsp;21D</span><span class="gd">-28</span></td><td class="cell" style="background:rgba(192,48,58,0.21);border-color:rgba(192,48,58,0.53)" title="Pierre vs Damien: 10V 7N 19D | GD: -46 | 36 matchs"><span class="record">10V&nbsp;7N&nbsp;19D</span><span class="gd">-46</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.44)" title="Pierre vs Greg: 15V 4N 17D | GD: -7 | 36 matchs"><span class="record">15V&nbsp;4N&nbsp;17D</span><span class="gd">-7</span></td><td class="cell" style="background:rgba(69,201,69,0.11);border-color:rgba(69,201,69,0.41)" title="Pierre vs Marc: 17V 4N 15D | GD: -9 | 36 matchs"><span class="record">17V&nbsp;4N&nbsp;15D</span><span class="gd">-9</span></td><td class="diag">—</td><td class="cell" style="background:rgba(192,48,58,0.16);border-color:rgba(192,48,58,0.47)" title="Pierre vs Manu: 14V 3N 19D | GD: -3 | 36 matchs"><span class="record">14V&nbsp;3N&nbsp;19D</span><span class="gd">-3</span></td><td class="total-cell"><span class="total-record">96V 33N 123D</span><span class="total-pts">321 pts · -102</span></td></tr>
+<tr><td class="player-label" style="--pc:#7A1A1E"><span class="dot"></span>Manu</td><td class="cell" style="background:rgba(192,48,58,0.16);border-color:rgba(192,48,58,0.47)" title="Manu vs Raph: 12V 8N 16D | GD: -19 | 36 matchs"><span class="record">12V&nbsp;8N&nbsp;16D</span><span class="gd">-19</span></td><td class="cell" style="background:rgba(192,48,58,0.26);border-color:rgba(192,48,58,0.58)" title="Manu vs Nico: 8V 6N 22D | GD: -27 | 36 matchs"><span class="record">8V&nbsp;6N&nbsp;22D</span><span class="gd">-27</span></td><td class="cell" style="background:rgba(192,48,58,0.22);border-color:rgba(192,48,58,0.54)" title="Manu vs François: 9V 8N 19D | GD: -17 | 36 matchs"><span class="record">9V&nbsp;8N&nbsp;19D</span><span class="gd">-17</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.43)" title="Manu vs Damien: 14V 8N 14D | GD: +2 | 36 matchs"><span class="record">14V&nbsp;8N&nbsp;14D</span><span class="gd">+2</span></td><td class="cell" style="background:rgba(192,48,58,0.18);border-color:rgba(192,48,58,0.50)" title="Manu vs Greg: 12V 5N 19D | GD: -15 | 36 matchs"><span class="record">12V&nbsp;5N&nbsp;19D</span><span class="gd">-15</span></td><td class="cell" style="background:rgba(192,48,58,0.13);border-color:rgba(192,48,58,0.44)" title="Manu vs Marc: 14V 7N 15D | GD: +3 | 36 matchs"><span class="record">14V&nbsp;7N&nbsp;15D</span><span class="gd">+3</span></td><td class="cell" style="background:rgba(69,201,69,0.14);border-color:rgba(69,201,69,0.44)" title="Manu vs Pierre: 19V 3N 14D | GD: +3 | 36 matchs"><span class="record">19V&nbsp;3N&nbsp;14D</span><span class="gd">+3</span></td><td class="diag">—</td><td class="total-cell"><span class="total-record">88V 45N 119D</span><span class="total-pts">309 pts · -70</span></td></tr>
+
+    </table>
+  </div>
+
+  <div class="summary-section">
+    <div class="section-title">Résumés individuels</div>
+    <div class="cards-grid">
+      
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#C0303A">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Raph</span>
+        <span class="sc-record">117V 47N 88D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">46%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#1E5C3A">François <small>(17V 9N 10D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#1A3D50">Marc <small>(23V 7N 6D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#2E6A99">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Nico</span>
+        <span class="sc-record">114V 46N 92D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">45%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#C0303A">Raph <small>(18V 7N 11D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#7A1A1E">Manu <small>(22V 6N 8D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#1E5C3A">
+        <span class="sc-dot"></span>
+        <span class="sc-name">François</span>
+        <span class="sc-record">109V 53N 90D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">43%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#2E6A99">Nico <small>(19V 7N 10D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#2A8FA0">Pierre <small>(21V 4N 11D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#C08A00">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Damien</span>
+        <span class="sc-record">108V 50N 94D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">43%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#C0303A">Raph <small>(17V 4N 15D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#2A8FA0">Pierre <small>(19V 7N 10D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#D4643A">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Greg</span>
+        <span class="sc-record">103V 46N 103D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">41%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#C08A00">Damien <small>(18V 6N 12D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#1A3D50">Marc <small>(19V 6N 11D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#1A3D50">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Marc</span>
+        <span class="sc-record">92V 42N 118D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">37%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#C0303A">Raph <small>(23V 7N 6D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#1E5C3A">François <small>(18V 6N 12D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#2A8FA0">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Pierre</span>
+        <span class="sc-record">96V 33N 123D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">38%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#1E5C3A">François <small>(21V 4N 11D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#1A3D50">Marc <small>(17V 4N 15D)</small></span>
+        </div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-header" style="--pc:#7A1A1E">
+        <span class="sc-dot"></span>
+        <span class="sc-name">Manu</span>
+        <span class="sc-record">88V 45N 119D</span>
+      </div>
+      <div class="sc-body">
+        <div class="sc-row">
+          <span class="sc-label">🏆 % victoires</span>
+          <span class="sc-val">35%</span>
+        </div>
+        <div class="sc-row nemesis-row">
+          <span class="sc-label">😈 Nemesis</span>
+          <span class="sc-val" style="color:#2E6A99">Nico <small>(22V 6N 8D)</small></span>
+        </div>
+        <div class="sc-row victim-row">
+          <span class="sc-label">😏 Victime</span>
+          <span class="sc-val" style="color:#2A8FA0">Pierre <small>(19V 3N 14D)</small></span>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</main>
+
+
+</body>
+</html>

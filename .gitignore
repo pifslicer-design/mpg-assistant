@@ -21,3 +21,7 @@ logs/
 # OS/IDE
 .DS_Store
 .vscode/
+
+# Publish folder (commit these)
+!site/
+!site/*.html

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPG — Hall of Fame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue:   #4054CC;
+    --green:  #45C945;
+    --grad:   linear-gradient(135deg, #4054CC 0%, #45C945 100%);
+    --grad-v: linear-gradient(180deg, #4054CC -103%, #45C945 147%);
+    --bg:     #F4F6F8;
+    --surface:#FFFFFF;
+    --border: #D8DAE8;
+    --text:   #1A1F2E;
+    --muted:  #959DAF;
+    --gold:   #F5A623;
+    --silver: #9BA8B8;
+    --bronze: #C8845A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Nunito', 'Avenir', sans-serif;
+         min-height: 100vh; }
+
+  /* ── Header ── */
+  .hero {
+    background: var(--grad);
+    padding: 48px 24px 64px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; border-radius: 20px; padding: 4px 14px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 2.8rem; font-weight: 900; color: #fff;
+              text-shadow: 0 2px 20px rgba(0,0,0,.15); line-height: 1.1; }
+  .hero .sub { font-size: 0.9rem; color: rgba(255,255,255,.7); margin-top: 10px; }
+  .hero-stats { display: flex; justify-content: center; gap: 32px; margin-top: 28px; flex-wrap: wrap; }
+  .hero-stat { text-align: center; }
+  .hero-stat .num { font-size: 1.8rem; font-weight: 900; color: #fff; line-height: 1; }
+  .hero-stat .lbl { font-size: 0.68rem; color: rgba(255,255,255,.6);
+                    text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
+
+  /* ── Podium ── */
+  .section { padding: 40px 24px; max-width: 1000px; margin: 0 auto; }
+  .section-title { font-size: 0.72rem; font-weight: 800; color: var(--muted);
+                   text-transform: uppercase; letter-spacing: .1em; margin-bottom: 20px; }
+
+  .podium-wrap { display: flex; align-items: flex-end; justify-content: center; gap: 16px; margin-bottom: 48px; }
+  .pod { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .pod-card {
+    background: var(--surface); border-radius: 16px; padding: 20px 16px 16px;
+    text-align: center; width: 200px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    border: 2px solid transparent; position: relative;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .pod-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+  .pod.p1 .pod-card { border-color: var(--gold); }
+  .pod.p2 .pod-card { border-color: var(--silver); }
+  .pod.p3 .pod-card { border-color: var(--bronze); }
+  .pod-rank {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 900; color: #fff;
+  }
+  .pod.p1 .pod-rank { background: var(--gold); font-size: 1rem; width: 34px; height: 34px; top: -17px; }
+  .pod.p2 .pod-rank { background: var(--silver); }
+  .pod.p3 .pod-rank { background: var(--bronze); }
+  .pod-avatar {
+    width: 64px; height: 64px; border-radius: 50%; margin: 4px auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 900; color: rgba(0,0,0,.55);
+    border: 3px solid rgba(255,255,255,.6);
+    box-shadow: 0 2px 12px rgba(0,0,0,.12);
+  }
+  .pod.p1 .pod-avatar { width: 76px; height: 76px; font-size: 1rem; }
+  .pod-name { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+  .pod-team { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .pod-titles {
+    margin-top: 10px; display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 800;
+  }
+  .pod.p1 .pod-titles { background: #FFF8E7; color: var(--gold); }
+  .pod.p2 .pod-titles { background: #F4F6F8; color: var(--silver); }
+  .pod.p3 .pod-titles { background: #FDF3EE; color: var(--bronze); }
+  .pod-podiums { font-size: 0.68rem; color: var(--muted); margin-top: 6px; }
+
+  .pod-plinth {
+    width: 200px; border-radius: 0 0 8px 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,.8);
+  }
+  .pod.p1 .pod-plinth { background: var(--gold); height: 56px; font-size: 0.8rem; }
+  .pod.p2 .pod-plinth { background: var(--silver); height: 40px; }
+  .pod.p3 .pod-plinth { background: var(--bronze); height: 28px; font-size: 0.68rem; }
+
+  /* ── Tableau ── */
+  .table-card {
+    background: var(--surface); border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--bg); }
+  th { padding: 12px 16px; font-size: 0.68rem; font-weight: 800; color: var(--muted);
+       text-align: left; text-transform: uppercase; letter-spacing: .08em; }
+  th.c { text-align: center; }
+  tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+  tbody tr:hover { background: #F8F9FD; }
+  tbody tr.leader { background: #FFFBF0; }
+  td { padding: 14px 16px; vertical-align: middle; font-size: 0.85rem; }
+  td.c { text-align: center; }
+
+  .rank-badge {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 0.8rem; font-weight: 900; margin: 0 auto;
+    background: var(--bg); color: var(--muted);
+  }
+  .rank-badge.r1 { background: var(--gold); color: #fff; font-size: 1rem; }
+  .rank-badge.r2 { background: var(--silver); color: #fff; }
+  .rank-badge.r3 { background: var(--bronze); color: #fff; }
+
+  .player-cell { display: flex; align-items: center; gap: 12px; }
+  .av { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; font-size: 0.6rem; font-weight: 800; color: rgba(0,0,0,.55); flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .pn { font-weight: 800; color: var(--text); font-size: 0.9rem; }
+  .pt { font-size: 0.7rem; color: var(--muted); margin-top: 1px; }
+
+  .titles-num { font-size: 1.3rem; font-weight: 900; color: var(--gold); }
+  .titles-num.zero { color: var(--muted); font-size: 1rem; }
+
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar-bg { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; min-width: 80px; }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--grad); }
+  .bar-pct { font-size: 0.72rem; color: var(--muted); min-width: 32px; text-align: right; }
+
+  .season-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+  .sbadge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; font-weight: 700;
+    background: #EFF1FB; color: var(--blue); border: 1px solid #C8CEEE;
+    white-space: nowrap;
+  }
+  .sbadge.gold { background: #FFF8E7; color: #C17F24; border-color: #F5D68A; }
+  .sbadge .trophy { font-size: 0.7rem; }
+  .none-badge { font-size: 0.78rem; color: var(--muted); }
+
+  .podium-pct { font-size: 0.78rem; color: var(--muted); }
+  .podium-val { font-weight: 700; color: var(--text); }
+</style>
+</head>
+<body>
+
+<nav style="padding:10px 20px;background:#fff;border-bottom:1px solid #D8DAE8;font-family:'Nunito',sans-serif;">
+  <a href="index.html" style="font-size:13px;font-weight:700;color:#4054CC;text-decoration:none;">← Accueil</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">⭐ Hall of Fame</div>
+  <h1>Les Champions</h1>
+  <p class="sub" id="herosub"></p>
+  <div class="hero-stats" id="herostats"></div>
+  <p style="margin-top:14px;font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;">François domine avec 5 titres sur 18 saisons · Raph suit avec 4 couronnes · Marc est le champion en titre (S18)</p>
+</div>
+
+<div class="section">
+  <div class="section-title">Podium all-time</div>
+  <div class="podium-wrap" id="podium"></div>
+
+  <div class="section-title">Classement complet</div>
+  <div class="table-card">
+    <table>
+      <thead><tr>
+        <th class="c">#</th>
+        <th>Joueur</th>
+        <th class="c">Titres</th>
+        <th>Saisons gagnées</th>
+        <th>Victoires / saisons</th>
+        <th class="c">Podiums</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const DATA = [{"pid": "francois", "name": "Les Malabars", "display": "François", "initials": "CC", "color": "#2d6a4f", "titres": 5, "titres_list": [{"snum": 2, "year": 2016, "pts": 30, "v": 9, "n": 3, "d": 2}, {"snum": 6, "year": 2018, "pts": 30, "v": 9, "n": 3, "d": 2}, {"snum": 10, "year": 2021, "pts": 24, "v": 8, "n": 0, "d": 6}, {"snum": 11, "year": 2021, "pts": 30, "v": 9, "n": 3, "d": 2}, {"snum": 13, "year": 2022, "pts": 28, "v": 8, "n": 4, "d": 2}], "podiums": 7, "chapeaux": 1, "seasons": 18, "pct": 28}, {"pid": "raph", "name": "issy ci boubou", "display": "Raph", "initials": "SC", "color": "#e63946", "titres": 4, "titres_list": [{"snum": 4, "year": 2017, "pts": 31, "v": 9, "n": 4, "d": 1}, {"snum": 7, "year": 2019, "pts": 28, "v": 8, "n": 4, "d": 2}, {"snum": 12, "year": 2022, "pts": 30, "v": 9, "n": 3, "d": 2}, {"snum": 14, "year": 2023, "pts": 29, "v": 9, "n": 2, "d": 3}], "podiums": 12, "chapeaux": 2, "seasons": 18, "pct": 22}, {"pid": "greg", "name": "NAPPY FC", "display": "Greg", "initials": "CU", "color": "#f4a261", "titres": 2, "titres_list": [{"snum": 8, "year": 2020, "pts": 32, "v": 10, "n": 2, "d": 2}, {"snum": 15, "year": 2023, "pts": 26, "v": 8, "n": 2, "d": 4}], "podiums": 7, "chapeaux": 3, "seasons": 18, "pct": 11}, {"pid": "nico", "name": "Puntagliera", "display": "Nico", "initials": "PU", "color": "#457b9d", "titres": 2, "titres_list": [{"snum": 3, "year": 2017, "pts": 27, "v": 8, "n": 3, "d": 3}, {"snum": 16, "year": 2024, "pts": 30, "v": 9, "n": 3, "d": 2}], "podiums": 6, "chapeaux": 0, "seasons": 18, "pct": 11}, {"pid": "damien", "name": "Stade Malherbe de Milan", "display": "Damien", "initials": "SM", "color": "#e9c46a", "titres": 2, "titres_list": [{"snum": 1, "year": 2016, "pts": 30, "v": 10, "n": 0, "d": 4}, {"snum": 17, "year": 2024, "pts": 26, "v": 8, "n": 2, "d": 4}], "podiums": 7, "chapeaux": 0, "seasons": 18, "pct": 11}, {"pid": "pierre", "name": "Lulu Football Club", "display": "Pierre", "initials": "LU", "color": "#a8dadc", "titres": 1, "titres_list": [{"snum": 9, "year": 2020, "pts": 30, "v": 9, "n": 3, "d": 2}], "podiums": 6, "chapeaux": 4, "seasons": 18, "pct": 6}, {"pid": "marc", "name": "Miller FC", "display": "Marc", "initials": "FM", "color": "#264653", "titres": 1, "titres_list": [{"snum": 18, "year": 2025, "pts": 28, "v": 9, "n": 1, "d": 4}], "podiums": 5, "chapeaux": 6, "seasons": 18, "pct": 6}, {"pid": "manu", "name": "Olympique de McCourt", "display": "Manu", "initials": "PP", "color": "#9b2226", "titres": 1, "titres_list": [{"snum": 5, "year": 2018, "pts": 23, "v": 7, "n": 2, "d": 5}], "podiums": 4, "chapeaux": 2, "seasons": 18, "pct": 6}];
+const N_SEASONS = 18;
+
+document.getElementById('herosub').textContent =
+  N_SEASONS + ' saisons terminées · hors COVID · hors saison en cours';
+
+const totalTitres  = DATA.reduce((s,p) => s + p.titres, 0);
+const maxTitres    = DATA[0].titres;
+const topPlayer    = DATA[0].display;
+document.getElementById('herostats').innerHTML = `
+  <div class="hero-stat"><div class="num">${N_SEASONS}</div><div class="lbl">Saisons</div></div>
+  <div class="hero-stat"><div class="num">${totalTitres}</div><div class="lbl">Titres décernés</div></div>
+  <div class="hero-stat"><div class="num">#1</div><div class="lbl">${topPlayer}</div></div>
+  <div class="hero-stat"><div class="num">${maxTitres}</div><div class="lbl">Record titres</div></div>`;
+
+// Podium top 3
+const top3 = DATA.slice(0,3);
+const podOrder = [top3[1], top3[0], top3[2]].filter(Boolean);
+const podCls  = ['p2','p3','p1'].slice(0, podOrder.length);
+// Reorder: p2 left, p1 center, p3 right
+const podFinal = [DATA[1], DATA[0], DATA[2]].filter(Boolean);
+const podClsFinal = ['p2','p1','p3'];
+const plinthLbl = ['2ème','1er','3ème'];
+
+document.getElementById('podium').innerHTML = podFinal.map((p,i) => `
+  <div class="pod ${podClsFinal[i]}">
+    <div class="pod-card">
+      <div class="pod-rank">${i===1?'🏆':i===0?'2':'3'}</div>
+      <div class="pod-avatar" style="background:${p.color}">${p.initials}</div>
+      <div class="pod-name">${p.display}</div>
+      <div class="pod-team">${p.name}</div>
+      <div class="pod-titles">🏆 ${p.titres} titre${p.titres>1?'s':''}</div>
+      <div class="pod-podiums">${p.podiums} podium${p.podiums>1?'s':''} · ${p.pct}% des saisons</div>
+    </div>
+    <div class="pod-plinth">${plinthLbl[i]}</div>
+  </div>`
+).join('');
+
+// Tableau
+const MAX = DATA[0].titres || 1;
+const tbody = document.getElementById('tbody');
+DATA.forEach((p,i) => {
+  const rkCls = i===0?'r1':i===1?'r2':i===2?'r3':'';
+  const barW = Math.round(p.titres / MAX * 100);
+  const badges = p.titres_list.map(t =>
+    `<span class="sbadge gold"><span class="trophy">🏆</span>S${t.snum} · ${t.year} · ${t.pts}pts</span>`
+  ).join('');
+  const rowCls = i===0 ? 'leader' : '';
+  tbody.innerHTML += `
+    <tr class="${rowCls}">
+      <td class="c"><div class="rank-badge ${rkCls}">${i===0?'🏆':i+1}</div></td>
+      <td>
+        <div class="player-cell">
+          <div class="av" style="background:${p.color}">${p.initials}</div>
+          <div><div class="pn">${p.display}</div><div class="pt">${p.name}</div></div>
+        </div>
+      </td>
+      <td class="c"><span class="titles-num ${p.titres===0?'zero':''}">${p.titres===0?'—':p.titres}</span></td>
+      <td><div class="season-badges">${badges||'<span class="none-badge">Aucun titre</span>'}</div></td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar-bg"><div class="bar-fill" style="width:${barW}%"></div></div>
+          <span class="bar-pct">${p.pct}%</span>
+        </div>
+      </td>
+      <td class="c"><span class="podium-val">${p.podiums}</span><span class="podium-pct"> / ${p.seasons}</span></td>
+    </tr>`;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<title>MPG — Hall of Shame</title><style>
+:root{--blue:#4054CC;--green:#45C945;--grad:linear-gradient(135deg,#4054CC 0%,#45C945 100%);
+  --bg:#F4F6F8;--surface:#FFFFFF;--border:#D8DAE8;--text:#1A1F2E;--muted:#959DAF;
+  --gold:#F5A623;--silver:#8A9BAD;--bronze:#C8845A;--red:#C0303A;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Nunito','Avenir',sans-serif;}
+html,body{min-height:100%;}
+.hero{background:linear-gradient(135deg,#B02828 0%,#E05020 100%);padding:40px 24px 32px;text-align:center;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);
+  border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;padding:3px 14px;
+  font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;}
+.hero h1{font-size:2.4rem;font-weight:900;color:#fff;}
+.hero .sub{font-size:.78rem;color:rgba(255,255,255,.7);margin-top:8px;}
+.hero-stats{display:flex;justify-content:center;gap:28px;margin-top:24px;flex-wrap:wrap;}
+.hs{text-align:center;}.hs .num{font-size:1.6rem;font-weight:900;color:#fff;line-height:1;}
+.hs .lbl{font-size:.64rem;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.main{max-width:980px;margin:0 auto;padding:32px 20px;}
+.section-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;}
+.podium-wrap{display:flex;align-items:flex-end;justify-content:center;gap:16px;margin-bottom:40px;}
+.pod{display:flex;flex-direction:column;align-items:center;}
+.pod-card{background:var(--surface);border-radius:14px;padding:18px 14px 14px;text-align:center;
+  width:185px;box-shadow:0 4px 20px rgba(0,0,0,.08);border:2px solid transparent;position:relative;transition:transform .2s;}
+.pod-card:hover{transform:translateY(-3px);}
+.pod.p1 .pod-card{border-color:#B02828;width:200px;}
+.pod.p2 .pod-card{border-color:#E07050;}
+.pod.p3 .pod-card{border-color:#EDCCCA;}
+.pod-rank{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;color:#fff;background:var(--muted);}
+.pod.p1 .pod-rank{background:#B02828;font-size:1rem;width:34px;height:34px;top:-17px;}
+.pod.p2 .pod-rank{background:#E07050;}.pod.p3 .pod-rank{background:#EDCCCA;color:#B02828;}
+.pod-av{width:56px;height:56px;border-radius:50%;margin:4px auto 10px;display:flex;align-items:center;
+  justify-content:center;font-size:.78rem;font-weight:800;color:rgba(0,0,0,.5);box-shadow:0 2px 10px rgba(0,0,0,.1);}
+.pod.p1 .pod-av{width:68px;height:68px;}
+.pod-name{font-size:.9rem;font-weight:800;color:var(--text);}
+.pod-team{font-size:.68rem;color:var(--muted);margin-top:2px;}
+.pod-chap{margin-top:10px;display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:.82rem;font-weight:800;}
+.pod.p1 .pod-chap{background:#FEF0F0;color:#B02828;}.pod.p2 .pod-chap{background:#FDF5F4;color:#E07050;}
+.pod.p3 .pod-chap{background:#FDF9F8;color:#D4A8A4;}
+.pod-sub{font-size:.66rem;color:var(--muted);margin-top:5px;}
+.pod-plinth{width:185px;border-radius:0 0 8px 8px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;color:rgba(255,255,255,.9);}
+.pod.p1 .pod-plinth{width:200px;background:#B02828;height:52px;font-size:.8rem;}
+.pod.p2 .pod-plinth{background:#E07050;height:38px;}.pod.p3 .pod-plinth{background:#EDCCCA;height:26px;color:#B02828;font-size:.66rem;}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.04);}
+table{width:100%;border-collapse:collapse;}thead{background:var(--bg);}
+th{padding:11px 16px;font-size:.66rem;font-weight:800;color:var(--muted);text-align:left;text-transform:uppercase;letter-spacing:.08em;}
+th.c{text-align:center;}
+tbody tr{border-top:1px solid var(--border);transition:background .1s;}tbody tr:hover{background:#FDF8F8;}
+tbody tr.top1{background:#FEF5F5;}
+td{padding:12px 16px;vertical-align:middle;font-size:.83rem;}td.c{text-align:center;}
+.rk-badge{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;margin:0 auto;background:var(--bg);color:var(--muted);}
+.rk-badge.r1{background:#B02828;color:#fff;}.rk-badge.r2{background:#E07050;color:#fff;}.rk-badge.r3{background:#EDCCCA;color:#B02828;}
+.pcell{display:flex;align-items:center;gap:11px;}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:800;color:rgba(0,0,0,.5);flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.pn{font-weight:800;color:var(--text);font-size:.88rem;}.pt{font-size:.68rem;color:var(--muted);margin-top:1px;}
+.bar-wrap{display:flex;align-items:center;gap:8px;}
+.bar-bg{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;min-width:80px;}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(to right,#B02828,#E05020);}
+.bar-val{font-size:.9rem;font-weight:900;min-width:20px;text-align:right;color:#B02828;}
+.badges{display:flex;flex-wrap:wrap;gap:4px;}
+.badge{font-size:.62rem;padding:2px 8px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--muted);white-space:nowrap;}
+.badge.hot{background:#FDF5F4;border-color:#F5C6B8;color:#C06040;}
+.badge.recent{background:#FEF0F0;border-color:#F5A0A0;color:#B02828;}
+.titres-cell{font-size:.78rem;color:var(--gold);letter-spacing:.04em;}
+.zero-badge{font-size:.75rem;color:var(--green);font-weight:700;}
+.note{text-align:center;font-size:.7rem;color:var(--muted);margin-top:24px;padding-bottom:32px;}
+</style></head><body>
+<nav style="padding:10px 20px;background:#fff;border-bottom:1px solid #D8DAE8;font-family:'Nunito',sans-serif;">
+  <a href="index.html" style="font-size:13px;font-weight:700;color:#4054CC;text-decoration:none;">← Accueil</a>
+</nav>
+<div class="hero"><div class="hero-badge">🪣 Hall of Shame</div><h1>Hall of Shame</h1>
+  <p class="sub">18 saisons terminées · hors COVID · hors saison en cours</p>
+  <div class="hero-stats" id="hs"></div>
+  <p style="margin-top:14px;font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;">Marc termine dernier 1 saison sur 3 avec 6 chapeaux · Nico et Damien sont les seuls à n'en avoir jamais eu</p>
+</div>
+<div class="main">
+  <div class="section-label">Podium de la honte</div>
+  <div class="podium-wrap" id="podium"></div>
+  <div class="section-label">Classement complet</div>
+  <div class="table-card"><table>
+    <thead><tr><th class="c">#</th><th>Joueur</th><th>Chapeaux</th>
+      <th class="c">Saisons</th><th class="c">%</th><th class="c">Titres</th><th>Détail</th>
+    </tr></thead><tbody id="tbody"></tbody>
+  </table></div>
+  <p class="note">🪣 dernier de saison · 🏆 champion · rouge = saison récente (2024+)</p>
+</div>
+<script>
+const DATA=[{"pid":"marc","name":"Miller FC","display":"Marc","initials":"FM","color":"#1A3D50","chapeaux":6,"chapeaux_list":[{"snum":2,"year":2016,"pts":8,"v":2,"n":2,"d":10},{"snum":5,"year":2018,"pts":12,"v":2,"n":6,"d":6},{"snum":10,"year":2021,"pts":17,"v":5,"n":2,"d":7},{"snum":14,"year":2023,"pts":14,"v":4,"n":2,"d":8},{"snum":15,"year":2023,"pts":14,"v":4,"n":2,"d":8},{"snum":17,"year":2024,"pts":16,"v":5,"n":1,"d":8}],"titres":1,"seasons":18,"pct":33},{"pid":"pierre","name":"Lulu Football Club","display":"Pierre","initials":"LU","color":"#2A8FA0","chapeaux":4,"chapeaux_list":[{"snum":3,"year":2017,"pts":12,"v":3,"n":3,"d":8},{"snum":4,"year":2017,"pts":10,"v":3,"n":1,"d":10},{"snum":8,"year":2020,"pts":15,"v":4,"n":3,"d":7},{"snum":18,"year":2025,"pts":13,"v":4,"n":1,"d":9}],"titres":1,"seasons":18,"pct":22},{"pid":"greg","name":"NAPPY FC","display":"Greg","initials":"CU","color":"#D4643A","chapeaux":3,"chapeaux_list":[{"snum":6,"year":2018,"pts":9,"v":2,"n":3,"d":9},{"snum":11,"year":2021,"pts":7,"v":2,"n":1,"d":11},{"snum":12,"year":2022,"pts":10,"v":2,"n":4,"d":8}],"titres":2,"seasons":18,"pct":17},{"pid":"raph","name":"issy ci boubou","display":"Raph","initials":"SC","color":"#C0303A","chapeaux":2,"chapeaux_list":[{"snum":1,"year":2016,"pts":11,"v":3,"n":2,"d":9},{"snum":16,"year":2024,"pts":14,"v":4,"n":2,"d":8}],"titres":4,"seasons":18,"pct":11},{"pid":"manu","name":"Olympique de McCourt","display":"Manu","initials":"PP","color":"#7A1A1E","chapeaux":2,"chapeaux_list":[{"snum":7,"year":2019,"pts":6,"v":1,"n":3,"d":10},{"snum":13,"year":2022,"pts":13,"v":4,"n":1,"d":9}],"titres":1,"seasons":18,"pct":11},{"pid":"francois","name":"Les Malabars","display":"François","initials":"CC","color":"#1E5C3A","chapeaux":1,"chapeaux_list":[{"snum":9,"year":2020,"pts":11,"v":2,"n":5,"d":7}],"titres":5,"seasons":18,"pct":6},{"pid":"damien","name":"Stade Malherbe de Milan","display":"Damien","initials":"SM","color":"#C08A00","chapeaux":0,"chapeaux_list":[],"titres":2,"seasons":18,"pct":0},{"pid":"nico","name":"Puntagliera","display":"Nico","initials":"PU","color":"#2E6A99","chapeaux":0,"chapeaux_list":[],"titres":2,"seasons":18,"pct":0}];const MAX=DATA[0]?.chapeaux||1;
+document.getElementById('hs').innerHTML=`
+  <div class="hs"><div class="num">${DATA[0].display}</div><div class="lbl">Plus honteux</div></div>
+  <div class="hs"><div class="num">${DATA[0].chapeaux}</div><div class="lbl">Record chapeaux</div></div>
+  <div class="hs"><div class="num">2</div><div class="lbl">Sans chapeau 🎉</div></div>`;
+const pF=[DATA[1],DATA[0],DATA[2]].filter(Boolean),pC=['p2','p1','p3'],pL=['2ème','1er','3ème'];
+document.getElementById('podium').innerHTML=pF.map((p,i)=>`
+  <div class="pod ${pC[i]}">
+    <div class="pod-card"><div class="pod-rank">${i===1?'🪣':i===0?'2':'3'}</div>
+      <div class="pod-av" style="background:${p.color}">${p.initials}</div>
+      <div class="pod-name">${p.display}</div><div class="pod-team">${p.name}</div>
+      <div class="pod-chap">🪣 ${p.chapeaux} chapeau${p.chapeaux>1?'x':''}</div>
+      <div class="pod-sub">${p.pct}% des saisons · ${p.titres} titre${p.titres>1?'s':''}</div>
+    </div><div class="pod-plinth">${pL[i]}</div>
+  </div>`).join('');
+const tbody=document.getElementById('tbody');
+DATA.forEach((p,i)=>{
+  const bw=Math.round(p.chapeaux/MAX*100),rk=i===0?'r1':i===1?'r2':i===2?'r3':'';
+  const badges=p.chapeaux_list.map(c=>{
+    const cl=c.year>=2024?'recent':c.year>=2022?'hot':'';
+    return `<span class="badge ${cl}">S${c.snum}·${c.year}·${c.pts}pts·${c.v}V${c.n}N${c.d}D</span>`;
+  }).join('');
+  const tStr=p.titres>0?'🏆'.repeat(Math.min(p.titres,5))+(p.titres>5?` ×${p.titres}`:''):'';
+  tbody.innerHTML+=`<tr class="${i===0?'top1':''}">
+    <td class="c"><div class="rk-badge ${rk}">${i===0?'🪣':i+1}</div></td>
+    <td><div class="pcell"><div class="av" style="background:${p.color}">${p.initials}</div>
+      <div><div class="pn">${p.display}</div><div class="pt">${p.name}</div></div></div></td>
+    <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill" style="width:${bw}%"></div></div>
+      <span class="bar-val">${p.chapeaux}</span></div></td>
+    <td class="c" style="color:var(--muted);font-size:.75rem">${p.seasons}</td>
+    <td class="c" style="color:var(--muted);font-size:.75rem">${p.pct}%</td>
+    <td class="c"><span class="titres-cell">${tStr}</span>
+      ${p.chapeaux===0?'<span class="zero-badge">0 🎉</span>':''}</td>
+    <td><div class="badges">${badges||'<span class="zero-badge">Aucun 🎉</span>'}</div></td>
+  </tr>`;
+});
+</script>
+</body></html>

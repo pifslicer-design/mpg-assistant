@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impact des Bonus — MPG Privé</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --blue: #4054CC;
+      --blue-light: #6B7FD7;
+      --green: #45C945;
+      --bg: #F4F6F8;
+      --card: #FFFFFF;
+      --text: #1A1A2E;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+
+      /* Couleurs bonus */
+      --zahia:   #E91E8C;
+      --suarez:  #FF6B35;
+      --valise:  #9B59B6;
+      --mcdo:    #F39C12;
+      --mirror:  #1ABC9C;
+      --cheat:   #E74C3C;
+
+      /* Couleurs joueurs */
+      --raph:     #C0303A;
+      --nico:     #2E6A99;
+      --francois: #1E5C3A;
+      --damien:   #C08A00;
+      --greg:     #D4643A;
+      --marc:     #1A3D50;
+      --pierre:   #2A8FA0;
+      --manu:     #7A1A1E;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--blue);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    nav a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color .2s;
+    }
+    nav a:hover { color: #fff; }
+
+    /* ── HERO ── */
+    header {
+      background: linear-gradient(135deg, var(--blue) 0%, #2d3ea8 60%, #1a2680 100%);
+      color: #fff;
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    header h1 { font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; }
+    header p { font-size: 1.05rem; opacity: .85; max-width: 600px; margin: 0 auto 8px; line-height: 1.5; }
+    .hero-meta { font-size: 0.8rem; opacity: .6; margin-top: 6px; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1000px; margin: 0 auto; padding: 32px 20px; }
+    h2 { font-size: 1.25rem; font-weight: 800; color: var(--blue); margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    h2::before { content: ''; display: block; width: 4px; height: 20px; background: var(--blue); border-radius: 2px; }
+
+    /* ── CARDS BONUS IMPACT ── */
+    .bonus-grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .bonus-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+      border-left: 5px solid var(--blue);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .bonus-card.rank-1 { border-left-color: var(--valise); }
+    .bonus-card.rank-2 { border-left-color: var(--zahia); }
+    .bonus-card.rank-3 { border-left-color: var(--suarez); }
+    .bonus-card.rank-4 { border-left-color: var(--mirror); }
+    .bonus-card.rank-5 { border-left-color: var(--mcdo); }
+    .bonus-card.rank-6 { border-left-color: var(--cheat); border-left-style: dashed; opacity: .7; }
+
+    .bonus-name { font-weight: 800; font-size: 1.05rem; margin-bottom: 4px; }
+    .bonus-desc { font-size: 0.82rem; color: var(--muted); margin-bottom: 10px; }
+
+    .bar-container { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .bar-label { font-size: 0.75rem; color: var(--muted); width: 60px; flex-shrink: 0; }
+    .bar-track { flex: 1; background: var(--bg); border-radius: 4px; height: 8px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+    .bar-value { font-size: 0.78rem; font-weight: 700; width: 40px; text-align: right; flex-shrink: 0; }
+
+    .bonus-stats-row { display: flex; gap: 20px; margin-top: 8px; flex-wrap: wrap; }
+    .stat-chip { font-size: 0.78rem; background: var(--bg); border-radius: 6px; padding: 3px 8px; color: var(--muted); }
+    .stat-chip strong { color: var(--text); }
+
+    .rank-badge {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--border);
+      line-height: 1;
+      align-self: center;
+    }
+    .rank-1 .rank-badge { color: var(--valise); }
+    .rank-2 .rank-badge { color: var(--zahia); }
+    .rank-3 .rank-badge { color: var(--suarez); }
+
+    .insight-box {
+      background: linear-gradient(135deg, #eef1ff, #f4f6f8);
+      border: 1.5px solid var(--blue-light);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .insight-box strong { color: var(--blue); }
+
+    /* ── TABLEAU USAGE PAR JOUEUR ── */
+    .usage-table-wrap { overflow-x: auto; margin-bottom: 40px; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+    thead th { background: var(--blue); color: #fff; font-size: 0.78rem; font-weight: 700; padding: 10px 12px; text-align: center; white-space: nowrap; }
+    thead th:first-child { text-align: left; background: #2d3ea8; }
+    tbody tr:nth-child(even) { background: #fafbfc; }
+    tbody td { padding: 9px 12px; font-size: 0.83rem; text-align: center; border-bottom: 1px solid var(--border); }
+    tbody td:first-child { text-align: left; font-weight: 700; }
+
+    .player-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .player-dot::before {
+      content: '';
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--raph);
+    }
+    .p-raph::before   { background: var(--raph); }
+    .p-nico::before   { background: var(--nico); }
+    .p-francois::before { background: var(--francois); }
+    .p-damien::before { background: var(--damien); }
+    .p-greg::before   { background: var(--greg); }
+    .p-marc::before   { background: var(--marc); }
+    .p-pierre::before { background: var(--pierre); }
+    .p-manu::before   { background: var(--manu); }
+
+    .cell-heat {
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-weight: 700;
+    }
+
+    .note-section { font-size: 0.78rem; color: var(--muted); line-height: 1.6; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html">← Accueil</a>
+</nav>
+
+<header>
+  <h1>🎲 Impact des Bonus</h1>
+  <p>Analyse contrefactuelle sur <strong>1 008 matchs historiques</strong> — que se passe-t-il si on rejoue chaque match sans le bonus ?</p>
+  <div class="hero-meta">Simulation avec moteur de buts virtuels MPG · Précision 100% · 2016–2025</div>
+</header>
+
+<div class="container">
+
+  <div class="insight-box">
+    💡 <strong>La révélation :</strong> La <strong>Valise</strong> est le bonus le plus dévastateur — elle change le résultat <em>dans 36.5% des matchs</em> où elle est utilisée (+0.81 but d'écart en moyenne).
+    Zahia est la plus efficace en termes d'impact global (+0.59 but, 12.8% de résultats changés).
+    Le Mirror change désormais 4% des résultats (8 activations sur 99 utilisations).
+  </div>
+
+  <h2>Classement des bonus</h2>
+
+  <div class="bonus-grid" id="bonusGrid"></div>
+
+  <h2>Utilisations par joueur</h2>
+  <div class="usage-table-wrap">
+    <table id="usageTable"></table>
+  </div>
+  <p class="note-section">* Hors captain, boostDefense4/5 (bonus permanents ou quasi-systématiques). Classement par total d'utilisations de bonus offensifs/spéciaux.</p>
+
+</div>
+
+<script>
+const IMPACT = {"boostOnePlayer":{"n_matches":377,"avg_goal_delta":0.08753315649867374,"pct_positive_delta":7.957559681697612,"win_rate_with":33.687002652519894,"draw_rate_with":18.83289124668435,"loss_rate_with":47.48010610079575,"win_rate_without":32.891246684350136,"draw_rate_without":18.30238726790451,"loss_rate_without":48.80636604774536,"result_changed_pct":1.8567639257294428},"boostAllPlayers":{"n_matches":133,"avg_goal_delta":0.5939849624060151,"pct_positive_delta":38.34586466165413,"win_rate_with":42.857142857142854,"draw_rate_with":21.052631578947366,"loss_rate_with":36.09022556390977,"win_rate_without":37.59398496240601,"draw_rate_without":16.541353383458645,"loss_rate_without":45.86466165413533,"result_changed_pct":12.781954887218044},"nerfGoalkeeper":{"n_matches":174,"avg_goal_delta":0.29310344827586204,"pct_positive_delta":21.26436781609195,"win_rate_with":45.40229885057471,"draw_rate_with":16.666666666666664,"loss_rate_with":37.93103448275862,"win_rate_without":40.229885057471265,"draw_rate_without":17.81609195402299,"loss_rate_without":41.95402298850575,"result_changed_pct":8.620689655172415},"nerfAllPlayers":{"n_matches":7,"avg_goal_delta":-1.0,"pct_positive_delta":0.0,"win_rate_with":57.14285714285714,"draw_rate_with":0.0,"loss_rate_with":42.857142857142854,"win_rate_without":71.42857142857143,"draw_rate_without":14.285714285714285,"loss_rate_without":14.285714285714285,"result_changed_pct":28.57142857142857},"removeGoal":{"n_matches":137,"avg_goal_delta":0.8102189781021898,"pct_positive_delta":81.75182481751825,"win_rate_with":48.175182481751825,"draw_rate_with":18.97810218978102,"loss_rate_with":32.846715328467155,"win_rate_without":30.656934306569344,"draw_rate_without":18.97810218978102,"loss_rate_without":50.36496350364964,"result_changed_pct":36.496350364963504},"mirror":{"n_matches":99,"avg_goal_delta":0.13131313131313133,"pct_positive_delta":9.090909090909092,"win_rate_with":53.535353535353536,"draw_rate_with":16.161616161616163,"loss_rate_with":30.303030303030305,"win_rate_without":50.505050505050505,"draw_rate_without":18.181818181818183,"loss_rate_without":31.313131313131315,"result_changed_pct":4.040404040404041}};
+
+const PLAYER_USAGE = {"Raph":{"boostOnePlayer":50,"nerfGoalkeeper":22,"removeGoal":17,"mirror":13,"boostAllPlayers":17,"blockTacticalSubs":8,"fourStrikers":4,"nerfAllPlayers":1},"Nico":{"boostOnePlayer":53,"nerfGoalkeeper":22,"removeGoal":17,"mirror":9,"boostAllPlayers":17,"blockTacticalSubs":7,"fourStrikers":4,"nerfAllPlayers":1},"François":{"boostOnePlayer":53,"nerfGoalkeeper":23,"removeGoal":18,"mirror":12,"boostAllPlayers":18,"blockTacticalSubs":9,"fourStrikers":4,"nerfAllPlayers":1},"Damien":{"boostOnePlayer":39,"nerfGoalkeeper":19,"removeGoal":16,"mirror":12,"boostAllPlayers":13,"blockTacticalSubs":1,"fourStrikers":3,"nerfAllPlayers":0},"Greg":{"boostOnePlayer":47,"nerfGoalkeeper":21,"removeGoal":18,"mirror":13,"boostAllPlayers":17,"blockTacticalSubs":8,"fourStrikers":7,"nerfAllPlayers":1},"Marc":{"boostOnePlayer":38,"nerfGoalkeeper":22,"removeGoal":17,"mirror":13,"boostAllPlayers":17,"blockTacticalSubs":6,"fourStrikers":2,"nerfAllPlayers":1},"Pierre":{"boostOnePlayer":49,"nerfGoalkeeper":22,"removeGoal":16,"mirror":14,"boostAllPlayers":17,"blockTacticalSubs":9,"fourStrikers":1,"nerfAllPlayers":1},"Manu":{"boostOnePlayer":48,"nerfGoalkeeper":23,"removeGoal":18,"mirror":13,"boostAllPlayers":17,"blockTacticalSubs":4,"fourStrikers":1,"nerfAllPlayers":1}};
+
+const BONUS_META = {
+  removeGoal:       { label: 'Valise à Nanard',    desc: 'Annule le but d\'un adversaire',  color: '#9B59B6', max_delta: 0.90 },
+  boostAllPlayers:  { label: 'Zahia',             desc: '+0.5 à tous les joueurs de champ', color: '#E91E8C', max_delta: 0.90 },
+  nerfGoalkeeper:   { label: 'Suarez',             desc: '−1 au gardien adverse',           color: '#FF6B35', max_delta: 0.90 },
+  mirror:           { label: 'Tonton Pat\'',        desc: 'Réfléchit la Valise adverse',     color: '#1ABC9C', max_delta: 0.90 },
+  boostOnePlayer:   { label: 'McDo+',              desc: '+1 à un joueur de son équipe',    color: '#F39C12', max_delta: 0.90 },
+  nerfAllPlayers:   { label: 'Cheat Code',         desc: '−0.5 à tous les adv. (⚠ 7 uses)', color: '#E74C3C', max_delta: 0.90 },
+};
+
+const SORTED_BONUSES = ['removeGoal','boostAllPlayers','nerfGoalkeeper','mirror','boostOnePlayer','nerfAllPlayers'];
+
+// ── Génération des cards ──
+const grid = document.getElementById('bonusGrid');
+SORTED_BONUSES.forEach((bt, idx) => {
+  const r = IMPACT[bt];
+  const m = BONUS_META[bt];
+  const rank = idx + 1;
+  const delta = r.avg_goal_delta;
+  const maxDelta = m.max_delta;
+  const barPct = Math.max(0, delta) / maxDelta * 100;
+  const winDiff = r.win_rate_with - r.win_rate_without;
+
+  const card = document.createElement('div');
+  card.className = `bonus-card rank-${rank}`;
+  card.innerHTML = `
+    <div>
+      <div class="bonus-name">${rank}. ${m.label}</div>
+      <div class="bonus-desc">${m.desc}</div>
+      <div class="bar-container">
+        <span class="bar-label">ΔButs moy.</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${barPct.toFixed(1)}%;background:${m.color}"></div>
+        </div>
+        <span class="bar-value" style="color:${m.color}">${delta >= 0 ? '+' : ''}${delta.toFixed(3)}</span>
+      </div>
+      <div class="bar-container">
+        <span class="bar-label">Résultat↑</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${(r.result_changed_pct/10*100).toFixed(1)}%;background:${m.color};opacity:.5"></div>
+        </div>
+        <span class="bar-value" style="color:${m.color}">${r.result_changed_pct.toFixed(1)}%</span>
+      </div>
+      <div class="bonus-stats-row">
+        <span class="stat-chip">Avec : <strong style="color:#27ae60">${r.win_rate_with.toFixed(0)}%V</strong> <strong style="color:#888">${r.draw_rate_with.toFixed(0)}%N</strong> <strong style="color:#e74c3c">${r.loss_rate_with.toFixed(0)}%D</strong></span>
+        <span class="stat-chip">Sans : <strong style="color:#27ae60">${r.win_rate_without.toFixed(0)}%V</strong> <strong style="color:#888">${r.draw_rate_without.toFixed(0)}%N</strong> <strong style="color:#e74c3c">${r.loss_rate_without.toFixed(0)}%D</strong></span>
+        <span class="stat-chip">Utilisé <strong>${r.n_matches}×</strong></span>
+      </div>
+    </div>
+    <div class="rank-badge">#${rank}</div>
+  `;
+  grid.appendChild(card);
+});
+
+// ── Tableau usage par joueur ──
+const BONUS_COLS = [
+  { key: 'boostOnePlayer', label: 'McDo+',   color: '#F39C12' },
+  { key: 'nerfGoalkeeper', label: 'Suarez',   color: '#FF6B35' },
+  { key: 'removeGoal',     label: 'Valise',   color: '#9B59B6' },
+  { key: 'boostAllPlayers',label: 'Zahia',    color: '#E91E8C' },
+  { key: 'mirror',         label: 'Mirror',   color: '#1ABC9C' },
+  { key: 'fourStrikers',   label: '4 ATT',    color: '#3498DB' },
+  { key: 'blockTacticalSubs', label: 'Blocage', color: '#95A5A6' },
+];
+
+const PLAYER_CLASS = {
+  'Raph': 'p-raph', 'Nico': 'p-nico', 'François': 'p-francois',
+  'Damien': 'p-damien', 'Greg': 'p-greg', 'Marc': 'p-marc',
+  'Pierre': 'p-pierre', 'Manu': 'p-manu'
+};
+
+const table = document.getElementById('usageTable');
+
+// Thead
+const thead = table.createTHead();
+const hr = thead.insertRow();
+const th0 = document.createElement('th');
+th0.textContent = 'Joueur';
+hr.appendChild(th0);
+BONUS_COLS.forEach(bc => {
+  const th = document.createElement('th');
+  th.innerHTML = `<span style="color:${bc.color}">●</span> ${bc.label}`;
+  hr.appendChild(th);
+});
+
+// Compute max per column for heat coloring
+const colMax = {};
+BONUS_COLS.forEach(bc => {
+  colMax[bc.key] = Math.max(...Object.values(PLAYER_USAGE).map(p => p[bc.key] || 0));
+});
+
+// Tbody
+const tbody = table.createTBody();
+const players = ['Raph','Nico','François','Damien','Greg','Marc','Pierre','Manu'];
+players.forEach(name => {
+  const tr = tbody.insertRow();
+  const td0 = tr.insertCell();
+  td0.innerHTML = `<span class="player-dot ${PLAYER_CLASS[name]}">${name}</span>`;
+
+  BONUS_COLS.forEach(bc => {
+    const val = PLAYER_USAGE[name][bc.key] || 0;
+    const td = tr.insertCell();
+    if (val > 0) {
+      const intensity = val / colMax[bc.key];
+      const alpha = 0.12 + intensity * 0.55;
+      td.innerHTML = `<span class="cell-heat" style="background:${bc.color}${Math.round(alpha*255).toString(16).padStart(2,'0')}">${val}</span>`;
+    } else {
+      td.innerHTML = `<span style="color:#ccc">—</span>`;
+    }
+  });
+});
+</script>
+</body>
+</html>
