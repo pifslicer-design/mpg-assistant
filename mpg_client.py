@@ -7,11 +7,13 @@ import sys
 from collections import defaultdict
 from dotenv import load_dotenv
 import httpx
+import yaml
 from mpg_db import (
     init_db, get_conn, get_last_fetched_game_week, get_league_current_game_week,
     mark_finalized_up_to, get_manifest, set_manifest, refresh_divisions_metadata,
 )
 from mpg_fetchers import fetch_league, fetch_teams, fetch_matches
+from mpg_people import DEFAULT_MAPPING_PATH
 from mpg_bonuses import print_bonus_report
 from mpg_export import build_export, write_export, SCOPES
 from mpg_stats import print_stats_report
@@ -171,6 +173,51 @@ def _sync_division(
     return fetched
 
 
+def _print_results(division_id: str, gw: int | None = None) -> None:
+    """Affiche les résultats scorés de la division, groupés par journée."""
+    data = yaml.safe_load(DEFAULT_MAPPING_PATH.read_text(encoding="utf-8"))
+    display = {
+        pid: info.get("display_name", pid)
+        for pid, info in data.get("persons", {}).items()
+    }
+
+    clause = "m.division_id = ? AND m.home_score IS NOT NULL"
+    params: list = [division_id]
+    if gw is not None:
+        clause += " AND m.game_week = ?"
+        params.append(gw)
+
+    with get_conn() as conn:
+        rows = conn.execute(f"""
+            SELECT m.game_week,
+                   ht.person_id AS home_pid, ht.name AS home_name,
+                   m.home_score, m.away_score,
+                   at.person_id AS away_pid, at.name AS away_name
+            FROM matches m
+            JOIN teams ht ON m.home_team_id = ht.id
+            JOIN teams at ON m.away_team_id = at.id
+            WHERE {clause}
+            ORDER BY m.game_week, m.id
+        """, params).fetchall()
+
+    if not rows:
+        label = f"J{gw}" if gw else "la saison"
+        print(f"[RESULTS] Aucun résultat pour {label}.")
+        return
+
+    current_gw = None
+    for r in rows:
+        if r["game_week"] != current_gw:
+            current_gw = r["game_week"]
+            print(f"\n── J{current_gw} ──")
+        hs, as_ = float(r["home_score"]), float(r["away_score"])
+        winner = "←" if hs > as_ else ("→" if as_ > hs else "=")
+        home = display.get(r["home_pid"], r["home_name"] or "?")
+        away = display.get(r["away_pid"], r["away_name"] or "?")
+        print(f"  {home:<12}  {hs:.0f} – {as_:.0f}  {away:<12}  {winner}")
+    print()
+
+
 def _apply_people_mapping(division_id: str | None = None) -> None:
     """Applique people_mapping.yaml si le fichier existe."""
     from pathlib import Path as _P
@@ -295,6 +342,9 @@ if __name__ == "__main__":
                         help="Stats head-to-head (ex: --h2h raph manu)")
     parser.add_argument("--streaks",  action="store_true",
                         help="Séries V/N/D all-time par joueur")
+    parser.add_argument("--results", nargs="?", const=0, default=None, type=int,
+                        metavar="JW",
+                        help="Résultats saison en cours (ex: --results ou --results 3)")
     parser.add_argument("--season-mpg", default=None, metavar="DIVISION_ID",
                         help="Classement J/V/N/D/Pts d'une division MPG")
     # Export
@@ -398,3 +448,6 @@ if __name__ == "__main__":
 
     if args.season_mpg:
         print_mpg_season_report(args.season_mpg)
+
+    if args.results is not None:
+        _print_results(division_id_effective, gw=args.results if args.results else None)
