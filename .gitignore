@@ -29,3 +29,4 @@ logs/
 # Publish folder (commit these)
 !docs/
 !docs/*.html
+Infos.txt
