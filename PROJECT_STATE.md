@@ -227,7 +227,7 @@ Pas de validation que la valeur correspond à une division en DB.
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
-- [x] Script `generate_pages.py` centralisé — 8/8 pages ✅
+- [x] Script `generate_pages.py` centralisé — 9 pages ✅ + miroir auto vers `docs/`
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 
 ### Niveau 2 — Analyse avancée
@@ -283,12 +283,15 @@ python3 test_legacy_engine.py  # 13/13
 python3 test_batch_import.py   # 8/8
 python3 test_export.py <export.json>
 
-# Régénération pages HTML (après chaque sync)
+# Régénération pages HTML + publication GitHub Pages (après chaque sync)
 python3 generate_pages.py                        # toutes les pages (9 pages)
 python3 generate_pages.py podiums hall_of_fame   # pages spécifiques
-python3 generate_pages.py h2h bonus_impact       # duel H2H + bonus
+# → copie automatique dans docs/ à la fin de chaque run
+
+# Publication (après generate_pages.py)
+git add docs/ && git commit -m "chore: régénère pages" && git push
 ```
 
 ---
 
-*Mis à jour le 2026-02-22 par Claude Sonnet 4.6 — ne pas modifier manuellement*
+*Mis à jour le 2026-02-22 (session 2) par Claude Sonnet 4.6 — ne pas modifier manuellement*
