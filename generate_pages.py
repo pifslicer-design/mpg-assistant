@@ -10,6 +10,7 @@ Usage:
 import json
 import math
 import re
+import shutil
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -24,6 +25,9 @@ from mpg_legacy_engine import (
 from mpg_people import DEFAULT_MAPPING_PATH
 
 BASE_DIR = Path(__file__).parent
+DOCS_DIR = BASE_DIR / "docs"
+
+_modified: set[Path] = set()  # fichiers HTML écrits dans ce run
 
 PLAYER_COLORS = {
     "raph":     "#C0303A",
@@ -82,6 +86,7 @@ def inject_const(html_path: Path, var_name: str, data) -> None:
 
     new_content = content[:m.start()] + f"const {var_name}={json_str}" + content[end_val:]
     html_path.write_text(new_content, encoding="utf-8")
+    _modified.add(html_path)
 
 
 def _snum_map(conn) -> tuple[dict[str, int], dict[str, int]]:
@@ -428,6 +433,7 @@ def generate_records() -> None:
         content,
     )
     html.write_text(new_content, encoding="utf-8")
+    _modified.add(html)
     inject_const(html, "POS_DIST", r["pos_dist"])
     inject_const(html, "RECORDS",  r["records"])
     inject_const(html, "TOP10",    r["top10"])
@@ -670,6 +676,7 @@ def generate_h2h() -> None:
     start = content.index('<main>')
     end = content.index('</main>') + len('</main>')
     html_path.write_text(content[:start] + ''.join(p) + content[end:], encoding="utf-8")
+    _modified.add(html_path)
 
     sample = totals[PLAYER_ORDER[0]]
     matches_pp = sample["w"] + sample["n"] + sample["d"]
@@ -742,6 +749,9 @@ PAGES: dict[str, callable] = {
 
 
 def main() -> None:
+    global _modified
+    _modified = set()
+
     targets = sys.argv[1:] or list(PAGES.keys())
     print(f"generate_pages.py — {len(targets)} page(s) demandée(s)")
     done: set = set()
@@ -761,6 +771,16 @@ def main() -> None:
                 print(f"  ✗ {t} : {exc}")
                 traceback.print_exc()
                 errors += 1
+
+    # Miroir vers docs/ si le dossier existe (GitHub Pages)
+    if DOCS_DIR.exists() and _modified:
+        copied = 0
+        for f in sorted(_modified):
+            dst = DOCS_DIR / f.name
+            shutil.copy2(f, dst)
+            copied += 1
+        print(f"  📂 {copied} fichier(s) → docs/")
+
     print("✅ Terminé" if not errors else f"⚠ Terminé avec {errors} erreur(s)")
 
 
