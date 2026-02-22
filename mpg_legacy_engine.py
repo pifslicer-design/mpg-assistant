@@ -433,7 +433,130 @@ def compute_elo(
     }
 
 
+def compute_streaks(
+    conn,
+    include_covid: bool = False,
+    include_incomplete: bool = False,
+) -> dict[str, dict]:
+    """Séries consécutives all-time par person_id (cross-divisions).
+
+    Retourne {person_id: {
+        best_win:        int,   # plus longue série de victoires
+        best_unbeaten:   int,   # plus longue série sans défaite (V+N)
+        best_loss:       int,   # plus longue série de défaites
+        current_type:    str,   # 'W' | 'D' | 'L' — dernier résultat de la timeline
+        current_length:  int,   # longueur de la série en cours
+    }}
+
+    Les séries enjambent les divisions (même groupe de 8 joueurs, continuité
+    chronologique garantie par fetch_matches ORDER BY season, division_id, gw, id).
+    """
+    divisions = list_included_divisions(conn, include_covid, include_incomplete)
+    matches   = fetch_matches(conn, divisions)
+
+    seq_by_player: dict[str, list[str]] = defaultdict(list)
+    for m in matches:
+        hp, ap = m["home_person_id"], m["away_person_id"]
+        if not hp or not ap:
+            continue
+        fr = m["final_result"]
+        if fr == 1:
+            seq_by_player[hp].append("W")
+            seq_by_player[ap].append("L")
+        elif fr == 2:
+            seq_by_player[hp].append("D")
+            seq_by_player[ap].append("D")
+        else:
+            seq_by_player[hp].append("L")
+            seq_by_player[ap].append("W")
+
+    result: dict[str, dict] = {}
+    for pid, seq in seq_by_player.items():
+        best_win = best_unbeaten = best_loss = 0
+        cur_win = cur_unbeaten = cur_loss = 0
+
+        for r in seq:
+            if r == "W":
+                cur_win += 1
+                cur_unbeaten += 1
+                cur_loss = 0
+            elif r == "D":
+                cur_win = 0
+                cur_unbeaten += 1
+                cur_loss = 0
+            else:  # L
+                cur_win = 0
+                cur_unbeaten = 0
+                cur_loss += 1
+
+            best_win      = max(best_win, cur_win)
+            best_unbeaten = max(best_unbeaten, cur_unbeaten)
+            best_loss     = max(best_loss, cur_loss)
+
+        # Série en cours : remonter la fin de la timeline
+        cur_type   = seq[-1] if seq else None
+        cur_length = 0
+        for r in reversed(seq):
+            if r == cur_type:
+                cur_length += 1
+            else:
+                break
+
+        result[pid] = {
+            "best_win":      best_win,
+            "best_unbeaten": best_unbeaten,
+            "best_loss":     best_loss,
+            "current_type":  cur_type,
+            "current_length": cur_length,
+        }
+
+    return result
+
+
 # ── rapports console ──────────────────────────────────────────────────────────
+
+def print_streaks_report(
+    include_covid: bool = False,
+    include_incomplete: bool = False,
+) -> None:
+    """Affiche les meilleures séries V/N/D par joueur + série en cours."""
+    display = _load_display_names()
+    with get_conn() as conn:
+        streaks = compute_streaks(conn, include_covid, include_incomplete)
+
+    if not streaks:
+        print("[SÉRIES] Aucune donnée.")
+        return
+
+    excl = []
+    if not include_covid:
+        excl.append("COVID exclus")
+    if not include_incomplete:
+        excl.append("incomplets exclus")
+    excl_label = ", ".join(excl) or "tout inclus"
+
+    sorted_rows = sorted(
+        streaks.items(),
+        key=lambda x: (-x[1]["best_win"], -x[1]["best_unbeaten"]),
+    )
+
+    LABELS = {"W": "V", "D": "N", "L": "D"}
+    print(f"\n=== Séries consécutives ({excl_label}) ===")
+    col = 12
+    header = (
+        f"  {'Joueur':<{col}} {'Série V':>7} {'Invaincu':>8} {'Série D':>7} {'En cours':>9}"
+    )
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+    for pid, s in sorted_rows:
+        name    = display.get(pid, pid)[:col - 1]
+        cur_lbl = f"{s['current_length']}{LABELS.get(s['current_type'], '?')}"
+        print(
+            f"  {name:<{col}} {s['best_win']:>7} {s['best_unbeaten']:>8} "
+            f"{s['best_loss']:>7} {cur_lbl:>9}"
+        )
+    print()
+
 
 def print_palmares_report(
     include_covid: bool = False,

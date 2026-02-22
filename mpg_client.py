@@ -17,7 +17,7 @@ from mpg_export import build_export, write_export, SCOPES
 from mpg_stats import print_stats_report
 from mpg_legacy_engine import (
     print_palmares_report, print_elo_report, print_h2h_report,
-    print_mpg_season_report, resolve_person_id,
+    print_mpg_season_report, print_streaks_report, resolve_person_id,
 )
 
 load_dotenv()
@@ -293,6 +293,8 @@ if __name__ == "__main__":
                         help="Classement ELO seul")
     parser.add_argument("--h2h",       nargs=2, metavar=("PERSON_A", "PERSON_B"),
                         help="Stats head-to-head (ex: --h2h raph manu)")
+    parser.add_argument("--streaks",  action="store_true",
+                        help="Séries V/N/D all-time par joueur")
     parser.add_argument("--season-mpg", default=None, metavar="DIVISION_ID",
                         help="Classement J/V/N/D/Pts d'une division MPG")
     # Export
@@ -387,6 +389,12 @@ if __name__ == "__main__":
                 include_covid=args.include_covid,
                 include_incomplete=args.include_incomplete,
             )
+
+    if args.streaks:
+        print_streaks_report(
+            include_covid=args.include_covid,
+            include_incomplete=args.include_incomplete,
+        )
 
     if args.season_mpg:
         print_mpg_season_report(args.season_mpg)

@@ -296,6 +296,41 @@ def test_resolve_person_id():
     print(f"  ✓ resolve_person_id : {len(cases)} cas validés")
 
 
+# ── Test : séries V/N/D ───────────────────────────────────────────────────────
+
+def test_streaks():
+    """Vérifie la cohérence des séries all-time par joueur."""
+    from mpg_legacy_engine import compute_streaks
+
+    with _conn() as conn:
+        streaks = compute_streaks(conn)
+
+    assert len(streaks) == 8, f"Attendu 8 joueurs, obtenu {len(streaks)}"
+
+    for pid, s in streaks.items():
+        assert s["best_win"] >= 1,      f"{pid} : best_win doit être >= 1"
+        assert s["best_loss"] >= 1,     f"{pid} : best_loss doit être >= 1"
+        assert s["best_unbeaten"] >= s["best_win"], (
+            f"{pid} : best_unbeaten ({s['best_unbeaten']}) < best_win ({s['best_win']})"
+        )
+        assert s["current_type"] in ("W", "D", "L"), (
+            f"{pid} : current_type invalide ({s['current_type']})"
+        )
+        assert s["current_length"] >= 1, f"{pid} : current_length doit être >= 1"
+
+    wins   = [s["best_win"]      for s in streaks.values()]
+    losses = [s["best_loss"]     for s in streaks.values()]
+    assert len(set(wins))   > 1, f"best_win identiques pour tous ({wins}) — suspect"
+    assert len(set(losses)) > 1, f"best_loss identiques pour tous ({losses}) — suspect"
+
+    best_win_pid = max(streaks, key=lambda p: streaks[p]["best_win"])
+    print(
+        f"  ✓ séries : 8 joueurs — meilleure série V : "
+        f"{best_win_pid} ({streaks[best_win_pid]['best_win']}), "
+        f"invaincu max : {max(s['best_unbeaten'] for s in streaks.values())}"
+    )
+
+
 # ── Runner ───────────────────────────────────────────────────────────────────
 
 TESTS = [
@@ -311,6 +346,7 @@ TESTS = [
     test_elo_zero_sum,
     test_elo_wl_not_identical,             # nouveau — détecte W/L uniformes
     test_resolve_person_id,
+    test_streaks,                          # nouveau — séries V/N/D all-time
 ]
 
 
