@@ -25,3 +25,7 @@ logs/
 # Publish folder (commit these)
 !site/
 !site/*.html
+
+# Publish folder (commit these)
+!docs/
+!docs/*.html

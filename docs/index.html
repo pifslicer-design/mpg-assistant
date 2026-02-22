@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPG Assistant — Tableau de bord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #4054CC;
+    --green: #45C945;
+    --grad: linear-gradient(135deg, #4054CC 0%, #45C945 100%);
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --border: #D8DAE8;
+    --text: #1A1F2E;
+    --muted: #959DAF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--grad);
+    padding: 48px 24px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 70% 50%, rgba(255,255,255,0.08) 0%, transparent 60%);
+  }
+  .header-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  header h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  header p {
+    margin-top: 12px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+  }
+
+  /* DECORATIVE BALL */
+  .ball {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .ball-1 { width: 200px; height: 200px; top: -60px; left: -60px; }
+  .ball-2 { width: 120px; height: 120px; bottom: -30px; right: 10%; }
+  .ball-3 { width: 60px; height: 60px; top: 30px; right: 20%; }
+
+  /* MAIN CONTENT */
+  main {
+    max-width: 900px;
+    margin: -24px auto 40px;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px 24px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 2px 8px rgba(64,84,204,0.07);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--grad);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(64,84,204,0.15);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 36px;
+    line-height: 1;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--blue);
+    margin-top: 4px;
+  }
+  .card-cta svg {
+    transition: transform 0.15s ease;
+  }
+  .card:hover .card-cta svg {
+    transform: translateX(4px);
+  }
+
+  /* FEATURED CARD (spans 2 cols on wide screens) */
+  .card-wide {
+    grid-column: span 2;
+  }
+  @media (max-width: 640px) {
+    .card-wide { grid-column: span 1; }
+  }
+
+  /* TAG */
+  .card-tag {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 3px 10px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .card-tag.anim {
+    background: #EEF1FF;
+    border-color: #C5CBF5;
+    color: var(--blue);
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  footer span {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ball ball-1"></div>
+  <div class="ball ball-2"></div>
+  <div class="ball ball-3"></div>
+  <div class="header-badge">Ligue privée · 8 joueurs</div>
+  <h1>MPG Assistant</h1>
+  <p>Historique & statistiques de la ligue</p>
+</header>
+
+<main>
+  <div class="grid">
+
+    <a class="card card-wide" href="classement_chronologique.html">
+      <span class="card-tag anim">Animé</span>
+      <div class="card-icon">📈</div>
+      <div class="card-title">Évolution des moyennes</div>
+      <div class="card-desc">Courbe animée de la moyenne de points par match au fil des saisons. Animation journée par journée avec fenêtre glissante.</div>
+      <div class="card-cta">
+        Voir l'animation
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card card-wide" href="classement_cumul.html">
+      <span class="card-tag anim">Animé</span>
+      <div class="card-icon">🏃</div>
+      <div class="card-title">Classement cumulé</div>
+      <div class="card-desc">Évolution du total de points accumulés depuis le début de la ligue. Qui a le plus de points sur toute l'histoire ?</div>
+      <div class="card-cta">
+        Voir l'animation
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card" href="podiums.html">
+      <div class="card-icon">🏆</div>
+      <div class="card-title">Podiums par saison</div>
+      <div class="card-desc">1er, 2e, 3e et dernier pour chacune des 18 saisons terminées. Stats V/N/D, goal average et points.</div>
+      <div class="card-cta">
+        Voir les podiums
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card" href="hall_of_fame.html">
+      <div class="card-icon">🥇</div>
+      <div class="card-title">Hall of Fame</div>
+      <div class="card-desc">Le palmarès des champions. Classement par nombre de titres remportés sur l'ensemble des saisons historiques.</div>
+      <div class="card-cta">
+        Voir les champions
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card" href="hall_of_shame.html">
+      <div class="card-icon">🪣</div>
+      <div class="card-title">Hall of Shame</div>
+      <div class="card-desc">Le palmarès des chapeaux. Qui a terminé dernier le plus souvent ? Un classement à éviter à tout prix.</div>
+      <div class="card-cta">
+        Voir les chapeaux
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card card-wide" href="h2h.html">
+      <div class="card-icon">⚔️</div>
+      <div class="card-title">Face-à-face H2H</div>
+      <div class="card-desc">Matrice complète des duels entre les 8 joueurs. Qui domine qui ? Nemesis, victime préférée, bilan complet sur toutes les saisons terminées.</div>
+      <div class="card-cta">
+        Voir les duels
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card card-wide" href="records.html">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Records & Seuils</div>
+      <div class="card-desc">Combien de points pour être champion ou éviter le chapeau ? Distributions historiques par position, records absolus (meilleure/pire saison, diff buts…) et tableau de toutes les performances.</div>
+      <div class="card-cta">
+        Voir les records
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+    <a class="card card-wide" href="bonus_impact.html">
+      <div class="card-icon">🎲</div>
+      <div class="card-title">Impact des Bonus</div>
+      <div class="card-desc">Analyse contrefactuelle sur 1 008 matchs : quel bonus change vraiment le résultat ? La Valise #1 (36% des matchs changés), Zahia #2, le Mirror change 4% des résultats.</div>
+      <div class="card-cta">
+        Voir l'analyse
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  Saison en cours exclue des stats historiques · <span>MPG Assistant</span>
+</footer>
+
+</body>
+</html>
