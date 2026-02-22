@@ -4,10 +4,11 @@
 Usage:
     python generate_pages.py                     # toutes les pages supportées
     python generate_pages.py classement_cumul    # page spécifique
-    python generate_pages.py classement_cumul classement_chronologique
+    python generate_pages.py podiums hall_of_fame
 """
 
 import json
+import math
 import re
 import sys
 from collections import defaultdict
@@ -16,12 +17,13 @@ from pathlib import Path
 import yaml
 
 from mpg_db import get_conn
-from mpg_legacy_engine import list_included_divisions, fetch_matches
+from mpg_legacy_engine import (
+    list_included_divisions, fetch_matches, compute_mpg_season_standings,
+)
 from mpg_people import DEFAULT_MAPPING_PATH
 
 BASE_DIR = Path(__file__).parent
 
-# Couleurs fixes par joueur (identiques aux pages HTML)
 PLAYER_COLORS = {
     "raph":     "#C0303A",
     "nico":     "#2E6A99",
@@ -32,8 +34,16 @@ PLAYER_COLORS = {
     "pierre":   "#2A8FA0",
     "manu":     "#7A1A1E",
 }
-
-# Ordre d'affichage dans les légendes (identique aux HTML d'origine)
+PLAYER_INITIALS = {
+    "raph":     "SC",
+    "nico":     "PU",
+    "francois": "CC",
+    "damien":   "SM",
+    "greg":     "CU",
+    "marc":     "FM",
+    "pierre":   "LU",
+    "manu":     "PP",
+}
 PLAYER_ORDER = ["raph", "nico", "francois", "damien", "greg", "marc", "pierre", "manu"]
 
 
@@ -48,47 +58,82 @@ def _load_display_names() -> dict[str, str]:
 
 
 def inject_const(html_path: Path, var_name: str, data) -> None:
-    """Remplace la ligne `const VAR_NAME=...;` dans le fichier HTML."""
+    """Remplace `const VAR_NAME = <json>;` dans le fichier HTML.
+
+    Utilise json.JSONDecoder.raw_decode pour localiser précisément la valeur
+    existante, ce qui est robuste même si plusieurs `const` sont sur la même ligne.
+    """
     content = html_path.read_text(encoding="utf-8")
     json_str = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    new_line = f"const {var_name}={json_str};"
-    new_content, n = re.subn(
-        rf"^const {var_name}=.+$",
-        new_line,
-        content,
-        flags=re.MULTILINE,
-    )
-    if n == 0:
+
+    pattern = re.compile(rf'const {re.escape(var_name)}\s*=\s*')
+    m = pattern.search(content)
+    if not m:
         print(f"  ⚠ {html_path.name} : const {var_name} introuvable — fichier non modifié")
         return
+
+    start_val = m.end()
+    try:
+        _, end_val = json.JSONDecoder().raw_decode(content, start_val)
+    except json.JSONDecodeError as e:
+        print(f"  ⚠ {html_path.name} : JSON invalide pour {var_name} — {e}")
+        return
+
+    new_content = content[:m.start()] + f"const {var_name}={json_str}" + content[end_val:]
     html_path.write_text(new_content, encoding="utf-8")
 
 
-# ── builders ───────────────────────────────────────────────────────────────────
+def _snum_map(conn) -> tuple[dict[str, int], dict[str, int]]:
+    """Retourne ({division_id: snum}, {division_id: year}) pour les 18 divisions complètes."""
+    divs = list_included_divisions(conn)  # 18 complètes par défaut
+    ph = ",".join("?" * len(divs))
+    rows = conn.execute(
+        f"SELECT division_id, season FROM divisions_metadata "
+        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divs
+    ).fetchall()
+    snum_map = {r["division_id"]: i + 1 for i, r in enumerate(rows)}
+    year_map = {r["division_id"]: r["season"] for r in rows}
+    return snum_map, year_map
+
+
+def _latest_team_names(conn) -> dict[str, str]:
+    """Retourne {person_id: team_name} depuis la division complète la plus récente."""
+    divs = list_included_divisions(conn)
+    if not divs:
+        return {}
+    ph = ",".join("?" * len(divs))
+    rows = conn.execute(
+        f"""SELECT t.person_id, t.name, dm.season, dm.division_id
+            FROM teams t
+            JOIN divisions_metadata dm ON t.division_id = dm.division_id
+            WHERE t.division_id IN ({ph}) AND t.person_id IS NOT NULL
+            ORDER BY dm.season DESC, dm.division_id DESC""",
+        divs,
+    ).fetchall()
+    seen: dict[str, str] = {}
+    for r in rows:
+        if r["person_id"] not in seen:
+            seen[r["person_id"]] = r["name"]
+    return seen
+
+
+# ── builders classement ────────────────────────────────────────────────────────
 
 def build_classement_raw(conn) -> tuple[dict, dict]:
-    """Construit les dicts RAW pour classement_cumul et classement_chronologique.
-
-    Inclut toutes les divisions non-COVID (incomplètes + en cours comprises).
-    Retourne (raw_cumul, raw_ratio).
+    """Construit RAW pour classement_cumul et classement_chronologique.
+    Inclut toutes les divisions non-COVID (incl. incomplètes + en cours).
     """
     divisions = list_included_divisions(
-        conn,
-        include_covid=False,
-        include_incomplete=True,
-        include_current=True,
+        conn, include_covid=False, include_incomplete=True, include_current=True,
     )
-
     ph = ",".join("?" * len(divisions))
     meta_rows = conn.execute(
         f"SELECT division_id, season FROM divisions_metadata "
-        f"WHERE division_id IN ({ph}) ORDER BY season, division_id",
-        divisions,
+        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divisions,
     ).fetchall()
     ordered_divs = [r["division_id"] for r in meta_rows]
     div_season   = {r["division_id"]: r["season"] for r in meta_rows}
 
-    # Labels (S1.J1 … Sn.J14) et métadonnées de saisons pour l'axe
     labels:  list[str]  = []
     seasons: list[dict] = []
     for snum, div_id in enumerate(ordered_divs, 1):
@@ -98,7 +143,6 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
         seasons.append({"snum": snum, "year": div_season[div_id],
                         "start": start, "end": start + 13})
 
-    # Résultats par (division_id, game_week) → {person_id: pts}
     matches = fetch_matches(conn, ordered_divs)
     gw_pts: dict[tuple, dict[str, int]] = defaultdict(dict)
     for m in matches:
@@ -117,8 +161,6 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
             gw_pts[(m["division_id"], m["game_week"])][ap] = 3
 
     display = _load_display_names()
-
-    # Accumulation slot par slot
     cumul_pts = {pid: 0 for pid in PLAYER_ORDER}
     cumul_mp  = {pid: 0 for pid in PLAYER_ORDER}
     cum_data  = {pid: [] for pid in PLAYER_ORDER}
@@ -137,15 +179,211 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
                 rat_data[pid].append(round(pts / mp, 4) if mp else 0.0)
 
     def _players(data_by_pid):
-        return [
-            {"id": pid, "name": display.get(pid, pid),
-             "color": PLAYER_COLORS[pid], "data": data_by_pid[pid]}
-            for pid in PLAYER_ORDER
-        ]
+        return [{"id": pid, "name": display.get(pid, pid),
+                 "color": PLAYER_COLORS[pid], "data": data_by_pid[pid]}
+                for pid in PLAYER_ORDER]
 
-    raw_cumul = {"labels": labels, "players": _players(cum_data), "seasons": seasons}
-    raw_ratio = {"labels": labels, "players": _players(rat_data), "seasons": seasons}
-    return raw_cumul, raw_ratio
+    return ({"labels": labels, "players": _players(cum_data), "seasons": seasons},
+            {"labels": labels, "players": _players(rat_data), "seasons": seasons})
+
+
+# ── builders podiums ───────────────────────────────────────────────────────────
+
+def build_podiums_data(conn) -> dict:
+    """Construit D pour podiums.html — standings par saison complète."""
+    snum_map, year_map = _snum_map(conn)
+    standings_by_div = compute_mpg_season_standings(conn)
+
+    seasons = []
+    for div_id, snum in sorted(snum_map.items(), key=lambda x: x[1]):
+        data = standings_by_div.get(div_id)
+        if not data:
+            continue
+        standings = []
+        for row in data["standings"]:
+            standings.append({
+                "pid":         row["person_id"],
+                "division_id": div_id,
+                "pts":         row["points"],
+                "j":           row["matches_played"],
+                "v":           row["wins"],
+                "n":           row["draws"],
+                "d":           row["losses"],
+                "bp":          row["goals_for"],
+                "bc":          row["goals_against"],
+            })
+        seasons.append({"snum": snum, "year": year_map[div_id], "standings": standings})
+
+    return {"seasons": seasons}
+
+
+# ── builders hall_of_fame / hall_of_shame ──────────────────────────────────────
+
+def _build_hall_data(conn) -> tuple[list, list]:
+    """Retourne (hof_data, hos_data) pour les deux pages hall."""
+    snum_map, year_map = _snum_map(conn)
+    standings_by_div  = compute_mpg_season_standings(conn)
+    display           = _load_display_names()
+    team_names        = _latest_team_names(conn)
+    n_seasons         = len(snum_map)
+
+    stats: dict[str, dict] = {
+        pid: {
+            "titres": 0, "titres_list": [],
+            "podiums": 0, "chapeaux": 0, "chapeaux_list": [],
+            "seasons": 0,
+        }
+        for pid in PLAYER_ORDER
+    }
+
+    for div_id, snum in sorted(snum_map.items(), key=lambda x: x[1]):
+        data = standings_by_div.get(div_id)
+        if not data or not data["is_complete"]:
+            continue
+        year  = year_map[div_id]
+        rows  = data["standings"]
+        n     = len(rows)
+        for i, row in enumerate(rows):
+            pid = row["person_id"]
+            if pid not in stats:
+                continue
+            s = stats[pid]
+            s["seasons"] += 1
+            entry = {"snum": snum, "year": year,
+                     "pts": row["points"], "v": row["wins"],
+                     "n": row["draws"],   "d": row["losses"]}
+            if i == 0:
+                s["titres"]  += 1
+                s["podiums"] += 1
+                s["titres_list"].append(entry)
+            elif i < 3:
+                s["podiums"] += 1
+            if i == n - 1:
+                s["chapeaux"] += 1
+                s["chapeaux_list"].append(entry)
+
+    def _row(pid, s):
+        return {
+            "pid":      pid,
+            "name":     team_names.get(pid, pid),
+            "display":  display.get(pid, pid),
+            "initials": PLAYER_INITIALS[pid],
+            "color":    PLAYER_COLORS[pid],
+            "titres":   s["titres"],
+            "titres_list": s["titres_list"],
+            "podiums":  s["podiums"],
+            "chapeaux": s["chapeaux"],
+            "chapeaux_list": s["chapeaux_list"],
+            "seasons":  s["seasons"],
+            "pct":      round(s["titres"] / s["seasons"] * 100) if s["seasons"] else 0,
+        }
+
+    all_rows = [_row(pid, stats[pid]) for pid in PLAYER_ORDER if stats[pid]["seasons"] > 0]
+    hof = sorted(all_rows, key=lambda r: (-r["titres"], -r["podiums"], -r["seasons"]))
+    hos = sorted(all_rows, key=lambda r: (-r["chapeaux"], r["titres"]))
+    return hof, hos, n_seasons
+
+
+# ── builders records ───────────────────────────────────────────────────────────
+
+def build_records_data(conn) -> dict:
+    """Construit ALL_PERF, POS_DIST, RECORDS, TOP10, SAFE_THR, TITLE_THR, SCALE."""
+    snum_map, year_map = _snum_map(conn)
+    standings_by_div  = compute_mpg_season_standings(conn)
+    display           = _load_display_names()
+
+    all_perf = []
+    for div_id, snum in sorted(snum_map.items(), key=lambda x: x[1]):
+        data = standings_by_div.get(div_id)
+        if not data or not data["is_complete"]:
+            continue
+        year = year_map[div_id]
+        rows = data["standings"]
+        for pos, row in enumerate(rows, 1):
+            pid = row["person_id"]
+            all_perf.append({
+                "snum":     snum,
+                "year":     year,
+                "pid":      pid,
+                "display":  display.get(pid, pid),
+                "color":    PLAYER_COLORS.get(pid, "#888"),
+                "initials": PLAYER_INITIALS.get(pid, "??"),
+                "pos":      pos,
+                "pts":      row["points"],
+                "v":        row["wins"],
+                "n":        row["draws"],
+                "d":        row["losses"],
+                "gd":       int(row["goals_for"] - row["goals_against"]),
+                "bp":       int(row["goals_for"]),
+                "bc":       int(row["goals_against"]),
+            })
+
+    # POS_DIST
+    by_pos: dict[int, list[int]] = defaultdict(list)
+    for p in all_perf:
+        by_pos[p["pos"]].append(p["pts"])
+    pos_dist = []
+    for pos in range(1, 9):
+        vals = sorted(by_pos[pos])
+        if vals:
+            pos_dist.append({
+                "pos":    pos,
+                "min":    min(vals),
+                "max":    max(vals),
+                "avg":    round(sum(vals) / len(vals), 1),
+                "values": vals,
+            })
+
+    # Thresholds
+    safe_thr  = max(by_pos[8]) if by_pos[8] else 0
+    vals_p1   = sorted(by_pos[1])
+    title_thr = vals_p1[len(vals_p1) // 2] if vals_p1 else 0  # médiane basse
+    scale     = max(by_pos[1]) + 2 if by_pos[1] else 40
+
+    # TOP10
+    top10 = sorted(all_perf, key=lambda p: (-p["pts"], -p["gd"], -p["bp"]))[:10]
+
+    # RECORDS (8 records)
+    def _fmt(p):
+        return {
+            "pid":      p["pid"],
+            "display":  p["display"],
+            "color":    p["color"],
+            "initials": p["initials"],
+            "season":   f"S{p['snum']} · {p['year']}",
+        }
+
+    def _rec(icon, label, p, value, sub):
+        return {**_fmt(p), "icon": icon, "label": label, "value": value, "sub": sub}
+
+    def _sub(p):
+        return f"{p['v']}V {p['n']}N {p['d']}D"
+
+    best  = max(all_perf, key=lambda p: (p["pts"], p["gd"]))
+    worst = min(all_perf, key=lambda p: (p["pts"], p["gd"]))
+    most_w = max(all_perf, key=lambda p: p["v"])
+    most_l = max(all_perf, key=lambda p: p["d"])
+    best_gd  = max(all_perf, key=lambda p: p["gd"])
+    worst_gd = min(all_perf, key=lambda p: p["gd"])
+    most_bp  = max(all_perf, key=lambda p: p["bp"])
+    most_bc  = max(all_perf, key=lambda p: p["bc"])
+
+    records = [
+        _rec("🏅", "Meilleure saison",    best,     f"{best['pts']} pts",           _sub(best)),
+        _rec("💀", "Pire saison",          worst,    f"{worst['pts']} pts",          _sub(worst)),
+        _rec("🎯", "Plus de victoires",    most_w,   f"{most_w['v']} victoires",     _sub(most_w)),
+        _rec("😭", "Plus de défaites",     most_l,   f"{most_l['d']} défaites",      _sub(most_l)),
+        _rec("📈", "Meilleure diff buts",  best_gd,  f"+{best_gd['gd']} ({best_gd['bp']}/{best_gd['bc']})",  _sub(best_gd)),
+        _rec("📉", "Pire diff buts",       worst_gd, f"{worst_gd['gd']} ({worst_gd['bp']}/{worst_gd['bc']})", _sub(worst_gd)),
+        _rec("⚽", "Plus de buts marqués", most_bp,  f"{most_bp['bp']} buts",        _sub(most_bp)),
+        _rec("🥅", "Plus de buts encaissés", most_bc, f"{most_bc['bc']} buts",       _sub(most_bc)),
+    ]
+
+    return {
+        "safe_thr": safe_thr, "title_thr": title_thr, "scale": scale,
+        "pos_dist": pos_dist, "records": records, "top10": top10,
+        "all_perf": all_perf,
+    }
 
 
 # ── générateurs de pages ───────────────────────────────────────────────────────
@@ -153,7 +391,6 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
 def generate_classements() -> None:
     with get_conn() as conn:
         raw_cumul, raw_ratio = build_classement_raw(conn)
-
     n = len(raw_cumul["labels"])
     inject_const(BASE_DIR / "classement_cumul.html",         "RAW", raw_cumul)
     print(f"  ✓ classement_cumul.html          ({n} labels)")
@@ -161,11 +398,51 @@ def generate_classements() -> None:
     print(f"  ✓ classement_chronologique.html  ({n} labels)")
 
 
+def generate_podiums() -> None:
+    with get_conn() as conn:
+        d = build_podiums_data(conn)
+    inject_const(BASE_DIR / "podiums.html", "D", d)
+    print(f"  ✓ podiums.html  ({len(d['seasons'])} saisons)")
+
+
+def generate_halls() -> None:
+    with get_conn() as conn:
+        hof, hos, n_seasons = _build_hall_data(conn)
+    inject_const(BASE_DIR / "hall_of_fame.html",  "DATA",      hof)
+    inject_const(BASE_DIR / "hall_of_fame.html",  "N_SEASONS", n_seasons)
+    print(f"  ✓ hall_of_fame.html   ({len(hof)} joueurs, {n_seasons} saisons)")
+    inject_const(BASE_DIR / "hall_of_shame.html", "DATA",      hos)
+    print(f"  ✓ hall_of_shame.html  ({len(hos)} joueurs)")
+
+
+def generate_records() -> None:
+    with get_conn() as conn:
+        r = build_records_data(conn)
+    html = BASE_DIR / "records.html"
+    # SAFE_THR/TITLE_THR/SCALE sont sur la même ligne comme entiers, pas du JSON
+    content = html.read_text(encoding="utf-8")
+    new_content = re.sub(
+        r'const SAFE_THR=\d+,TITLE_THR=\d+,SCALE=\d+',
+        f"const SAFE_THR={r['safe_thr']},TITLE_THR={r['title_thr']},SCALE={r['scale']}",
+        content,
+    )
+    html.write_text(new_content, encoding="utf-8")
+    inject_const(html, "POS_DIST", r["pos_dist"])
+    inject_const(html, "RECORDS",  r["records"])
+    inject_const(html, "TOP10",    r["top10"])
+    inject_const(html, "ALL_PERF", r["all_perf"])
+    print(f"  ✓ records.html  ({len(r['all_perf'])} perf, {len(r['records'])} records)")
+
+
 # ── registre des pages ─────────────────────────────────────────────────────────
 
 PAGES: dict[str, callable] = {
     "classement_cumul":         generate_classements,
     "classement_chronologique": generate_classements,
+    "podiums":                  generate_podiums,
+    "hall_of_fame":             generate_halls,
+    "hall_of_shame":            generate_halls,
+    "records":                  generate_records,
 }
 
 
@@ -185,7 +462,9 @@ def main() -> None:
                 fn()
                 done.add(fn)
             except Exception as exc:
-                print(f"  ✗ Erreur : {exc}")
+                import traceback
+                print(f"  ✗ {t} : {exc}")
+                traceback.print_exc()
                 errors += 1
     print("✅ Terminé" if not errors else f"⚠ Terminé avec {errors} erreur(s)")
 
