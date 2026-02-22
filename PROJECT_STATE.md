@@ -227,13 +227,13 @@ Pas de validation que la valeur correspond à une division en DB.
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
-- [x] Script `generate_pages.py` centralisé — classement_cumul + classement_chronologique ✅
+- [x] Script `generate_pages.py` centralisé — 6/8 pages ✅ (reste : h2h, bonus_impact)
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 
 ### Niveau 2 — Analyse avancée
 
 - [x] Séries V/N/D (plus longues séquences par joueur) ✅
-- [ ] Forme récente (rolling average N dernières journées)
+- [ ] Forme récente (rolling average N dernières journées) — reporté
 - [ ] Page ELO animé dans le temps
 - [ ] Analyse home/away advantage
 
@@ -270,6 +270,7 @@ python mpg_client.py --sync-divisions divisions.txt
 python mpg_client.py --legacy        # standings + palmares
 python mpg_client.py --elo           # classement ELO
 python mpg_client.py --h2h raph nico # face-à-face
+python mpg_client.py --streaks       # séries V/N/D all-time
 
 # Stats saison en cours
 python mpg_client.py --stats
@@ -278,12 +279,14 @@ python mpg_client.py --stats
 python mpg_client.py --export all
 
 # Tests
-python test_legacy_engine.py
-python test_batch_import.py
-python test_export.py
+python3 test_legacy_engine.py  # 13/13
+python3 test_batch_import.py   # 8/8
+python3 test_export.py <export.json>
 
 # Régénération pages HTML (après chaque sync)
-# ⚠️ Pas encore de script centralisé — fait manuellement
+python3 generate_pages.py                        # toutes les pages (6/8)
+python3 generate_pages.py podiums hall_of_fame   # pages spécifiques
+# Pages non couvertes : h2h.html, bonus_impact.html
 ```
 
 ---
