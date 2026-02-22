@@ -434,6 +434,265 @@ def generate_records() -> None:
     print(f"  ✓ records.html  ({len(r['all_perf'])} perf, {len(r['records'])} records)")
 
 
+# ── builders h2h ──────────────────────────────────────────────────────────────
+
+def _h2h_cell_style(w: int, d: int, total: int) -> tuple[str, str]:
+    """Returns (bg_color, border_color) rgba strings for a H2H matrix cell."""
+    if total == 0 or w == d:
+        return "rgba(150,150,150,0.1)", "rgba(150,150,150,0.3)"
+    diff = abs(w - d)
+    alpha = round(min(0.30, diff / total * 1.5), 2)
+    border = round(min(0.70, alpha + 0.30), 2)
+    if w > d:
+        return f"rgba(69,201,69,{alpha})", f"rgba(69,201,69,{border})"
+    return f"rgba(192,48,58,{alpha})", f"rgba(192,48,58,{border})"
+
+
+def build_h2h_data(conn) -> dict:
+    """Compute H2H W/N/D/GD for all player pairs from 18 historical divisions."""
+    divs = list_included_divisions(conn)
+    matches = fetch_matches(conn, divs)
+
+    h2h: dict[str, dict] = {
+        p1: {p2: {"w": 0, "n": 0, "d": 0, "gd": 0.0}
+             for p2 in PLAYER_ORDER if p2 != p1}
+        for p1 in PLAYER_ORDER
+    }
+
+    for m in matches:
+        hp, ap = m["home_person_id"], m["away_person_id"]
+        if not hp or not ap or hp not in h2h or ap not in h2h:
+            continue
+        fr = m["final_result"]
+        gd = m["home_score"] - m["away_score"]
+
+        h2h[hp][ap]["gd"] += gd
+        h2h[ap][hp]["gd"] -= gd
+
+        if fr == 1:
+            h2h[hp][ap]["w"] += 1
+            h2h[ap][hp]["d"] += 1
+        elif fr == 3:
+            h2h[ap][hp]["w"] += 1
+            h2h[hp][ap]["d"] += 1
+        else:
+            h2h[hp][ap]["n"] += 1
+            h2h[ap][hp]["n"] += 1
+
+    for p1 in PLAYER_ORDER:
+        for p2 in PLAYER_ORDER:
+            if p2 != p1:
+                h2h[p1][p2]["gd"] = round(h2h[p1][p2]["gd"])
+
+    return h2h
+
+
+def generate_h2h() -> None:
+    with get_conn() as conn:
+        h2h = build_h2h_data(conn)
+    display = _load_display_names()
+
+    def _gd_str(gd: int) -> str:
+        return f"+{gd}" if gd >= 0 else str(gd)
+
+    def _best_opponent(pid: str, key: str) -> str:
+        """Return opponent with max h2h[pid][opp][key]."""
+        return max(
+            (q for q in PLAYER_ORDER if q != pid),
+            key=lambda q: h2h[pid][q][key],
+        )
+
+    # Totals per player
+    totals: dict[str, dict] = {}
+    for pid in PLAYER_ORDER:
+        w = sum(h2h[pid][q]["w"] for q in PLAYER_ORDER if q != pid)
+        n = sum(h2h[pid][q]["n"] for q in PLAYER_ORDER if q != pid)
+        d = sum(h2h[pid][q]["d"] for q in PLAYER_ORDER if q != pid)
+        gd = round(sum(h2h[pid][q]["gd"] for q in PLAYER_ORDER if q != pid))
+        totals[pid] = {"w": w, "n": n, "d": d, "gd": gd, "pts": w * 3 + n}
+
+    # Build <main> HTML
+    p: list[str] = []
+    p.append('<main>\n  <div class="matrix-wrap">\n')
+    p.append(
+        '    <div class="matrix-title">Matrice H2H — lire par ligne'
+        ' (V N D du joueur en ligne contre le joueur en colonne)</div>\n'
+    )
+    p.append(
+        '    <div class="reading-tip">\n'
+        '      💡 Chaque case = bilan du joueur en <strong>ligne</strong>'
+        ' contre le joueur en <strong>colonne</strong>'
+        ' (V = victoire, N = nul, D = défaite) · Différence de buts en dessous\n'
+        '    </div>\n'
+    )
+    p.append(
+        '    <div class="legend">\n'
+        '      <span class="leg-item"><span class="leg-swatch"'
+        ' style="background:rgba(69,201,69,.35);border-color:rgba(69,201,69,.7)">'
+        '</span>Domine</span>\n'
+        '      <span class="leg-item"><span class="leg-swatch"'
+        ' style="background:rgba(150,150,150,.1);border-color:rgba(150,150,150,.3)">'
+        '</span>Équilibré</span>\n'
+        '      <span class="leg-item"><span class="leg-swatch"'
+        ' style="background:rgba(192,48,58,.35);border-color:rgba(192,48,58,.7)">'
+        '</span>Dominé</span>\n'
+        '    </div>\n'
+    )
+
+    # Matrix table
+    p.append('    <table>\n')
+    hdr = '      <tr><th class="corner">↓ vs →</th>'
+    for col in PLAYER_ORDER:
+        hdr += (
+            f'<th class="col-header" style="--pc:{PLAYER_COLORS[col]}">'
+            f'<span class="dot"></span>{display.get(col, col)}</th>'
+        )
+    hdr += '<th class="col-total">Total</th></tr>\n'
+    p.append(hdr)
+
+    for rp in PLAYER_ORDER:
+        t = totals[rp]
+        rname = display.get(rp, rp)
+        row = (
+            f'<tr><td class="player-label" style="--pc:{PLAYER_COLORS[rp]}">'
+            f'<span class="dot"></span>{rname}</td>'
+        )
+        for cp in PLAYER_ORDER:
+            if cp == rp:
+                row += '<td class="diag">—</td>'
+            else:
+                c = h2h[rp][cp]
+                w, n, d, gd = c["w"], c["n"], c["d"], c["gd"]
+                tot = w + n + d
+                bg, bord = _h2h_cell_style(w, d, tot)
+                cname = display.get(cp, cp)
+                gds = _gd_str(gd)
+                row += (
+                    f'<td class="cell" style="background:{bg};border-color:{bord}"'
+                    f' title="{rname} vs {cname}: {w}V {n}N {d}D | GD: {gds} | {tot} matchs">'
+                    f'<span class="record">{w}V&nbsp;{n}N&nbsp;{d}D</span>'
+                    f'<span class="gd">{gds}</span></td>'
+                )
+        row += (
+            f'<td class="total-cell">'
+            f'<span class="total-record">{t["w"]}V {t["n"]}N {t["d"]}D</span>'
+            f'<span class="total-pts">{t["pts"]} pts · {_gd_str(t["gd"])}</span>'
+            f'</td></tr>\n'
+        )
+        p.append(row)
+
+    p.append('    </table>\n  </div>\n\n')  # end matrix-wrap
+
+    # Summary cards
+    p.append(
+        '  <div class="summary-section">\n'
+        '    <div class="section-title">Résumés individuels</div>\n'
+        '    <div class="cards-grid">\n'
+    )
+
+    for pid in PLAYER_ORDER:
+        t = totals[pid]
+        total_m = t["w"] + t["n"] + t["d"]
+        pct = round(t["w"] / total_m * 100) if total_m else 0
+
+        nem_pid = _best_opponent(pid, "d")
+        vic_pid = _best_opponent(pid, "w")
+        # Nemesis display: nemesis's record vs this player
+        nem = h2h[nem_pid][pid]
+        # Victim display: this player's record vs victim
+        vic = h2h[pid][vic_pid]
+
+        p.append(
+            f'    <div class="summary-card">\n'
+            f'      <div class="sc-header" style="--pc:{PLAYER_COLORS[pid]}">\n'
+            f'        <span class="sc-dot"></span>\n'
+            f'        <span class="sc-name">{display.get(pid, pid)}</span>\n'
+            f'        <span class="sc-record">{t["w"]}V {t["n"]}N {t["d"]}D</span>\n'
+            f'      </div>\n'
+            f'      <div class="sc-body">\n'
+            f'        <div class="sc-row">\n'
+            f'          <span class="sc-label">🏆 % victoires</span>\n'
+            f'          <span class="sc-val">{pct}%</span>\n'
+            f'        </div>\n'
+            f'        <div class="sc-row nemesis-row">\n'
+            f'          <span class="sc-label">😈 Nemesis</span>\n'
+            f'          <span class="sc-val" style="color:{PLAYER_COLORS[nem_pid]}">'
+            f'{display.get(nem_pid, nem_pid)}'
+            f' <small>({nem["w"]}V {nem["n"]}N {nem["d"]}D)</small></span>\n'
+            f'        </div>\n'
+            f'        <div class="sc-row victim-row">\n'
+            f'          <span class="sc-label">😏 Victime</span>\n'
+            f'          <span class="sc-val" style="color:{PLAYER_COLORS[vic_pid]}">'
+            f'{display.get(vic_pid, vic_pid)}'
+            f' <small>({vic["w"]}V {vic["n"]}N {vic["d"]}D)</small></span>\n'
+            f'        </div>\n'
+            f'      </div>\n'
+            f'    </div>\n'
+        )
+
+    p.append('    </div>\n  </div>\n</main>')
+
+    html_path = BASE_DIR / "h2h.html"
+    content = html_path.read_text(encoding="utf-8")
+    start = content.index('<main>')
+    end = content.index('</main>') + len('</main>')
+    html_path.write_text(content[:start] + ''.join(p) + content[end:], encoding="utf-8")
+
+    sample = totals[PLAYER_ORDER[0]]
+    matches_pp = sample["w"] + sample["n"] + sample["d"]
+    print(f"  ✓ h2h.html  ({matches_pp} matchs/joueur, {len(PLAYER_ORDER)} joueurs)")
+
+
+# ── builders bonus_impact ─────────────────────────────────────────────────────
+
+def build_bonus_usage(conn) -> dict:
+    """Returns PLAYER_USAGE {display_name: {bonus_type: count}} from 18 historical divisions."""
+    divs = list_included_divisions(conn)
+    ph = ",".join("?" * len(divs))
+
+    team_rows = conn.execute(
+        f"SELECT id, person_id FROM teams "
+        f"WHERE division_id IN ({ph}) AND person_id IS NOT NULL",
+        divs,
+    ).fetchall()
+    team_to_pid = {r["id"]: r["person_id"] for r in team_rows}
+
+    match_rows = conn.execute(
+        f"SELECT home_team_id, away_team_id, home_bonuses, away_bonuses "
+        f"FROM matches WHERE division_id IN ({ph})",
+        divs,
+    ).fetchall()
+
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for row in match_rows:
+        for team_id, bonuses_json in (
+            (row["home_team_id"], row["home_bonuses"]),
+            (row["away_team_id"], row["away_bonuses"]),
+        ):
+            if not team_id or not bonuses_json:
+                continue
+            pid = team_to_pid.get(team_id)
+            if not pid:
+                continue
+            for bonus_type in json.loads(bonuses_json):
+                counts[pid][bonus_type] += 1
+
+    display = _load_display_names()
+    return {
+        display.get(pid, pid): dict(counts.get(pid, {}))
+        for pid in PLAYER_ORDER
+    }
+
+
+def generate_bonus_impact() -> None:
+    with get_conn() as conn:
+        player_usage = build_bonus_usage(conn)
+    html_path = BASE_DIR / "bonus_impact.html"
+    inject_const(html_path, "PLAYER_USAGE", player_usage)
+    n_total = sum(sum(v.values()) for v in player_usage.values())
+    print(f"  ✓ bonus_impact.html  ({n_total} bonus utilisations)")
+
+
 # ── registre des pages ─────────────────────────────────────────────────────────
 
 PAGES: dict[str, callable] = {
@@ -443,6 +702,8 @@ PAGES: dict[str, callable] = {
     "hall_of_fame":             generate_halls,
     "hall_of_shame":            generate_halls,
     "records":                  generate_records,
+    "h2h":                      generate_h2h,
+    "bonus_impact":             generate_bonus_impact,
 }
 
 

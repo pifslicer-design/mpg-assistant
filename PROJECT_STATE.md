@@ -8,7 +8,7 @@
 Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, depuis 2016).
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmares) → pages HTML statiques.
 
-**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 13/13 + 8/8 tests passants.
+**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 13/13 + 8/8 tests passants, 8/8 pages HTML régénérables.
 **Bugs résolus** : `list_included_divisions()` filtre `is_current` par défaut · `mpg_stats.py` dérive l'outcome des scores (plus de dépendance à `finalResult`).
 
 ---
@@ -202,10 +202,10 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 Matchs non finalisés (scores NULL) skippés proprement.
 **Test** : `test_stats_wdl_coherence()` dans `test_batch_import.py`.
 
-### 🟡 RISQUE — Pages HTML avec données figées
+### ✅ RÉSOLU — Pages HTML avec données figées
 
-Les HTML contiennent les données en JSON inline. Pas de régénération automatique si DB mise à jour.
-**Fix** : Script `generate_pages.py` centralisé.
+`generate_pages.py` couvre les 8/8 pages HTML. Lancer après chaque sync.
+**Note** : `bonus_impact.html` — seul `PLAYER_USAGE` est régénéré. `IMPACT`/`SORTED_BONUSES` restent statiques (simulation contrefactuelle non implémentée).
 
 ### 🟡 RISQUE — Constantes saisonnières hardcodées
 
@@ -227,7 +227,7 @@ Pas de validation que la valeur correspond à une division en DB.
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
-- [x] Script `generate_pages.py` centralisé — 6/8 pages ✅ (reste : h2h, bonus_impact)
+- [x] Script `generate_pages.py` centralisé — 8/8 pages ✅
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 
 ### Niveau 2 — Analyse avancée
@@ -284,11 +284,11 @@ python3 test_batch_import.py   # 8/8
 python3 test_export.py <export.json>
 
 # Régénération pages HTML (après chaque sync)
-python3 generate_pages.py                        # toutes les pages (6/8)
+python3 generate_pages.py                        # toutes les pages (8/8)
 python3 generate_pages.py podiums hall_of_fame   # pages spécifiques
-# Pages non couvertes : h2h.html, bonus_impact.html
+python3 generate_pages.py h2h bonus_impact       # duel H2H + bonus
 ```
 
 ---
 
-*Généré le 2026-02-20 par Claude Sonnet 4.6 — ne pas modifier manuellement*
+*Mis à jour le 2026-02-22 par Claude Sonnet 4.6 — ne pas modifier manuellement*
