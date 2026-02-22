@@ -8,8 +8,8 @@
 Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, depuis 2016).
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmares) → pages HTML statiques.
 
-**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 12/12 tests passants.
-**Bug résolu** : `list_included_divisions()` filtre désormais `is_current=1` par défaut (paramètre `include_current=False`).
+**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 12/12 + 8/8 tests passants.
+**Bugs résolus** : `list_included_divisions()` filtre `is_current` par défaut · `mpg_stats.py` dérive l'outcome des scores (plus de dépendance à `finalResult`).
 
 ---
 
@@ -196,10 +196,11 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 **Résultat** : Damien = 2 titres (correct). ELO recalculé sur 18 divisions. 12/12 tests passants.
 **Test** : `test_current_exclusion_default()` dans `test_legacy_engine.py`.
 
-### 🟡 RISQUE — `mpg_stats.py` utilise `finalResult`
+### ✅ RÉSOLU — `mpg_stats.py` utilisait `finalResult`
 
-**Impact** : Stats saison en cours potentiellement incorrectes (API retourne toujours finalResult=1)
-**Fix** : Aligner avec legacy_engine (comparaison home_score/away_score)
+**Fix appliqué** : Outcome dérivé de `home_score`/`away_score` (identique à `mpg_legacy_engine.py`).
+Matchs non finalisés (scores NULL) skippés proprement.
+**Test** : `test_stats_wdl_coherence()` dans `test_batch_import.py`.
 
 ### 🟡 RISQUE — Pages HTML avec données figées
 
@@ -225,7 +226,7 @@ Pas de validation que la valeur correspond à une division en DB.
 ### Niveau 1 — Stabilisation (prioritaire)
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
-- [ ] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores
+- [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
 - [ ] Script `generate_pages.py` centralisé pour régénérer tous les HTML
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 

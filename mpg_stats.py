@@ -3,7 +3,6 @@
 Divisions COVID et incomplètes exclues par défaut (via divisions_metadata).
 """
 
-import json
 from collections import defaultdict
 from mpg_db import get_conn, get_excluded_divisions
 
@@ -57,27 +56,34 @@ def compute_records(
     })
 
     for r in rows:
-        raw = json.loads(r["raw_json"] or "{}")
-        result = raw.get("finalResult")  # 1=home win, 2=draw, 3=away win
         h, a = r["home_team_id"], r["away_team_id"]
+        hs, as_ = r["home_score"], r["away_score"]
 
-        if not h or not a or result not in (1, 2, 3):
+        if not h or not a or hs is None or as_ is None:
             continue
+
+        # Dériver l'outcome depuis les scores (finalResult de l'API est toujours 1)
+        if hs > as_:
+            outcome = 1  # home win
+        elif hs < as_:
+            outcome = 3  # away win
+        else:
+            outcome = 2  # draw
 
         for team_id, is_home in ((h, True), (a, False)):
             s = stats[team_id]
             s["team_name"]    = r["home_name"] if is_home else r["away_name"]
             s["person_id"]    = r["home_person"] if is_home else r["away_person"]
             s["matches_played"] += 1
-            gf = (r["home_score"] or 0) if is_home else (r["away_score"] or 0)
-            ga = (r["away_score"] or 0) if is_home else (r["home_score"] or 0)
+            gf = hs if is_home else as_
+            ga = as_ if is_home else hs
             s["goals_for"]     += gf
             s["goals_against"] += ga
 
-            if result == 2:
+            if outcome == 2:
                 s["draws"]  += 1
                 s["points"] += 1
-            elif (result == 1 and is_home) or (result == 3 and not is_home):
+            elif (outcome == 1 and is_home) or (outcome == 3 and not is_home):
                 s["wins"]   += 1
                 s["points"] += 3
             else:

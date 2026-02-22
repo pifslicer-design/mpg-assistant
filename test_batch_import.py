@@ -221,6 +221,28 @@ def test_zero_unmapped_in_included_divisions():
     print(f"  ✓ zéro équipe non mappée ({total_teams} équipes, {len(included)} divisions incluses)")
 
 
+# ── Test stats : cohérence W/D/L (score-based, pas finalResult) ───────────────
+
+def test_stats_wdl_coherence():
+    """W+D+L == matches_played pour chaque équipe, et les points sont variés."""
+    from mpg_stats import compute_records
+
+    records = compute_records()
+    assert records, "compute_records() ne doit pas retourner un dict vide"
+
+    for team_id, s in records.items():
+        total = s["wins"] + s["draws"] + s["losses"]
+        assert total == s["matches_played"], (
+            f"{team_id} : W+D+L={total} ≠ matches_played={s['matches_played']}"
+        )
+
+    pts_values = {s["points"] for s in records.values()}
+    assert len(pts_values) > 1, (
+        f"Points identiques pour toutes les équipes ({pts_values}) — finalResult suspect"
+    )
+    print(f"  ✓ stats W/D/L cohérents : {len(records)} équipes, points variés {sorted(pts_values)}")
+
+
 # ── Runner ───────────────────────────────────────────────────────────────────
 
 TESTS = [
@@ -231,6 +253,7 @@ TESTS = [
     test_people_mapping,
     test_enrich_division_pwn,
     test_zero_unmapped_in_included_divisions,
+    test_stats_wdl_coherence,              # nouveau — détecte dépendance à finalResult
 ]
 
 
