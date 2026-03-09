@@ -30,3 +30,4 @@ logs/
 !docs/
 !docs/*.html
 Infos.txt
+sync.log

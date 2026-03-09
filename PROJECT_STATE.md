@@ -29,6 +29,10 @@ mpg-assistant/
 ├── people_mapping.yaml    # 8 players → aliases (team names per season)
 ├── divisions.txt          # 20 division_ids to sync
 ├── mpg.db                 # SQLite WAL database (source of truth)
+├── generate_pages.py      # Régénère les 9 pages HTML + copie vers docs/
+├── sync_and_publish.sh    # Pipeline automatisé : sync → pages → git push + notif Gmail
+├── notify.py              # Envoi Gmail via smtplib (credentials dans .env)
+├── sync.log               # Log des exécutions automatiques (rotatif 500 lignes)
 ├── test_batch_import.py   # 7 integration tests (import pipeline)
 ├── test_export.py         # Export format/structure validation
 ├── test_legacy_engine.py  # 11 analytics tests (palmares, ELO, H2H)
@@ -212,6 +216,12 @@ Matchs non finalisés (scores NULL) skippés proprement.
 `CURRENT_DIVISION` dans `mpg_db.py` doit être mis à jour manuellement chaque saison.
 Pas de validation que la valeur correspond à une division en DB.
 
+### 🟡 RISQUE — Token MPG expire régulièrement
+
+`MPG_TOKEN` dans `.env` est un JWT avec expiration courte. Quand il expire, le sync renvoie des `401 Unauthorized` sur toutes les divisions. Les divisions historiques déjà en DB ne sont pas affectées (pas de re-fetch), mais la division en cours ne sera pas mise à jour.
+
+**Action requise :** renouveler `MPG_TOKEN` dans `.env` après chaque expiration (se connecter à mpg.football, récupérer le token depuis les devtools réseau).
+
 ### 🟢 SOLIDE
 
 - Idempotence UPSERT complète (pas de doublons)
@@ -264,7 +274,7 @@ Pas de validation que la valeur correspond à une division en DB.
 
 ```bash
 # Sync toutes les divisions
-python mpg_client.py --sync-divisions divisions.txt
+python mpg_client.py --divisions-file divisions.txt --sync-divisions
 
 # Analytics all-time (CLI)
 python mpg_client.py --legacy        # standings + palmares
@@ -290,8 +300,11 @@ python3 generate_pages.py podiums hall_of_fame   # pages spécifiques
 
 # Publication (après generate_pages.py)
 git add docs/ && git commit -m "chore: régénère pages" && git push
+
+# Sync + régénération + publication automatisée (cron lundi 7h00)
+bash sync_and_publish.sh   # pipeline complet + notification Gmail
 ```
 
 ---
 
-*Mis à jour le 2026-02-22 (session 2) par Claude Sonnet 4.6 — ne pas modifier manuellement*
+*Mis à jour le 2026-03-09 (session 3) par Claude Sonnet 4.6 — ne pas modifier manuellement*
