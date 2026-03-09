@@ -7,13 +7,20 @@
 :root{--bg:#12141C;--card:#1A1D2E;--border:#2A2D3E;--text:#E8EAF0;--muted:#6B7280}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-bottom:48px}
-.main{max-width:1200px;margin:0 auto;padding:24px 16px}
+.main{max-width:1300px;margin:0 auto;padding:24px 16px}
 .section-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
-#chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto}
-svg#bump{width:100%;min-width:720px;display:block}
-.bl{fill:none;stroke-width:2.5;cursor:pointer;transition:opacity .15s,stroke-width .15s}
-.bd{cursor:pointer;transition:opacity .15s}
-.blab{cursor:pointer;transition:opacity .15s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+#chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;overflow-x:auto}
+svg#bump{width:100%;min-width:800px;display:block;cursor:default}
+.bl{fill:none;transition:stroke-width .12s,opacity .12s}
+.bd{transition:r .12s,opacity .12s}
+.bnum{dominant-baseline:middle;text-anchor:middle;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.blab{dominant-baseline:middle;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;transition:opacity .12s}
+#legend{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:14px}
+.leg-item{display:flex;align-items:center;gap:7px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background .1s}
+.leg-item:hover{background:rgba(255,255,255,.06)}
+.leg-item.active{background:rgba(255,255,255,.1)}
+.leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.leg-name{font-size:12px;font-weight:600;color:var(--text)}
 </style>
 </head>
 <body>
@@ -89,8 +96,9 @@ svg#bump{width:100%;min-width:720px;display:block}
 <div class="main">
 <div class="section-label">Évolution des classements · saison par saison</div>
 <div id="chart-wrap">
-<svg id="bump" viewBox="0 0 1100 460" preserveAspectRatio="xMinYMid meet"></svg>
+<svg id="bump" viewBox="0 0 1150 570" preserveAspectRatio="xMinYMid meet"></svg>
 </div>
+<div id="legend"></div>
 </div>
 <script>
 const BUMP={"seasons":[{"label":"Old S1","year":2016,"current":false},{"label":"Old S2","year":2016,"current":false},{"label":"S1","year":2017,"current":false},{"label":"S2","year":2017,"current":false},{"label":"S3","year":2018,"current":false},{"label":"S4","year":2018,"current":false},{"label":"S5","year":2019,"current":false},{"label":"S7","year":2020,"current":false},{"label":"S8","year":2020,"current":false},{"label":"S10","year":2021,"current":false},{"label":"S9","year":2021,"current":false},{"label":"S11","year":2022,"current":false},{"label":"S12","year":2022,"current":false},{"label":"S13","year":2023,"current":false},{"label":"S14","year":2023,"current":false},{"label":"S15","year":2024,"current":false},{"label":"S16","year":2024,"current":false},{"label":"S17","year":2025,"current":false},{"label":"S18","year":2025,"current":true}],"players":[{"pid":"raph","name":"Raph","color":"#C0303A","ranks":[8,3,6,1,3,4,1,7,5,2,3,1,3,1,3,8,2,3,3]},{"pid":"nico","name":"Nico","color":"#2E6A99","ranks":[4,5,1,2,4,3,4,3,7,4,4,6,7,2,4,1,6,4,5]},{"pid":"francois","name":"François","color":"#1E5C3A","ranks":[2,1,5,6,6,1,5,5,8,1,1,5,1,3,5,5,4,7,2]},{"pid":"damien","name":"Damien","color":"#C08A00","ranks":[1,2,4,5,5,2,6,6,2,7,5,4,2,5,6,3,1,6,1]},{"pid":"greg","name":"Greg","color":"#D4643A","ranks":[3,4,3,4,2,8,2,1,3,8,7,8,5,7,1,7,5,5,6]},{"pid":"marc","name":"Marc","color":"#1A3D50","ranks":[7,8,2,7,8,7,3,2,4,6,8,2,6,8,8,6,8,1,7]},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","ranks":[6,7,8,8,7,5,7,8,1,3,2,3,4,6,2,2,7,8,8]},{"pid":"manu","name":"Manu","color":"#7A1A1E","ranks":[5,6,7,3,1,6,8,4,6,5,6,7,8,4,7,4,3,2,4]}]};
@@ -98,108 +106,133 @@ const BUMP={"seasons":[{"label":"Old S1","year":2016,"current":false},{"label":"
 const S=BUMP.seasons,P=BUMP.players;
 const nS=S.length;
 if(!nS)return;
-const svg=document.getElementById('bump');
-const W=1100,H=460,LP=58,RP=90,TP=30,BP=62;
+const W=1150,H=570,LP=90,RP=95,TP=62,BP=28;
 const cW=W-LP-RP,cH=H-TP-BP;
-const nR=8;
+const nR=8,R_IDLE=9,R_HOV=11;
 const xP=i=>LP+i/(Math.max(nS-1,1))*cW;
 const yP=r=>TP+(r-1)/(nR-1)*cH;
 const ns='http://www.w3.org/2000/svg';
 const mk=(t,a,p)=>{const e=document.createElementNS(ns,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);if(p)p.appendChild(e);return e;};
 const fam='-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif';
+const svg=document.getElementById('bump');
 
-// Rank band alternates
+// rank row bands
+const rowH=cH/(nR-1);
 for(let r=1;r<=nR;r+=2){
-  const y0=r===1?TP:yP(r)-(cH/(nR-1))/2;
-  const y1=r===nR?H-BP:yP(r)+(cH/(nR-1))/2;
-  mk('rect',{x:LP,y:y0,width:cW,height:y1-y0,fill:'rgba(255,255,255,.018)'},svg);
+  const y0=r===1?TP:yP(r)-rowH/2;
+  const y1=r===nR?H-BP:yP(r)+rowH/2;
+  mk('rect',{x:LP,y:y0,width:cW,height:y1-y0,fill:'rgba(255,255,255,.016)'},svg);
 }
+// horizontal rank lines
+for(let r=1;r<=nR;r++)
+  mk('line',{x1:LP,y1:yP(r),x2:W-RP,y2:yP(r),stroke:'#1E2133','stroke-width':'1'},svg);
 
-// Horizontal grid + rank labels
-for(let r=1;r<=nR;r++){
-  mk('line',{x1:LP,y1:yP(r),x2:W-RP,y2:yP(r),stroke:'#232639','stroke-width':'1'},svg);
-  mk('text',{x:LP-6,y:yP(r),'font-size':'10',fill:'#4B5563','text-anchor':'end',
-    'dominant-baseline':'middle','font-family':fam},svg).textContent=r+'°';
-}
+// rank labels left
+const RL=['1er','2e','3e','4e','5e','6e','7e','8e'];
+for(let r=1;r<=nR;r++)
+  mk('text',{x:LP-10,y:yP(r),'font-size':'11',fill:'#3D4460','text-anchor':'end',
+    'dominant-baseline':'middle','font-weight':'600','font-family':fam},svg
+  ).textContent=RL[r-1];
 
-// Season labels + vertical guides
-S.forEach((s,i)=>{
-  const x=xP(i);
-  mk('line',{x1:x,y1:TP,x2:x,y2:H-BP,stroke:'#232639','stroke-width':'1'},svg);
-  const g=mk('g',{transform:`translate(${x},${H-BP+6}) rotate(-45)`},svg);
-  mk('text',{x:0,y:0,'font-size':'9','text-anchor':'end',
-    fill:s.current?'#9D8CF7':'#4B5563','font-weight':s.current?'700':'400',
-    'font-family':fam},g).textContent=s.label;
-});
+// vertical season guides
+S.forEach((_,i)=>mk('line',{x1:xP(i),y1:TP,x2:xP(i),y2:H-BP,stroke:'#1C1F30','stroke-width':'1'},svg));
 
-// Dashed separator before current season
+// dashed separator before current season
 const curIdx=S.findIndex(s=>s.current);
 if(curIdx>0){
-  const x0=(xP(curIdx-1)+xP(curIdx))/2;
-  mk('line',{x1:x0,y1:TP-8,x2:x0,y2:H-BP,
-    stroke:'#3A3D5C','stroke-width':'1.5','stroke-dasharray':'4,3'},svg);
-  mk('text',{x:x0+4,y:TP-4,'font-size':'8',fill:'#4B5563','font-family':fam}).textContent='en cours';
+  const xSep=(xP(curIdx-1)+xP(curIdx))/2;
+  mk('line',{x1:xSep,y1:TP-20,x2:xSep,y2:H-BP,stroke:'#3A3D5C','stroke-width':'1.5','stroke-dasharray':'5,4'},svg);
+  mk('text',{x:xSep+4,y:TP-14,'font-size':'8',fill:'#4B5570','font-family':fam,'font-style':'italic'},svg).textContent='en cours';
 }
 
-// Per-player
+// season labels (rotated above chart)
+S.forEach((s,i)=>{
+  const g=mk('g',{transform:`translate(${xP(i)},${TP-8}) rotate(-50)`},svg);
+  mk('text',{x:0,y:0,'font-size':'10','text-anchor':'start','dominant-baseline':'auto',
+    fill:s.current?'#8B7CF7':'#4B5570','font-weight':s.current?'700':'500','font-family':fam},g
+  ).textContent=s.label;
+});
+
+// lines (behind dots)
 const els={};
 P.forEach(p=>{
   const pts=p.ranks.map((r,i)=>r!=null?[xP(i),yP(r)]:null);
-
-  // Path (cubic bezier horizontal control points)
   let d='',prev=null;
   pts.forEach(pt=>{
     if(!pt){prev=null;return;}
-    if(!prev){d+=`M${pt[0]} ${pt[1]}`;prev=pt;return;}
-    const mx=(prev[0]+pt[0])/2;
-    d+=` C${mx} ${prev[1]},${mx} ${pt[1]},${pt[0]} ${pt[1]}`;
+    if(!prev){d+=`M${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`;prev=pt;return;}
+    const mx=((prev[0]+pt[0])/2).toFixed(1);
+    d+=` C${mx} ${prev[1].toFixed(1)},${mx} ${pt[1].toFixed(1)},${pt[0].toFixed(1)} ${pt[1].toFixed(1)}`;
     prev=pt;
   });
-  const line=mk('path',{d,class:'bl',stroke:p.color,'data-pid':p.pid},svg);
+  const line=mk('path',{d,class:'bl',stroke:p.color,'stroke-width':'2',opacity:'0.85','data-pid':p.pid},svg);
+  els[p.pid]={line,dots:[],bnums:[],lblR:null,lblL:null};
+});
 
-  // Dots
-  const dots=[];
+// dots + rank numbers + labels
+P.forEach(p=>{
+  const pts=p.ranks.map((r,i)=>r!=null?[xP(i),yP(r)]:null);
   pts.forEach((pt,i)=>{
     if(!pt)return;
     const isCur=S[i]&&S[i].current;
-    const c=mk('circle',{cx:pt[0],cy:pt[1],r:isCur?5:3.5,
-      fill:p.color,stroke:'#12141C','stroke-width':isCur?'2':'1.5',
-      class:'bd','data-pid':p.pid},svg);
-    dots.push(c);
+    const c=mk('circle',{cx:pt[0].toFixed(1),cy:pt[1].toFixed(1),r:R_IDLE,
+      fill:p.color,stroke:'#12141C','stroke-width':isCur?'2.5':'1.5',class:'bd','data-pid':p.pid},svg);
+    const rn=mk('text',{x:pt[0].toFixed(1),y:pt[1].toFixed(1),'font-size':'9',
+      'font-weight':'700',fill:'rgba(255,255,255,0.92)',class:'bnum','data-pid':p.pid},svg);
+    rn.textContent=p.ranks[i];
+    els[p.pid].dots.push(c);
+    els[p.pid].bnums.push(rn);
   });
-
-  // Right label at last known rank
   const lastPt=[...pts].reverse().find(x=>x);
-  let lbl=null;
   if(lastPt){
-    lbl=mk('text',{x:lastPt[0]+10,y:lastPt[1],'font-size':'11','font-weight':'700',
-      fill:p.color,class:'blab','data-pid':p.pid,'dominant-baseline':'middle',
-      'font-family':fam},svg);
-    lbl.textContent=p.name;
+    const lb=mk('text',{x:(lastPt[0]+R_IDLE+6).toFixed(1),y:lastPt[1].toFixed(1),
+      'font-size':'12','font-weight':'700',fill:p.color,class:'blab','text-anchor':'start','data-pid':p.pid},svg);
+    lb.textContent=p.name;
+    els[p.pid].lblR=lb;
   }
-
-  els[p.pid]={line,dots,lbl};
+  const firstPt=pts.find(x=>x);
+  if(firstPt){
+    const lb=mk('text',{x:(firstPt[0]-R_IDLE-6).toFixed(1),y:firstPt[1].toFixed(1),
+      'font-size':'12','font-weight':'700',fill:p.color,class:'blab','text-anchor':'end','data-pid':p.pid},svg);
+    lb.textContent=p.name;
+    els[p.pid].lblL=lb;
+  }
 });
 
-// Interaction
+// interaction
 let activePid=null;
 function hl(pid){
   Object.entries(els).forEach(([id,e])=>{
     const on=!pid||id===pid;
-    const op=on?'1':'0.06';
-    e.line.style.opacity=op;
-    e.line.style.strokeWidth=on?'3.5':'2.5';
-    e.dots.forEach(d=>d.style.opacity=op);
-    if(e.lbl)e.lbl.style.opacity=op;
+    e.line.style.opacity=on?'0.9':'0.04';
+    e.line.style.strokeWidth=on?'3.5':'1.5';
+    e.dots.forEach(d=>{d.style.opacity=on?'1':'0.05';d.setAttribute('r',on?R_HOV:R_IDLE);});
+    e.bnums.forEach(n=>n.style.opacity=on?'1':'0.05');
+    if(e.lblR)e.lblR.style.opacity=on?'1':'0.05';
+    if(e.lblL)e.lblL.style.opacity=on?'1':'0.05';
   });
 }
 svg.addEventListener('mouseover',e=>{if(!activePid&&e.target.dataset.pid)hl(e.target.dataset.pid);});
 svg.addEventListener('mouseout', e=>{if(!activePid&&e.target.dataset.pid)hl(null);});
 svg.addEventListener('click',e=>{
   const pid=e.target.dataset.pid;
-  if(!pid){activePid=null;hl(null);return;}
-  activePid=activePid===pid?null:pid;
-  hl(activePid);
+  if(!pid){activePid=null;hl(null);}
+  else{activePid=activePid===pid?null:pid;hl(activePid);}
+  document.querySelectorAll('.leg-item').forEach(el=>el.classList.toggle('active',el.dataset.pid===activePid));
+});
+
+// legend
+const leg=document.getElementById('legend');
+P.forEach(p=>{
+  const item=document.createElement('div');
+  item.className='leg-item';item.dataset.pid=p.pid;
+  item.innerHTML=`<span class="leg-dot" style="background:${p.color}"></span><span class="leg-name">${p.name}</span>`;
+  item.addEventListener('click',()=>{
+    activePid=activePid===p.pid?null:p.pid;
+    hl(activePid);
+    document.querySelectorAll('.leg-item').forEach(el=>el.classList.toggle('active',el.dataset.pid===activePid));
+  });
+  leg.appendChild(item);
 });
 })();
 </script>
