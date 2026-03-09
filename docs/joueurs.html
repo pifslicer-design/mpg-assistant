@@ -431,6 +431,24 @@ function swingBadge(swing) {
 
 let _subFilter = null;
 let _subTab = 'missed';
+const _SWING_PTS = {'D→V': 3, 'N→V': 2, 'D→N': 1};
+
+function renderSubKpis(pid) {
+  const missed  = (DATA.missed_decisive  || []).filter(e => !pid || e.owner === pid);
+  const entered = (DATA.entered_decisive || []).filter(e => !pid || e.owner === pid);
+  const lost   = missed.reduce((s, e)  => s + (_SWING_PTS[e.swing] || 0), 0);
+  const gained = entered.reduce((s, e) => s + (_SWING_PTS[e.swing] || 0), 0);
+  return `<div style="display:flex;gap:12px;margin-bottom:16px;">
+    <div style="flex:1;background:#FDECEA;border-radius:12px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:var(--red)">${lost}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;">pts perdus · ratés</div>
+    </div>
+    <div style="flex:1;background:#EDFAED;border-radius:12px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:#2A7A2A">${gained}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;">pts gagnés · réussis</div>
+    </div>
+  </div>`;
+}
 
 function renderMissedSubs(pid) {
   const data = (DATA.missed_decisive || []).filter(e => !pid || e.owner === pid);
@@ -505,6 +523,7 @@ function renderSubImpact() {
   const ne = (DATA.entered_decisive || []).length;
   return `
     <div class="filter-tabs" style="margin-bottom:12px">${playerBtns}</div>
+    <div id="sub-kpis">${renderSubKpis(null)}</div>
     <div class="sub-tabs">
       <button class="sub-tab active" id="sub-tab-missed" onclick="selectSubTab('missed')">🚫 Ratés (${nm})</button>
       <button class="sub-tab" id="sub-tab-entered" onclick="selectSubTab('entered')">✅ Réussis (${ne})</button>
@@ -537,7 +556,8 @@ function selectSubFilter(pid) {
     btn.style.borderColor = active ? col : '';
     btn.style.color = active ? '#fff' : '';
   });
-  // Re-render both tab contents
+  // Re-render KPIs + both tab contents
+  document.getElementById('sub-kpis').innerHTML = renderSubKpis(pid);
   document.getElementById('sub-content-missed').innerHTML = renderMissedSubs(pid);
   document.getElementById('sub-content-entered').innerHTML = renderEnteredSubs(pid);
 }
