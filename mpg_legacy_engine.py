@@ -180,6 +180,7 @@ def compute_mpg_season_standings(
     conn,
     include_covid: bool = False,
     include_incomplete: bool = False,
+    include_current: bool = False,
 ) -> dict[str, dict]:
     """Classement par division_id (= une saison MPG).
 
@@ -196,7 +197,7 @@ def compute_mpg_season_standings(
 
     avg_pts = points / matches_played  (MoyPts, pas moyenne de buts).
     """
-    divisions = list_included_divisions(conn, include_covid, include_incomplete)
+    divisions = list_included_divisions(conn, include_covid, include_incomplete, include_current)
     if not divisions:
         return {}
 

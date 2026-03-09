@@ -72,7 +72,8 @@ NAV_HTML = """<!-- NAV_START -->
     <div class="snav-group">
       <span class="snav-label">📈</span>
       <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
-      <a href="classement_cumul.html">Cumulé</a>
+      <a href="classement_cumul.html">Cumulé</a><span class="snav-sep">·</span>
+      <a href="bump.html">Rangs</a>
     </div>
     <div class="snav-group">
       <span class="snav-label">⚡</span>
@@ -1239,6 +1240,66 @@ def generate_joueurs() -> None:
     print(f"  ✓ joueurs.html  ({n_scorers} buteurs, {n_ht} hat-tricks, {n_missed} ratés / {n_entered} réussis décisifs)")
 
 
+# ── builder bump chart ─────────────────────────────────────────────────────────
+
+def build_bump_data(conn) -> dict:
+    """Construit BUMP pour bump.html — rang de chaque joueur par saison."""
+    snum_map_hist, year_map = _snum_map(conn)
+    current_divs = _current_division_ids(conn)
+
+    # Ordre chronologique : saisons complètes + courante
+    ordered = sorted(snum_map_hist.items(), key=lambda x: x[1])
+    if current_divs:
+        next_s = max(snum_map_hist.values()) + 1 if snum_map_hist else 1
+        cur_meta = conn.execute(
+            "SELECT division_id, season FROM divisions_metadata WHERE is_current=1"
+        ).fetchall()
+        for row in cur_meta:
+            ordered.append((row["division_id"], next_s))
+            year_map[row["division_id"]] = row["season"]
+
+    current_set = set(current_divs)
+    standings_all = compute_mpg_season_standings(conn, include_incomplete=True, include_current=True)
+    display = _load_display_names()
+
+    seasons = []
+    rank_by_div: dict[str, dict[str, int]] = {}
+    for div_id, _ in ordered:
+        data = standings_all.get(div_id)
+        if not data:
+            continue
+        seasons.append({
+            "label":   slabel(div_id),
+            "year":    year_map.get(div_id, ""),
+            "current": div_id in current_set,
+        })
+        rank_by_div[div_id] = {
+            row["person_id"]: rank
+            for rank, row in enumerate(data["standings"], 1)
+        }
+
+    valid_divs = [div_id for div_id, _ in ordered if div_id in rank_by_div]
+    players = []
+    for pid in PLAYER_ORDER:
+        ranks = [rank_by_div[div_id].get(pid) for div_id in valid_divs]
+        players.append({
+            "pid":   pid,
+            "name":  display.get(pid, pid),
+            "color": PLAYER_COLORS[pid],
+            "ranks": ranks,
+        })
+
+    return {"seasons": seasons, "players": players}
+
+
+def generate_bump() -> None:
+    with get_conn() as conn:
+        data = build_bump_data(conn)
+    inject_const(BASE_DIR / "bump.html", "BUMP", data)
+    n_s = len(data["seasons"])
+    print(f"  ✓ bump.html  ({n_s} saisons)")
+
+
 # ── registre des pages ─────────────────────────────────────────────────────────
 
 PAGES: dict[str, callable] = {
@@ -1252,6 +1313,7 @@ PAGES: dict[str, callable] = {
     "h2h":                      generate_h2h,
     "bonus_impact":             generate_bonus_impact,
     "joueurs":                  generate_joueurs,
+    "bump":                     generate_bump,
 }
 
 

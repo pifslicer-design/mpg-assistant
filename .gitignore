@@ -29,5 +29,6 @@ logs/
 # Publish folder (commit these)
 !docs/
 !docs/*.html
+!bump.html
 Infos.txt
 sync.log

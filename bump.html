@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MPG — Évolution des rangs</title>
+<style>
+:root{--bg:#12141C;--card:#1A1D2E;--border:#2A2D3E;--text:#E8EAF0;--muted:#6B7280}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;padding-bottom:48px}
+.main{max-width:1200px;margin:0 auto;padding:24px 16px}
+.section-label{font-size:.68rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px}
+#chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:auto}
+svg#bump{width:100%;min-width:720px;display:block}
+.bl{fill:none;stroke-width:2.5;cursor:pointer;transition:opacity .15s,stroke-width .15s}
+.bd{cursor:pointer;transition:opacity .15s}
+.blab{cursor:pointer;transition:opacity .15s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+</style>
+</head>
+<body>
+<!-- NAV_START -->
+<style>
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #D8DAE8;
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 32px;
+    height: 48px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(64,84,204,0.08);
+  }
+  .snav-logo {
+    font-weight: 900; font-size: 15px; color: #4054CC;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .snav-groups { display: flex; gap: 24px; overflow-x: auto; }
+  .snav-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .snav-label { font-size: 13px; font-weight: 700; color: #959DAF; }
+  .snav-group a {
+    font-size: 13px; font-weight: 600; color: #1A1F2E;
+    text-decoration: none; padding: 2px 0;
+  }
+  .snav-group a:hover { color: #4054CC; }
+  .snav-group a.active { color: #4054CC; border-bottom: 2px solid #4054CC; }
+  .snav-sep { color: #D8DAE8; }
+  @media (max-width: 640px) {
+    .snav-groups { gap: 16px; }
+    .snav-label { display: none; }
+  }
+</style>
+<nav class="site-nav">
+  <a class="snav-logo" href="index.html">⚽ MPG</a>
+  <div class="snav-groups">
+    <div class="snav-group">
+      <span class="snav-label">🏆</span>
+      <a href="podiums.html">Podiums</a><span class="snav-sep">·</span>
+      <a href="hall_of_fame.html">Hall of Fame</a><span class="snav-sep">·</span>
+      <a href="hall_of_shame.html">Hall of Shame</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">📈</span>
+      <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
+      <a href="classement_cumul.html">Cumulé</a><span class="snav-sep">·</span>
+      <a href="bump.html">Rangs</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚡</span>
+      <a href="streaks.html">Séries</a><span class="snav-sep">·</span>
+      <a href="records.html">Records</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🔍</span>
+      <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
+      <a href="bonus_impact.html">Bonus</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚽</span>
+      <a href="joueurs.html">Joueurs</a>
+    </div>
+  </div>
+</nav>
+<script>(function(){
+  var p = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href') === p) a.classList.add('active');
+  });
+})();</script>
+<!-- NAV_END -->
+<div class="main">
+<div class="section-label">Évolution des classements · saison par saison</div>
+<div id="chart-wrap">
+<svg id="bump" viewBox="0 0 1100 460" preserveAspectRatio="xMinYMid meet"></svg>
+</div>
+</div>
+<script>
+const BUMP={"seasons":[{"label":"Old S1","year":2016,"current":false},{"label":"Old S2","year":2016,"current":false},{"label":"S1","year":2017,"current":false},{"label":"S2","year":2017,"current":false},{"label":"S3","year":2018,"current":false},{"label":"S4","year":2018,"current":false},{"label":"S5","year":2019,"current":false},{"label":"S7","year":2020,"current":false},{"label":"S8","year":2020,"current":false},{"label":"S10","year":2021,"current":false},{"label":"S9","year":2021,"current":false},{"label":"S11","year":2022,"current":false},{"label":"S12","year":2022,"current":false},{"label":"S13","year":2023,"current":false},{"label":"S14","year":2023,"current":false},{"label":"S15","year":2024,"current":false},{"label":"S16","year":2024,"current":false},{"label":"S17","year":2025,"current":false},{"label":"S18","year":2025,"current":true}],"players":[{"pid":"raph","name":"Raph","color":"#C0303A","ranks":[8,3,6,1,3,4,1,7,5,2,3,1,3,1,3,8,2,3,3]},{"pid":"nico","name":"Nico","color":"#2E6A99","ranks":[4,5,1,2,4,3,4,3,7,4,4,6,7,2,4,1,6,4,5]},{"pid":"francois","name":"François","color":"#1E5C3A","ranks":[2,1,5,6,6,1,5,5,8,1,1,5,1,3,5,5,4,7,2]},{"pid":"damien","name":"Damien","color":"#C08A00","ranks":[1,2,4,5,5,2,6,6,2,7,5,4,2,5,6,3,1,6,1]},{"pid":"greg","name":"Greg","color":"#D4643A","ranks":[3,4,3,4,2,8,2,1,3,8,7,8,5,7,1,7,5,5,6]},{"pid":"marc","name":"Marc","color":"#1A3D50","ranks":[7,8,2,7,8,7,3,2,4,6,8,2,6,8,8,6,8,1,7]},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","ranks":[6,7,8,8,7,5,7,8,1,3,2,3,4,6,2,2,7,8,8]},{"pid":"manu","name":"Manu","color":"#7A1A1E","ranks":[5,6,7,3,1,6,8,4,6,5,6,7,8,4,7,4,3,2,4]}]};
+(function(){
+const S=BUMP.seasons,P=BUMP.players;
+const nS=S.length;
+if(!nS)return;
+const svg=document.getElementById('bump');
+const W=1100,H=460,LP=58,RP=90,TP=30,BP=62;
+const cW=W-LP-RP,cH=H-TP-BP;
+const nR=8;
+const xP=i=>LP+i/(Math.max(nS-1,1))*cW;
+const yP=r=>TP+(r-1)/(nR-1)*cH;
+const ns='http://www.w3.org/2000/svg';
+const mk=(t,a,p)=>{const e=document.createElementNS(ns,t);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);if(p)p.appendChild(e);return e;};
+const fam='-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif';
+
+// Rank band alternates
+for(let r=1;r<=nR;r+=2){
+  const y0=r===1?TP:yP(r)-(cH/(nR-1))/2;
+  const y1=r===nR?H-BP:yP(r)+(cH/(nR-1))/2;
+  mk('rect',{x:LP,y:y0,width:cW,height:y1-y0,fill:'rgba(255,255,255,.018)'},svg);
+}
+
+// Horizontal grid + rank labels
+for(let r=1;r<=nR;r++){
+  mk('line',{x1:LP,y1:yP(r),x2:W-RP,y2:yP(r),stroke:'#232639','stroke-width':'1'},svg);
+  mk('text',{x:LP-6,y:yP(r),'font-size':'10',fill:'#4B5563','text-anchor':'end',
+    'dominant-baseline':'middle','font-family':fam},svg).textContent=r+'°';
+}
+
+// Season labels + vertical guides
+S.forEach((s,i)=>{
+  const x=xP(i);
+  mk('line',{x1:x,y1:TP,x2:x,y2:H-BP,stroke:'#232639','stroke-width':'1'},svg);
+  const g=mk('g',{transform:`translate(${x},${H-BP+6}) rotate(-45)`},svg);
+  mk('text',{x:0,y:0,'font-size':'9','text-anchor':'end',
+    fill:s.current?'#9D8CF7':'#4B5563','font-weight':s.current?'700':'400',
+    'font-family':fam},g).textContent=s.label;
+});
+
+// Dashed separator before current season
+const curIdx=S.findIndex(s=>s.current);
+if(curIdx>0){
+  const x0=(xP(curIdx-1)+xP(curIdx))/2;
+  mk('line',{x1:x0,y1:TP-8,x2:x0,y2:H-BP,
+    stroke:'#3A3D5C','stroke-width':'1.5','stroke-dasharray':'4,3'},svg);
+  mk('text',{x:x0+4,y:TP-4,'font-size':'8',fill:'#4B5563','font-family':fam}).textContent='en cours';
+}
+
+// Per-player
+const els={};
+P.forEach(p=>{
+  const pts=p.ranks.map((r,i)=>r!=null?[xP(i),yP(r)]:null);
+
+  // Path (cubic bezier horizontal control points)
+  let d='',prev=null;
+  pts.forEach(pt=>{
+    if(!pt){prev=null;return;}
+    if(!prev){d+=`M${pt[0]} ${pt[1]}`;prev=pt;return;}
+    const mx=(prev[0]+pt[0])/2;
+    d+=` C${mx} ${prev[1]},${mx} ${pt[1]},${pt[0]} ${pt[1]}`;
+    prev=pt;
+  });
+  const line=mk('path',{d,class:'bl',stroke:p.color,'data-pid':p.pid},svg);
+
+  // Dots
+  const dots=[];
+  pts.forEach((pt,i)=>{
+    if(!pt)return;
+    const isCur=S[i]&&S[i].current;
+    const c=mk('circle',{cx:pt[0],cy:pt[1],r:isCur?5:3.5,
+      fill:p.color,stroke:'#12141C','stroke-width':isCur?'2':'1.5',
+      class:'bd','data-pid':p.pid},svg);
+    dots.push(c);
+  });
+
+  // Right label at last known rank
+  const lastPt=[...pts].reverse().find(x=>x);
+  let lbl=null;
+  if(lastPt){
+    lbl=mk('text',{x:lastPt[0]+10,y:lastPt[1],'font-size':'11','font-weight':'700',
+      fill:p.color,class:'blab','data-pid':p.pid,'dominant-baseline':'middle',
+      'font-family':fam},svg);
+    lbl.textContent=p.name;
+  }
+
+  els[p.pid]={line,dots,lbl};
+});
+
+// Interaction
+let activePid=null;
+function hl(pid){
+  Object.entries(els).forEach(([id,e])=>{
+    const on=!pid||id===pid;
+    const op=on?'1':'0.06';
+    e.line.style.opacity=op;
+    e.line.style.strokeWidth=on?'3.5':'2.5';
+    e.dots.forEach(d=>d.style.opacity=op);
+    if(e.lbl)e.lbl.style.opacity=op;
+  });
+}
+svg.addEventListener('mouseover',e=>{if(!activePid&&e.target.dataset.pid)hl(e.target.dataset.pid);});
+svg.addEventListener('mouseout', e=>{if(!activePid&&e.target.dataset.pid)hl(null);});
+svg.addEventListener('click',e=>{
+  const pid=e.target.dataset.pid;
+  if(!pid){activePid=null;hl(null);return;}
+  activePid=activePid===pid?null:pid;
+  hl(activePid);
+});
+})();
+</script>
+</body>
+</html>
