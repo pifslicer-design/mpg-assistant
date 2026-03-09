@@ -84,6 +84,10 @@ NAV_HTML = """<!-- NAV_START -->
       <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
       <a href="bonus_impact.html">Bonus</a>
     </div>
+    <div class="snav-group">
+      <span class="snav-label">⚽</span>
+      <a href="joueurs.html">Joueurs</a>
+    </div>
   </div>
 </nav>
 <script>(function(){
@@ -896,6 +900,200 @@ def generate_bonus_impact() -> None:
     print(f"  ✓ bonus_impact.html  ({n_total} bonus utilisations)")
 
 
+# ── builders joueurs ──────────────────────────────────────────────────────────
+
+def build_joueurs_data(conn) -> dict:
+    """Construit DATA pour joueurs.html — stats joueurs de foot individuels."""
+    display = _load_display_names()
+    POS_MAP = {1: "G", 2: "D", 3: "M", 4: "A"}
+
+    rows = conn.execute("""
+        SELECT m.game_week, m.division_id, m.season,
+               t1.person_id AS home_pid, t2.person_id AS away_pid,
+               m.raw_json
+        FROM matches m
+        JOIN teams t1 ON m.home_team_id = t1.id
+        JOIN teams t2 ON m.away_team_id = t2.id
+        WHERE m.raw_json LIKE '%lastName%'
+    """).fetchall()
+
+    # player_id → {name, pos, goals, ratings, appearances, owners}
+    agg: dict[str, dict] = {}
+    hat_tricks: list[dict] = []
+    # person_id → {rotaldos, total_goals, player_stats{player_id → {name,pos,goals,ratings,appearances}}}
+    by_mpg: dict[str, dict] = {
+        pid: {"rotaldos": 0, "total_goals": 0, "player_stats": {}}
+        for pid in PLAYER_ORDER
+    }
+
+    for row in rows:
+        home_pid = row["home_pid"]
+        away_pid = row["away_pid"]
+        try:
+            rj = json.loads(row["raw_json"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+
+        # Count rotaldos per manager
+        for side, person_id in [("home", home_pid), ("away", away_pid)]:
+            if not person_id or person_id not in by_mpg:
+                continue
+            pop = rj.get(side, {}).get("playersOnPitch", {})
+            for pos_str, pdata in pop.items():
+                try:
+                    pos_num = int(pos_str)
+                except (ValueError, TypeError):
+                    continue
+                if 1 <= pos_num <= 11:
+                    if str(pdata.get("playerId", "")).startswith("rotaldo_"):
+                        by_mpg[person_id]["rotaldos"] += 1
+
+        # Aggregate player stats
+        for side, person_id in [("home", home_pid), ("away", away_pid)]:
+            if not person_id or person_id not in by_mpg:
+                continue
+            players = rj.get(side, {}).get("players", {})
+            for player_id, p in players.items():
+                if player_id.startswith("rotaldo_"):
+                    continue  # skip rotaldo placeholders from player stats
+                fname = p.get("firstName", "") or ""
+                lname = p.get("lastName", "") or ""
+                name = f"{fname} {lname}".strip() or player_id
+                rating = p.get("rating") or 0
+                goals = p.get("goals") or 0
+                pos = POS_MAP.get(p.get("position", 0), "?")
+
+                # Global aggregation
+                if player_id not in agg:
+                    agg[player_id] = {
+                        "name": name, "pos": pos,
+                        "goals": 0, "ratings": [],
+                        "appearances": 0, "owners": set(),
+                    }
+                entry = agg[player_id]
+                entry["goals"] += goals
+                entry["appearances"] += 1
+                if rating > 0:
+                    entry["ratings"].append(rating)
+                entry["owners"].add(person_id)
+
+                # Per-manager aggregation
+                pm = by_mpg[person_id]["player_stats"]
+                if player_id not in pm:
+                    pm[player_id] = {
+                        "name": name, "pos": pos,
+                        "goals": 0, "ratings": [], "appearances": 0,
+                    }
+                pm[player_id]["goals"] += goals
+                pm[player_id]["appearances"] += 1
+                if rating > 0:
+                    pm[player_id]["ratings"].append(rating)
+                by_mpg[person_id]["total_goals"] += goals
+
+                # Hat-trick detection
+                if goals >= 3:
+                    hat_tricks.append({
+                        "name": name,
+                        "goals": goals,
+                        "gw": row["game_week"],
+                        "season": row["season"],
+                        "owner": person_id,
+                    })
+
+    def _avg(ratings):
+        return round(sum(ratings) / len(ratings), 2) if ratings else 0.0
+
+    # Top scorers (top 20)
+    scored = sorted(
+        [(pid, d) for pid, d in agg.items() if d["goals"] > 0],
+        key=lambda x: (-x[1]["goals"], -x[1]["appearances"]),
+    )
+    top_scorers = [
+        {
+            "name": d["name"], "pos": d["pos"],
+            "goals": d["goals"], "matches": d["appearances"],
+            "gpg": round(d["goals"] / d["appearances"], 2),
+            "owners": sorted(d["owners"]),
+        }
+        for _, d in scored[:20]
+    ]
+
+    # Best/worst players (min 5 rated matches)
+    rated_pool = [(pid, d) for pid, d in agg.items() if len(d["ratings"]) >= 5]
+    best_players = [
+        {"name": d["name"], "pos": d["pos"], "avg": _avg(d["ratings"]), "matches": len(d["ratings"])}
+        for _, d in sorted(rated_pool, key=lambda x: -_avg(x[1]["ratings"]))[:10]
+    ]
+    worst_players = [
+        {"name": d["name"], "pos": d["pos"], "avg": _avg(d["ratings"]), "matches": len(d["ratings"])}
+        for _, d in sorted(rated_pool, key=lambda x: _avg(x[1]["ratings"]))[:10]
+    ]
+
+    # Most used (top 20)
+    most_used = [
+        {"name": d["name"], "pos": d["pos"], "appearances": d["appearances"], "owners": sorted(d["owners"])}
+        for _, d in sorted(agg.items(), key=lambda x: -x[1]["appearances"])[:20]
+    ]
+
+    # Hat-trick club (sorted by goals desc, then season desc)
+    hat_tricks.sort(key=lambda x: (-x["goals"], -x["season"], -x["gw"]))
+
+    # Voyageurs — players in most different MPG teams (top 15)
+    voyageurs = [
+        {"name": d["name"], "n_owners": len(d["owners"]), "owners": sorted(d["owners"])}
+        for _, d in sorted(
+            [(pid, d) for pid, d in agg.items() if len(d["owners"]) > 1],
+            key=lambda x: (-len(x[1]["owners"]), -x[1]["appearances"]),
+        )[:15]
+    ]
+
+    # Per-manager stats
+    by_mpg_final: dict[str, dict] = {}
+    for person_id in PLAYER_ORDER:
+        mgr = by_mpg[person_id]
+        pm = mgr["player_stats"]
+        rated = [(pid, d) for pid, d in pm.items() if len(d["ratings"]) >= 3]
+        best5 = [
+            {"name": d["name"], "pos": d["pos"], "avg": _avg(d["ratings"]), "matches": len(d["ratings"])}
+            for _, d in sorted(rated, key=lambda x: -_avg(x[1]["ratings"]))[:5]
+        ]
+        worst5 = [
+            {"name": d["name"], "pos": d["pos"], "avg": _avg(d["ratings"]), "matches": len(d["ratings"])}
+            for _, d in sorted(rated, key=lambda x: _avg(x[1]["ratings"]))[:5]
+        ]
+        fideles5 = [
+            {"name": d["name"], "pos": d["pos"], "appearances": d["appearances"]}
+            for _, d in sorted(pm.items(), key=lambda x: -x[1]["appearances"])[:5]
+        ]
+        by_mpg_final[person_id] = {
+            "best": best5, "worst": worst5, "fideles": fideles5,
+            "total_goals": mgr["total_goals"],
+            "rotaldos": mgr["rotaldos"],
+        }
+
+    return {
+        "top_scorers":   top_scorers,
+        "best_players":  best_players,
+        "worst_players": worst_players,
+        "most_used":     most_used,
+        "hat_tricks":    hat_tricks,
+        "voyageurs":     voyageurs,
+        "by_mpg":        by_mpg_final,
+        "mpg_players":   PLAYER_ORDER,
+        "display_names": {pid: display.get(pid, pid) for pid in PLAYER_ORDER},
+        "colors":        PLAYER_COLORS,
+    }
+
+
+def generate_joueurs() -> None:
+    with get_conn() as conn:
+        data = build_joueurs_data(conn)
+    inject_const(BASE_DIR / "joueurs.html", "DATA", data)
+    n_scorers = len(data["top_scorers"])
+    n_ht = len(data["hat_tricks"])
+    print(f"  ✓ joueurs.html  ({n_scorers} buteurs, {n_ht} hat-tricks)")
+
+
 # ── registre des pages ─────────────────────────────────────────────────────────
 
 PAGES: dict[str, callable] = {
@@ -908,6 +1106,7 @@ PAGES: dict[str, callable] = {
     "streaks":                  generate_streaks,
     "h2h":                      generate_h2h,
     "bonus_impact":             generate_bonus_impact,
+    "joueurs":                  generate_joueurs,
 }
 
 
