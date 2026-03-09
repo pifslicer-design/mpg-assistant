@@ -29,6 +29,71 @@ DOCS_DIR = BASE_DIR / "docs"
 
 _modified: set[Path] = set()  # fichiers HTML écrits dans ce run
 
+NAV_HTML = """<!-- NAV_START -->
+<style>
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #D8DAE8;
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 32px;
+    height: 48px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(64,84,204,0.08);
+  }
+  .snav-logo {
+    font-weight: 900; font-size: 15px; color: #4054CC;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .snav-groups { display: flex; gap: 24px; overflow-x: auto; }
+  .snav-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .snav-label { font-size: 13px; font-weight: 700; color: #959DAF; }
+  .snav-group a {
+    font-size: 13px; font-weight: 600; color: #1A1F2E;
+    text-decoration: none; padding: 2px 0;
+  }
+  .snav-group a:hover { color: #4054CC; }
+  .snav-group a.active { color: #4054CC; border-bottom: 2px solid #4054CC; }
+  .snav-sep { color: #D8DAE8; }
+  @media (max-width: 640px) {
+    .snav-groups { gap: 16px; }
+    .snav-label { display: none; }
+  }
+</style>
+<nav class="site-nav">
+  <a class="snav-logo" href="index.html">⚽ MPG</a>
+  <div class="snav-groups">
+    <div class="snav-group">
+      <span class="snav-label">🏆</span>
+      <a href="podiums.html">Podiums</a><span class="snav-sep">·</span>
+      <a href="hall_of_fame.html">Hall of Fame</a><span class="snav-sep">·</span>
+      <a href="hall_of_shame.html">Hall of Shame</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">📈</span>
+      <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
+      <a href="classement_cumul.html">Cumulé</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚡</span>
+      <a href="streaks.html">Séries</a><span class="snav-sep">·</span>
+      <a href="records.html">Records</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🔍</span>
+      <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
+      <a href="bonus_impact.html">Bonus</a>
+    </div>
+  </div>
+</nav>
+<script>(function(){
+  var p = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href') === p) a.classList.add('active');
+  });
+})();</script>
+<!-- NAV_END -->"""
+
 PLAYER_COLORS = {
     "raph":     "#C0303A",
     "nico":     "#2E6A99",
@@ -87,6 +152,15 @@ def inject_const(html_path: Path, var_name: str, data) -> None:
     new_content = content[:m.start()] + f"const {var_name}={json_str}" + content[end_val:]
     html_path.write_text(new_content, encoding="utf-8")
     _modified.add(html_path)
+
+
+def inject_nav(path: Path) -> None:
+    """Remplace les marqueurs <!-- NAV_START -->...<!-- NAV_END --> par NAV_HTML."""
+    content = path.read_text(encoding="utf-8")
+    new = re.sub(r'<!-- NAV_START -->.*?<!-- NAV_END -->', NAV_HTML, content, flags=re.DOTALL)
+    if new != content:
+        path.write_text(new, encoding="utf-8")
+        _modified.add(path)
 
 
 def _snum_map(conn) -> tuple[dict[str, int], dict[str, int]]:
@@ -854,6 +928,10 @@ def main() -> None:
                 print(f"  ✗ {t} : {exc}")
                 traceback.print_exc()
                 errors += 1
+
+    # Injecter la nav sur toutes les pages HTML (idempotent)
+    for html_path in sorted(BASE_DIR.glob("*.html")):
+        inject_nav(html_path)
 
     # Miroir vers docs/ si le dossier existe (GitHub Pages)
     if DOCS_DIR.exists() and _modified:

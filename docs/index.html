@@ -31,7 +31,7 @@
   /* HEADER */
   header {
     background: var(--grad);
-    padding: 48px 24px 56px;
+    padding: 40px 24px 48px;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -55,141 +55,74 @@
     margin-bottom: 16px;
   }
   header h1 {
-    font-size: clamp(28px, 5vw, 48px);
+    font-size: clamp(28px, 5vw, 44px);
     font-weight: 900;
     color: #fff;
     letter-spacing: -0.5px;
     line-height: 1.1;
   }
   header p {
-    margin-top: 12px;
-    font-size: 16px;
+    margin-top: 10px;
+    font-size: 15px;
     color: rgba(255,255,255,0.8);
     font-weight: 600;
   }
 
-  /* DECORATIVE BALL */
-  .ball {
-    position: absolute;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-  }
-  .ball-1 { width: 200px; height: 200px; top: -60px; left: -60px; }
-  .ball-2 { width: 120px; height: 120px; bottom: -30px; right: 10%; }
-  .ball-3 { width: 60px; height: 60px; top: 30px; right: 20%; }
-
-  /* MAIN CONTENT */
+  /* MAIN */
   main {
-    max-width: 900px;
-    margin: -24px auto 40px;
+    max-width: 860px;
+    margin: -20px auto 40px;
     padding: 0 24px;
     position: relative;
     z-index: 1;
   }
 
-  /* GRID */
-  .grid {
+  /* CATEGORY GRID */
+  .cat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 560px) {
+    .cat-grid { grid-template-columns: 1fr; }
   }
 
-  /* CARD */
-  .card {
+  .cat-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 28px 24px 24px;
-    text-decoration: none;
-    color: var(--text);
+    padding: 24px 22px 20px;
+    box-shadow: 0 2px 8px rgba(64,84,204,0.07);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-    box-shadow: 0 2px 8px rgba(64,84,204,0.07);
-    position: relative;
-    overflow: hidden;
+    gap: 10px;
   }
-  .card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
-    background: var(--grad);
-    opacity: 0;
-    transition: opacity 0.18s ease;
-  }
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 28px rgba(64,84,204,0.15);
-  }
-  .card:hover::before { opacity: 1; }
-
-  .card-icon {
-    font-size: 36px;
-    line-height: 1;
-  }
-  .card-title {
-    font-size: 17px;
-    font-weight: 800;
+  .cat-icon { font-size: 28px; line-height: 1; }
+  .cat-title {
+    font-size: 15px;
+    font-weight: 900;
     color: var(--text);
-    line-height: 1.2;
   }
-  .card-desc {
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 600;
-    line-height: 1.5;
-    flex: 1;
-  }
-  .card-cta {
-    display: inline-flex;
-    align-items: center;
+  .cat-links {
+    display: flex;
+    flex-direction: column;
     gap: 6px;
+  }
+  .cat-links a {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--blue);
-    margin-top: 4px;
+    text-decoration: none;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
   }
-  .card-cta svg {
-    transition: transform 0.15s ease;
-  }
-  .card:hover .card-cta svg {
-    transform: translateX(4px);
-  }
-
-  /* FEATURED CARD (spans 2 cols on wide screens) */
-  .card-wide {
-    grid-column: span 2;
-  }
-  @media (max-width: 640px) {
-    .card-wide { grid-column: span 1; }
-  }
-
-  /* TAG */
-  .card-tag {
-    position: absolute;
-    top: 16px; right: 16px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--muted);
-    padding: 3px 10px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-  .card-tag.anim {
-    background: #EEF1FF;
-    border-color: #C5CBF5;
-    color: var(--blue);
-  }
+  .cat-links a:last-child { border-bottom: none; }
+  .cat-links a:hover { color: #2a3ab0; }
 
   /* FOOTER */
   footer {
     text-align: center;
-    padding: 32px 24px;
+    padding: 28px 24px;
     font-size: 13px;
     color: var(--muted);
     font-weight: 600;
@@ -203,110 +136,116 @@
 </style>
 </head>
 <body>
+<!-- NAV_START -->
+<style>
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #D8DAE8;
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 32px;
+    height: 48px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(64,84,204,0.08);
+  }
+  .snav-logo {
+    font-weight: 900; font-size: 15px; color: #4054CC;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .snav-groups { display: flex; gap: 24px; overflow-x: auto; }
+  .snav-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .snav-label { font-size: 13px; font-weight: 700; color: #959DAF; }
+  .snav-group a {
+    font-size: 13px; font-weight: 600; color: #1A1F2E;
+    text-decoration: none; padding: 2px 0;
+  }
+  .snav-group a:hover { color: #4054CC; }
+  .snav-group a.active { color: #4054CC; border-bottom: 2px solid #4054CC; }
+  .snav-sep { color: #D8DAE8; }
+  @media (max-width: 640px) {
+    .snav-groups { gap: 16px; }
+    .snav-label { display: none; }
+  }
+</style>
+<nav class="site-nav">
+  <a class="snav-logo" href="index.html">⚽ MPG</a>
+  <div class="snav-groups">
+    <div class="snav-group">
+      <span class="snav-label">🏆</span>
+      <a href="podiums.html">Podiums</a><span class="snav-sep">·</span>
+      <a href="hall_of_fame.html">Hall of Fame</a><span class="snav-sep">·</span>
+      <a href="hall_of_shame.html">Hall of Shame</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">📈</span>
+      <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
+      <a href="classement_cumul.html">Cumulé</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚡</span>
+      <a href="streaks.html">Séries</a><span class="snav-sep">·</span>
+      <a href="records.html">Records</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🔍</span>
+      <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
+      <a href="bonus_impact.html">Bonus</a>
+    </div>
+  </div>
+</nav>
+<script>(function(){
+  var p = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href') === p) a.classList.add('active');
+  });
+})();</script>
+<!-- NAV_END -->
 
 <header>
-  <div class="ball ball-1"></div>
-  <div class="ball ball-2"></div>
-  <div class="ball ball-3"></div>
-  <div class="header-badge">Ligue privée · 8 joueurs</div>
+  <div class="header-badge">Ligue privée · 8 joueurs · 2016–2025</div>
   <h1>MPG Assistant</h1>
-  <p>Historique & statistiques de la ligue</p>
+  <p>Historique &amp; statistiques</p>
 </header>
 
 <main>
-  <div class="grid">
+  <div class="cat-grid">
 
-    <a class="card card-wide" href="classement_chronologique.html">
-      <span class="card-tag anim">Animé</span>
-      <div class="card-icon">📈</div>
-      <div class="card-title">Évolution des moyennes</div>
-      <div class="card-desc">Courbe animée de la moyenne de points par match au fil des saisons. Animation journée par journée avec fenêtre glissante.</div>
-      <div class="card-cta">
-        Voir l'animation
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="cat-card">
+      <div class="cat-icon">🏆</div>
+      <div class="cat-title">Palmarès</div>
+      <div class="cat-links">
+        <a href="podiums.html">Podiums par saison</a>
+        <a href="hall_of_fame.html">Hall of Fame</a>
+        <a href="hall_of_shame.html">Hall of Shame</a>
       </div>
-    </a>
+    </div>
 
-    <a class="card card-wide" href="classement_cumul.html">
-      <span class="card-tag anim">Animé</span>
-      <div class="card-icon">🏃</div>
-      <div class="card-title">Classement cumulé</div>
-      <div class="card-desc">Évolution du total de points accumulés depuis le début de la ligue. Qui a le plus de points sur toute l'histoire ?</div>
-      <div class="card-cta">
-        Voir l'animation
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="cat-card">
+      <div class="cat-icon">📈</div>
+      <div class="cat-title">Classements animés</div>
+      <div class="cat-links">
+        <a href="classement_chronologique.html">Évolution des moyennes</a>
+        <a href="classement_cumul.html">Classement cumulé</a>
       </div>
-    </a>
+    </div>
 
-    <a class="card" href="podiums.html">
-      <div class="card-icon">🏆</div>
-      <div class="card-title">Podiums par saison</div>
-      <div class="card-desc">1er, 2e, 3e et dernier pour chacune des 18 saisons terminées. Stats V/N/D, goal average et points.</div>
-      <div class="card-cta">
-        Voir les podiums
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="cat-card">
+      <div class="cat-icon">⚡</div>
+      <div class="cat-title">Séries &amp; Records</div>
+      <div class="cat-links">
+        <a href="streaks.html">Séries consécutives</a>
+        <a href="records.html">Records &amp; Seuils</a>
       </div>
-    </a>
+    </div>
 
-    <a class="card" href="hall_of_fame.html">
-      <div class="card-icon">🥇</div>
-      <div class="card-title">Hall of Fame</div>
-      <div class="card-desc">Le palmarès des champions. Classement par nombre de titres remportés sur l'ensemble des saisons historiques.</div>
-      <div class="card-cta">
-        Voir les champions
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="cat-card">
+      <div class="cat-icon">🔍</div>
+      <div class="cat-title">Analyse</div>
+      <div class="cat-links">
+        <a href="h2h.html">Face-à-face H2H</a>
+        <a href="bonus_impact.html">Impact des Bonus</a>
       </div>
-    </a>
-
-    <a class="card" href="hall_of_shame.html">
-      <div class="card-icon">🪣</div>
-      <div class="card-title">Hall of Shame</div>
-      <div class="card-desc">Le palmarès des chapeaux. Qui a terminé dernier le plus souvent ? Un classement à éviter à tout prix.</div>
-      <div class="card-cta">
-        Voir les chapeaux
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-    </a>
-
-    <a class="card" href="streaks.html">
-      <div class="card-icon">🔥</div>
-      <div class="card-title">Séries Consécutives</div>
-      <div class="card-desc">Records all-time de séries de victoires, de séries invaincu et de défaites. Plus le momentum de chaque joueur en fin de S18.</div>
-      <div class="card-cta">
-        Voir les séries
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-    </a>
-
-    <a class="card card-wide" href="h2h.html">
-      <div class="card-icon">⚔️</div>
-      <div class="card-title">Face-à-face H2H</div>
-      <div class="card-desc">Matrice complète des duels entre les 8 joueurs. Qui domine qui ? Nemesis, victime préférée, bilan complet sur toutes les saisons terminées.</div>
-      <div class="card-cta">
-        Voir les duels
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-    </a>
-
-    <a class="card card-wide" href="records.html">
-      <div class="card-icon">📊</div>
-      <div class="card-title">Records & Seuils</div>
-      <div class="card-desc">Combien de points pour être champion ou éviter le chapeau ? Distributions historiques par position, records absolus (meilleure/pire saison, diff buts…) et tableau de toutes les performances.</div>
-      <div class="card-cta">
-        Voir les records
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-    </a>
-
-    <a class="card card-wide" href="bonus_impact.html">
-      <div class="card-icon">🎲</div>
-      <div class="card-title">Impact des Bonus</div>
-      <div class="card-desc">Analyse contrefactuelle sur 1 008 matchs : quel bonus change vraiment le résultat ? La Valise #1 (36% des matchs changés), Zahia #2, le Mirror change 4% des résultats.</div>
-      <div class="card-cta">
-        Voir l'analyse
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-    </a>
+    </div>
 
   </div>
 </main>
