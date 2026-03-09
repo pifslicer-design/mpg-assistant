@@ -35,22 +35,37 @@ main{max-width:1000px;margin:-20px auto 40px;padding:0 20px;position:relative;z-
 .streak-icon{font-size:18px;}
 
 .streak-row{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.streak-row[title]{cursor:help;}
 .streak-rank{font-size:10px;font-weight:800;color:var(--muted);width:14px;text-align:right;flex-shrink:0;}
 .streak-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .streak-name{font-size:12px;font-weight:800;width:64px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .streak-bar-wrap{flex:1;background:var(--bg);border-radius:4px;height:12px;overflow:hidden;}
 .streak-bar{height:100%;border-radius:4px;min-width:4px;}
 .streak-value{font-size:13px;font-weight:900;width:22px;text-align:right;flex-shrink:0;}
+.ongoing-dot{font-size:9px;color:var(--green);flex-shrink:0;margin-left:1px;line-height:1;}
 
-/* ── CURRENT STREAK ── */
+/* ── CURRENT SECTION ── */
 .current-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(64,84,204,.06);}
-.current-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;}
+.current-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+.current-header .section-title{margin-bottom:0;}
+
+/* ── FILTER TABS ── */
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.tab-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;}
+.tab-btn:hover{border-color:var(--blue);color:var(--blue);}
+.tab-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+/* ── CURRENT CARDS ── */
+.current-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 @media(max-width:600px){.current-grid{grid-template-columns:repeat(2,1fr);}}
 
 .current-card{border-radius:12px;padding:14px 10px;border:1.5px solid;text-align:center;}
 .current-name{font-size:12px;font-weight:800;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .current-badge{font-size:24px;font-weight:900;line-height:1;}
 .current-label{font-size:10px;font-weight:700;margin-top:5px;text-transform:uppercase;letter-spacing:.5px;}
+.current-tip{font-size:10px;color:var(--muted);font-weight:600;margin-top:5px;}
+.current-ub{font-size:10px;color:var(--blue);font-weight:700;margin-top:3px;}
+.live-dot{color:var(--green);font-size:10px;vertical-align:middle;}
 
 footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
 footer a{color:var(--blue);text-decoration:none;font-weight:700;}
@@ -63,48 +78,52 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
   <a href="index.html" style="position:absolute;top:16px;left:20px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);text-decoration:none;background:rgba(255,255,255,0.18);padding:4px 12px;border-radius:16px;">← Accueil</a>
   <div class="hbadge">18 saisons · cross-divisions</div>
   <h1>Séries Consécutives</h1>
-  <p>Records de séries all-time · Momentum en fin de S18</p>
+  <p>Records all-time · Série en cours par joueur</p>
 </header>
 
 <main>
-  <div class="section-title">Records de séries</div>
+  <div class="section-title">Records all-time</div>
   <div class="streaks-grid" id="streaksGrid"></div>
 
   <div class="current-wrap">
-    <div class="section-title">Série en cours à la fin de S18</div>
+    <div class="current-header">
+      <div class="section-title" id="currentSectionTitle">Série en cours · fin S18</div>
+      <div class="filter-tabs" id="filterTabs"></div>
+    </div>
     <div class="current-grid" id="currentGrid"></div>
   </div>
 </main>
 
 <footer>
-  Hors COVID · Hors saison en cours · <a href="index.html">Accueil</a> · <span>MPG Assistant</span>
+  Hors COVID · <a href="index.html">Accueil</a> · <span>MPG Assistant</span>
 </footer>
 
 <script>
-const STREAKS=[{"pid":"raph","name":"Raph","color":"#C0303A","best_win":8,"best_unbeaten":10,"best_loss":5,"current_type":"W","current_length":1},{"pid":"damien","name":"Damien","color":"#C08A00","best_win":8,"best_unbeaten":10,"best_loss":5,"current_type":"W","current_length":1},{"pid":"nico","name":"Nico","color":"#2E6A99","best_win":7,"best_unbeaten":11,"best_loss":4,"current_type":"L","current_length":1},{"pid":"francois","name":"François","color":"#1E5C3A","best_win":6,"best_unbeaten":12,"best_loss":5,"current_type":"L","current_length":4},{"pid":"greg","name":"Greg","color":"#D4643A","best_win":5,"best_unbeaten":9,"best_loss":6,"current_type":"W","current_length":4},{"pid":"marc","name":"Marc","color":"#1A3D50","best_win":5,"best_unbeaten":7,"best_loss":6,"current_type":"W","current_length":3},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","best_win":5,"best_unbeaten":7,"best_loss":10,"current_type":"L","current_length":2},{"pid":"manu","name":"Manu","color":"#7A1A1E","best_win":5,"best_unbeaten":7,"best_loss":5,"current_type":"L","current_length":1}];
+const STREAKS={"all_time":[{"pid":"raph","name":"Raph","color":"#C0303A","best_win":8,"best_win_tip":"J13 S11 → J6 S12","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J8 S4 → J3 S5","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J13 S8 → J3 S9","best_loss_ongoing":false},{"pid":"nico","name":"Nico","color":"#2E6A99","best_win":7,"best_win_tip":"J4 S18 → J10 S18","best_win_ongoing":false,"best_unbeaten":11,"best_unbeaten_tip":"J6 S3 → J2 S4","best_unbeaten_ongoing":false,"best_loss":4,"best_loss_tip":"J14 S5 → J3 S6","best_loss_ongoing":false},{"pid":"francois","name":"François","color":"#1E5C3A","best_win":6,"best_win_tip":"J3 S6 → J8 S6","best_win_ongoing":false,"best_unbeaten":12,"best_unbeaten_tip":"J12 S5 → J9 S6","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 S8 → J2 S9","best_loss_ongoing":false},{"pid":"damien","name":"Damien","color":"#C08A00","best_win":8,"best_win_tip":"J1 S1 → J8 S1","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J9 S2 → J4 S3","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J3 S14 → J7 S14","best_loss_ongoing":false},{"pid":"greg","name":"Greg","color":"#D4643A","best_win":5,"best_win_tip":"J13 S3 → J3 S4","best_win_ongoing":false,"best_unbeaten":9,"best_unbeaten_tip":"J8 S5 → J2 S6","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J9 S6 → J14 S6","best_loss_ongoing":false},{"pid":"marc","name":"Marc","color":"#1A3D50","best_win":5,"best_win_tip":"J11 S9 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J8 S12 → J14 S12","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J8 S15 → J13 S15","best_loss_ongoing":false},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","best_win":5,"best_win_tip":"J11 S9 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J11 S9 → J3 S10","best_unbeaten_ongoing":false,"best_loss":10,"best_loss_tip":"J9 S17 → J4 S18","best_loss_ongoing":false},{"pid":"manu","name":"Manu","color":"#7A1A1E","best_win":5,"best_win_tip":"J1 S18 → J5 S18","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J13 S3 → J5 S4","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 S2 → J2 S3","best_loss_ongoing":false}],"prev_season":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"W","length":1,"tip":"depuis J14 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"L","length":1,"tip":"depuis J14 S18","unbeaten":0,"unbeaten_tip":""},{"pid":"francois","name":"François","color":"#1E5C3A","type":"L","length":4,"tip":"depuis J11 S18","unbeaten":0,"unbeaten_tip":""},{"pid":"damien","name":"Damien","color":"#C08A00","type":"W","length":1,"tip":"depuis J14 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"greg","name":"Greg","color":"#D4643A","type":"W","length":4,"tip":"depuis J11 S18","unbeaten":4,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"W","length":3,"tip":"depuis J12 S18","unbeaten":3,"unbeaten_tip":""},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"L","length":2,"tip":"depuis J13 S18","unbeaten":0,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"L","length":1,"tip":"depuis J14 S18","unbeaten":0,"unbeaten_tip":""}],"live":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"D","length":2,"tip":"depuis J2 S19","unbeaten":2,"unbeaten_tip":"","is_live":true},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":2,"unbeaten_tip":"depuis J2 S19","is_live":true},{"pid":"damien","name":"Damien","color":"#C08A00","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":4,"unbeaten_tip":"depuis J14 S18","is_live":true},{"pid":"greg","name":"Greg","color":"#D4643A","type":"W","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":6,"unbeaten_tip":"depuis J12 S18","is_live":true},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"L","length":1,"tip":"depuis J3 S19","unbeaten":0,"unbeaten_tip":"","is_live":true}],"season_only":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":""},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"D","length":2,"tip":"depuis J2 S19","unbeaten":2,"unbeaten_tip":""},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":2,"unbeaten_tip":"depuis J2 S19"},{"pid":"damien","name":"Damien","color":"#C08A00","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":3,"unbeaten_tip":"depuis J1 S19"},{"pid":"greg","name":"Greg","color":"#D4643A","type":"W","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":3,"unbeaten_tip":"depuis J1 S19"},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"D","length":1,"tip":"depuis J3 S19","unbeaten":1,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"L","length":1,"tip":"depuis J3 S19","unbeaten":0,"unbeaten_tip":""}],"last_snum":18,"current_snum":19};
 
 // ── Config ──
-const TYPE_LABEL = { W: 'Victoires', D: 'Nuls', L: 'Défaites' };
-const TYPE_COLOR = { W: '#45C945', D: '#4054CC', L: '#C0303A' };
-const TYPE_BG    = { W: 'rgba(69,201,69,0.10)', D: 'rgba(64,84,204,0.10)', L: 'rgba(192,48,58,0.10)' };
-const TYPE_BORDER= { W: 'rgba(69,201,69,0.45)', D: 'rgba(64,84,204,0.40)', L: 'rgba(192,48,58,0.45)' };
-const TYPE_EMOJI = { W: '🔥', D: '⏸️', L: '❄️' };
+const TYPE_LABEL  = { W: 'Victoires', D: 'Nuls', L: 'Défaites' };
+const TYPE_COLOR  = { W: '#45C945',   D: '#4054CC', L: '#C0303A' };
+const TYPE_BG     = { W: 'rgba(69,201,69,0.10)',   D: 'rgba(64,84,204,0.10)',  L: 'rgba(192,48,58,0.10)' };
+const TYPE_BORDER = { W: 'rgba(69,201,69,0.45)',   D: 'rgba(64,84,204,0.40)',  L: 'rgba(192,48,58,0.45)' };
+const TYPE_EMOJI  = { W: '🔥', D: '⏸️', L: '❄️' };
 
-// ── Streak blocks ──
-function renderBlock(container, title, icon, color, key, sortDir) {
+// ── All-time blocks ──
+function renderBlock(container, title, icon, color, key, tipKey, ongoingKey) {
   const block = document.createElement('div');
   block.className = 'streak-block';
-
-  const sorted = [...STREAKS].sort((a, b) => sortDir * (b[key] - a[key]));
-  const maxVal = sorted[0][key] || 1;
-
+  const sorted = [...STREAKS.all_time].sort((a, b) => b[key] - a[key]);
+  const maxVal = sorted[0]?.[key] || 1;
   block.innerHTML = `<div class="streak-block-title"><span class="streak-icon">${icon}</span>${title}</div>`;
 
   sorted.forEach((p, i) => {
-    const val = p[key];
-    const pct = (val / maxVal * 100).toFixed(1);
-    const row = document.createElement('div');
+    const val     = p[key];
+    const pct     = (val / maxVal * 100).toFixed(1);
+    const ongoing = p[ongoingKey];
+    const tip     = p[tipKey];
+    const row     = document.createElement('div');
     row.className = 'streak-row';
+    if (tip) row.title = tip + (ongoing ? ' · EN COURS' : '');
     row.innerHTML = `
       <span class="streak-rank">${i + 1}</span>
       <span class="streak-dot" style="background:${p.color}"></span>
@@ -113,6 +132,7 @@ function renderBlock(container, title, icon, color, key, sortDir) {
         <div class="streak-bar" style="width:${pct}%;background:${color}"></div>
       </div>
       <span class="streak-value" style="color:${color}">${val}</span>
+      ${ongoing ? '<span class="ongoing-dot" title="Série active">●</span>' : ''}
     `;
     block.appendChild(row);
   });
@@ -121,32 +141,79 @@ function renderBlock(container, title, icon, color, key, sortDir) {
 }
 
 const grid = document.getElementById('streaksGrid');
-renderBlock(grid, 'Série de victoires',   '🔥', '#45C945', 'best_win',      1);
-renderBlock(grid, 'Invaincu (V + N)',      '🛡️', '#4054CC', 'best_unbeaten', 1);
-renderBlock(grid, 'Série de défaites',    '💀', '#C0303A', 'best_loss',     1);
+renderBlock(grid, 'Série de victoires',  '🔥', '#45C945', 'best_win',      'best_win_tip',      'best_win_ongoing');
+renderBlock(grid, 'Invaincu (V + N)',     '🛡️', '#4054CC', 'best_unbeaten', 'best_unbeaten_tip', 'best_unbeaten_ongoing');
+renderBlock(grid, 'Série de défaites',   '💀', '#C0303A', 'best_loss',     'best_loss_tip',     'best_loss_ongoing');
 
-// ── Current streak cards ──
-const curGrid = document.getElementById('currentGrid');
-// Sort: W first, then D, then L; within same type by length desc
-const typeOrder = { W: 0, D: 1, L: 2 };
-const sortedCur = [...STREAKS].sort((a, b) =>
-  typeOrder[a.current_type] - typeOrder[b.current_type] ||
-  b.current_length - a.current_length
-);
+// ── Current section ──
+const TYPE_ORDER = { W: 0, D: 1, L: 2 };
 
-sortedCur.forEach(p => {
-  const t = p.current_type;
-  const card = document.createElement('div');
-  card.className = 'current-card';
-  card.style.background  = TYPE_BG[t];
-  card.style.borderColor = TYPE_BORDER[t];
-  card.innerHTML = `
-    <div class="current-name" style="color:${p.color}">${p.name}</div>
-    <div class="current-badge" style="color:${TYPE_COLOR[t]}">${p.current_length}${t === 'W' ? 'V' : t === 'D' ? 'N' : 'D'}</div>
-    <div class="current-label" style="color:${TYPE_COLOR[t]}">${TYPE_EMOJI[t]} ${TYPE_LABEL[t]}</div>
-  `;
-  curGrid.appendChild(card);
+function renderCurrentSection(mode) {
+  const curGrid = document.getElementById('currentGrid');
+  curGrid.innerHTML = '';
+  const cards = STREAKS[mode] || [];
+  const sorted = [...cards].sort((a, b) =>
+    TYPE_ORDER[a.type] - TYPE_ORDER[b.type] || b.length - a.length
+  );
+
+  sorted.forEach(p => {
+    const t      = p.type;
+    const isLive = (mode === 'live') && p.is_live;
+    const card   = document.createElement('div');
+    card.className = 'current-card';
+    card.style.background  = TYPE_BG[t];
+    card.style.borderColor = TYPE_BORDER[t];
+
+    const ubLine = (t !== 'L' && p.unbeaten > p.length)
+      ? `<div class="current-ub">Invaincu : ${p.unbeaten}m${p.unbeaten_tip ? ' · ' + p.unbeaten_tip : ''}</div>`
+      : '';
+
+    card.innerHTML = `
+      <div class="current-name" style="color:${p.color}">${p.name}${isLive ? ' <span class="live-dot" title="Série active en S actuelle">●</span>' : ''}</div>
+      <div class="current-badge" style="color:${TYPE_COLOR[t]}">${p.length}${t === 'W' ? 'V' : t === 'D' ? 'N' : 'D'}</div>
+      <div class="current-label" style="color:${TYPE_COLOR[t]}">${TYPE_EMOJI[t]} ${TYPE_LABEL[t]}</div>
+      ${p.tip ? `<div class="current-tip">${p.tip}</div>` : ''}
+      ${ubLine}
+    `;
+    curGrid.appendChild(card);
+  });
+
+  if (sorted.length === 0) {
+    curGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:20px;font-size:13px;">Aucune donnée disponible</div>';
+  }
+}
+
+// ── Tabs ──
+const MODES = ['prev_season', 'live', 'season_only'];
+const lastS = STREAKS.last_snum;
+const curS  = STREAKS.current_snum;
+const MODE_LABELS   = [`Fin S${lastS}`, 'En cours', curS ? `S${curS}` : 'S. act.'];
+const MODE_TITLES   = [
+  `Série en cours · fin S${lastS}`,
+  'Série en cours · toutes saisons',
+  `Série en cours · S${curS || 'act.'}`,
+];
+
+let activeMode = 'prev_season';
+const tabsContainer = document.getElementById('filterTabs');
+
+MODES.forEach((mode, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn' + (mode === activeMode ? ' active' : '');
+  btn.textContent = MODE_LABELS[i];
+  btn.onclick = () => {
+    activeMode = mode;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('currentSectionTitle').textContent = MODE_TITLES[i];
+    renderCurrentSection(mode);
+  };
+  tabsContainer.appendChild(btn);
 });
+
+// Initial render
+document.getElementById('currentSectionTitle').textContent = MODE_TITLES[0];
+renderCurrentSection(activeMode);
 </script>
 </body>
 </html>

@@ -443,33 +443,116 @@ def generate_records() -> None:
 
 # ── builders streaks ───────────────────────────────────────────────────────────
 
-def build_streaks_data(conn) -> list[dict]:
-    """Retourne STREAKS trié par best_win DESC pour streaks.html."""
-    raw = compute_streaks(conn)
-    display = _load_display_names()
-    rows = []
+def _snum_map_extended(conn) -> dict[str, int]:
+    """Retourne {division_id: snum} pour les divisions non-COVID (historiques + courante)."""
+    divs = list_included_divisions(conn, include_current=True)
+    ph = ",".join("?" * len(divs))
+    rows = conn.execute(
+        f"SELECT division_id FROM divisions_metadata "
+        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divs
+    ).fetchall()
+    return {r["division_id"]: i + 1 for i, r in enumerate(rows)}
+
+
+def _current_division_ids(conn) -> list[str]:
+    rows = conn.execute(
+        "SELECT division_id FROM divisions_metadata WHERE is_current=1"
+    ).fetchall()
+    return [r["division_id"] for r in rows]
+
+
+def build_streaks_data(conn) -> dict:
+    """Construit STREAKS pour streaks.html — 3 modes + all-time records."""
+    display      = _load_display_names()
+    snum_map     = _snum_map_extended(conn)
+    current_divs = _current_division_ids(conn)
+
+    def _tip(start, end, ongoing=False):
+        if not start:
+            return ""
+        s_s  = snum_map.get(start["division_id"], "?")
+        s_gw = start["game_week"]
+        if ongoing or not end:
+            return f"depuis J{s_gw} S{s_s}"
+        e_s  = snum_map.get(end["division_id"], "?")
+        e_gw = end["game_week"]
+        if s_s == e_s and s_gw == e_gw:
+            return f"J{s_gw} S{s_s}"
+        return f"J{s_gw} S{s_s} → J{e_gw} S{e_s}"
+
+    # 3 datasets
+    hist        = compute_streaks(conn)                                          # fin S-prev (is_current exclu)
+    live_data   = compute_streaks(conn, include_current=True)                    # toutes saisons
+    season_only = compute_streaks(conn, division_ids=current_divs) if current_divs else {}
+
+    # Numéros de saison pour les labels des onglets
+    hist_snums   = [v for k, v in snum_map.items() if k not in set(current_divs)]
+    last_snum    = max(hist_snums) if hist_snums else 0
+    current_snum = max(snum_map.values()) if current_divs else None
+
+    # ── All-time records (pour les 3 blocs du haut) ──
+    all_time = []
     for pid in PLAYER_ORDER:
-        s = raw.get(pid)
-        if not s:
+        h = hist.get(pid)
+        if not h:
             continue
-        rows.append({
-            "pid":            pid,
-            "name":           display.get(pid, pid),
-            "color":          PLAYER_COLORS[pid],
-            "best_win":       s["best_win"],
-            "best_unbeaten":  s["best_unbeaten"],
-            "best_loss":      s["best_loss"],
-            "current_type":   s["current_type"],
-            "current_length": s["current_length"],
+        all_time.append({
+            "pid":                   pid,
+            "name":                  display.get(pid, pid),
+            "color":                 PLAYER_COLORS[pid],
+            "best_win":              h["best_win"],
+            "best_win_tip":          _tip(h["best_win_start"], h["best_win_end"], h["best_win_ongoing"]),
+            "best_win_ongoing":      h["best_win_ongoing"],
+            "best_unbeaten":         h["best_unbeaten"],
+            "best_unbeaten_tip":     _tip(h["best_unbeaten_start"], h["best_unbeaten_end"], h["best_unbeaten_ongoing"]),
+            "best_unbeaten_ongoing": h["best_unbeaten_ongoing"],
+            "best_loss":             h["best_loss"],
+            "best_loss_tip":         _tip(h["best_loss_start"], h["best_loss_end"], h["best_loss_ongoing"]),
+            "best_loss_ongoing":     h["best_loss_ongoing"],
         })
-    return sorted(rows, key=lambda r: (-r["best_win"], -r["best_unbeaten"]))
+
+    # ── Cartes "série en cours" (pour les 3 onglets) ──
+    current_div_set = set(current_divs)
+
+    def _cur_cards(data, with_live=False):
+        cards = []
+        for pid in PLAYER_ORDER:
+            s = data.get(pid)
+            if not s or not s["current_type"]:
+                continue
+            ub     = s["current_unbeaten_length"]
+            length = s["current_length"]
+            card = {
+                "pid":          pid,
+                "name":         display.get(pid, pid),
+                "color":        PLAYER_COLORS[pid],
+                "type":         s["current_type"],
+                "length":       length,
+                "tip":          _tip(s["current_start"], None, ongoing=True),
+                "unbeaten":     ub,
+                "unbeaten_tip": _tip(s["current_unbeaten_start"], None, ongoing=True) if ub > length else "",
+            }
+            if with_live:
+                lm = s.get("last_match")
+                card["is_live"] = bool(lm and lm["division_id"] in current_div_set)
+            cards.append(card)
+        return cards
+
+    return {
+        "all_time":     all_time,
+        "prev_season":  _cur_cards(hist),
+        "live":         _cur_cards(live_data, with_live=True),
+        "season_only":  _cur_cards(season_only),
+        "last_snum":    last_snum,
+        "current_snum": current_snum,
+    }
 
 
 def generate_streaks() -> None:
     with get_conn() as conn:
         data = build_streaks_data(conn)
     inject_const(BASE_DIR / "streaks.html", "STREAKS", data)
-    best = max(data, key=lambda r: r["best_win"])
+    best = max(data["all_time"], key=lambda r: r["best_win"])
     print(f"  ✓ streaks.html  (meilleure série V : {best['name']} ({best['best_win']}))")
 
 

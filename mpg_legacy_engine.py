@@ -437,77 +437,136 @@ def compute_streaks(
     conn,
     include_covid: bool = False,
     include_incomplete: bool = False,
+    include_current: bool = False,
+    division_ids: list[str] | None = None,
 ) -> dict[str, dict]:
-    """Séries consécutives all-time par person_id (cross-divisions).
+    """Séries consécutives par person_id (cross-divisions).
+
+    Paramètres :
+      division_ids   : si fourni, utilise ces divisions directement (override).
+      include_current: inclut is_current=1 si division_ids est None.
 
     Retourne {person_id: {
-        best_win:        int,   # plus longue série de victoires
-        best_unbeaten:   int,   # plus longue série sans défaite (V+N)
-        best_loss:       int,   # plus longue série de défaites
-        current_type:    str,   # 'W' | 'D' | 'L' — dernier résultat de la timeline
-        current_length:  int,   # longueur de la série en cours
+        best_win, best_win_start, best_win_end, best_win_ongoing,
+        best_unbeaten, best_unbeaten_start, best_unbeaten_end, best_unbeaten_ongoing,
+        best_loss, best_loss_start, best_loss_end, best_loss_ongoing,
+        current_type, current_length, current_start, last_match,
+        current_unbeaten_length, current_unbeaten_start,
     }}
 
-    Les séries enjambent les divisions (même groupe de 8 joueurs, continuité
-    chronologique garantie par fetch_matches ORDER BY season, division_id, gw, id).
+    Les *_start/*_end sont {season, division_id, game_week} ou None.
+    *_ongoing = True si la meilleure série se termine au dernier match connu.
+    Les séries enjambent les divisions (continuité chronologique garantie par
+    fetch_matches ORDER BY season, division_id, gw, id).
     """
-    divisions = list_included_divisions(conn, include_covid, include_incomplete)
-    matches   = fetch_matches(conn, divisions)
+    if division_ids is None:
+        division_ids = list_included_divisions(
+            conn, include_covid, include_incomplete, include_current
+        )
+    matches = fetch_matches(conn, division_ids)
 
-    seq_by_player: dict[str, list[str]] = defaultdict(list)
+    seq_by_player: dict[str, list] = defaultdict(list)
     for m in matches:
         hp, ap = m["home_person_id"], m["away_person_id"]
         if not hp or not ap:
             continue
+        meta = {
+            "season":      m["season"],
+            "division_id": m["division_id"],
+            "game_week":   m["game_week"],
+        }
         fr = m["final_result"]
         if fr == 1:
-            seq_by_player[hp].append("W")
-            seq_by_player[ap].append("L")
+            seq_by_player[hp].append(("W", meta))
+            seq_by_player[ap].append(("L", meta))
         elif fr == 2:
-            seq_by_player[hp].append("D")
-            seq_by_player[ap].append("D")
+            seq_by_player[hp].append(("D", meta))
+            seq_by_player[ap].append(("D", meta))
         else:
-            seq_by_player[hp].append("L")
-            seq_by_player[ap].append("W")
+            seq_by_player[hp].append(("L", meta))
+            seq_by_player[ap].append(("W", meta))
 
     result: dict[str, dict] = {}
     for pid, seq in seq_by_player.items():
-        best_win = best_unbeaten = best_loss = 0
-        cur_win = cur_unbeaten = cur_loss = 0
+        n = len(seq)
+        bw = bub = bl = 0
+        bw_s = bw_e = bub_s = bub_e = bl_s = bl_e = None
+        bw_ei = bub_ei = bl_ei = -1
+        cw = cub = cl = 0
+        cw_si = cub_si = cl_si = 0
 
-        for r in seq:
+        for i, (r, meta) in enumerate(seq):
             if r == "W":
-                cur_win += 1
-                cur_unbeaten += 1
-                cur_loss = 0
+                if cw == 0:
+                    cw_si = i
+                cw += 1
+                if cub == 0:
+                    cub_si = i
+                cub += 1
+                cl = 0
             elif r == "D":
-                cur_win = 0
-                cur_unbeaten += 1
-                cur_loss = 0
+                cw = 0
+                if cub == 0:
+                    cub_si = i
+                cub += 1
+                cl = 0
             else:  # L
-                cur_win = 0
-                cur_unbeaten = 0
-                cur_loss += 1
+                cw = 0
+                cub = 0
+                if cl == 0:
+                    cl_si = i
+                cl += 1
 
-            best_win      = max(best_win, cur_win)
-            best_unbeaten = max(best_unbeaten, cur_unbeaten)
-            best_loss     = max(best_loss, cur_loss)
+            if cw > bw:
+                bw = cw; bw_s = seq[cw_si][1]; bw_e = meta; bw_ei = i
+            if cub > bub:
+                bub = cub; bub_s = seq[cub_si][1]; bub_e = meta; bub_ei = i
+            if cl > bl:
+                bl = cl; bl_s = seq[cl_si][1]; bl_e = meta; bl_ei = i
 
-        # Série en cours : remonter la fin de la timeline
-        cur_type   = seq[-1] if seq else None
+        # Série en cours (remonte la fin de la timeline)
+        cur_type = seq[-1][0] if seq else None
         cur_length = 0
-        for r in reversed(seq):
+        cur_si = n - 1
+        for i, (r, _) in enumerate(reversed(seq)):
             if r == cur_type:
                 cur_length += 1
+                cur_si = n - 1 - i
             else:
                 break
+        cur_start = seq[cur_si][1] if n > 0 else None
+        last_match = seq[-1][1] if seq else None
+
+        # Série invaincu en cours (V+N consécutifs à la fin)
+        cur_ub = 0
+        cur_ub_si = n - 1
+        for i, (r, _) in enumerate(reversed(seq)):
+            if r != "L":
+                cur_ub += 1
+                cur_ub_si = n - 1 - i
+            else:
+                break
+        cur_ub_start = seq[cur_ub_si][1] if n > 0 and cur_ub > 0 else None
 
         result[pid] = {
-            "best_win":      best_win,
-            "best_unbeaten": best_unbeaten,
-            "best_loss":     best_loss,
-            "current_type":  cur_type,
-            "current_length": cur_length,
+            "best_win":              bw,
+            "best_win_start":        bw_s,
+            "best_win_end":          bw_e,
+            "best_win_ongoing":      bw_ei == n - 1,
+            "best_unbeaten":         bub,
+            "best_unbeaten_start":   bub_s,
+            "best_unbeaten_end":     bub_e,
+            "best_unbeaten_ongoing": bub_ei == n - 1,
+            "best_loss":             bl,
+            "best_loss_start":       bl_s,
+            "best_loss_end":         bl_e,
+            "best_loss_ongoing":     bl_ei == n - 1,
+            "current_type":          cur_type,
+            "current_length":        cur_length,
+            "current_start":         cur_start,
+            "last_match":            last_match,
+            "current_unbeaten_length": cur_ub,
+            "current_unbeaten_start":  cur_ub_start,
         }
 
     return result

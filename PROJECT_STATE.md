@@ -8,7 +8,7 @@
 Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, depuis 2016).
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmares) → pages HTML statiques.
 
-**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 13/13 + 8/8 tests passants, 9 pages HTML (streaks.html ajoutée).
+**État actuel** : 20 divisions importées (2016-2025), 1 084 matchs en DB, 13/13 + 8/8 tests passants, 9 pages HTML (streaks.html enrichie — 3 modes + tooltips).
 **Bugs résolus** : `list_included_divisions()` filtre `is_current` par défaut · `mpg_stats.py` dérive l'outcome des scores (plus de dépendance à `finalResult`).
 
 ---
@@ -243,6 +243,7 @@ Pas de validation que la valeur correspond à une division en DB.
 ### Niveau 2 — Analyse avancée
 
 - [x] Séries V/N/D (plus longues séquences par joueur) ✅ — page `streaks.html`
+- [x] streaks.html enrichie : 3 modes (fin S-prev / en cours / saison act.) + tooltips J/S + invaincu cross-saison ✅
 - [ ] Forme récente (rolling average N dernières journées) — reporté
 - [ ] Page ELO animé dans le temps
 - [ ] Analyse home/away advantage
@@ -307,4 +308,4 @@ bash sync_and_publish.sh   # pipeline complet + notification Gmail
 
 ---
 
-*Mis à jour le 2026-03-09 (session 3) par Claude Sonnet 4.6 — ne pas modifier manuellement*
+*Mis à jour le 2026-03-09 (session 4) par Claude Sonnet 4.6 — ne pas modifier manuellement*
