@@ -953,10 +953,19 @@ def build_joueurs_data(conn) -> dict:
         for side, person_id in [("home", home_pid), ("away", away_pid)]:
             if not person_id or person_id not in by_mpg:
                 continue
+            # Only count players who actually played (positions 1-11 on the MPG pitch)
+            pop = rj.get(side, {}).get("playersOnPitch", {})
+            active_ids = {
+                v["playerId"]
+                for k, v in pop.items()
+                if k.isdigit() and 1 <= int(k) <= 11 and "playerId" in v
+            }
             players = rj.get(side, {}).get("players", {})
             for player_id, p in players.items():
                 if player_id.startswith("rotaldo_"):
                     continue  # skip rotaldo placeholders from player stats
+                if player_id not in active_ids:
+                    continue  # bench player who didn't enter
                 fname = p.get("firstName", "") or ""
                 lname = p.get("lastName", "") or ""
                 name = f"{fname} {lname}".strip() or player_id
