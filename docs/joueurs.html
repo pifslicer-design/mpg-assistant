@@ -429,9 +429,12 @@ function swingBadge(swing) {
   return `<span class="swing-badge ${cls}">${swing}</span>`;
 }
 
-function renderMissedSubs() {
-  const data = DATA.missed_decisive || [];
-  if (!data.length) return '<p class="no-data">Aucun changement raté décisif détecté</p>';
+let _subFilter = null;
+let _subTab = 'missed';
+
+function renderMissedSubs(pid) {
+  const data = (DATA.missed_decisive || []).filter(e => !pid || e.owner === pid);
+  if (!data.length) return '<p class="no-data">Aucun changement raté décisif pour ce joueur</p>';
   const rows = data.map((e, i) => {
     const col = (DATA.colors || {})[e.owner] || '#888';
     const ini = PLAYER_INITIALS[e.owner] || '?';
@@ -458,9 +461,9 @@ function renderMissedSubs() {
   </table>`;
 }
 
-function renderEnteredSubs() {
-  const data = DATA.entered_decisive || [];
-  if (!data.length) return '<p class="no-data">Aucun changement réussi décisif détecté</p>';
+function renderEnteredSubs(pid) {
+  const data = (DATA.entered_decisive || []).filter(e => !pid || e.owner === pid);
+  if (!data.length) return '<p class="no-data">Aucun changement réussi décisif pour ce joueur</p>';
   const rows = data.map((e, i) => {
     const col = (DATA.colors || {})[e.owner] || '#888';
     const ini = PLAYER_INITIALS[e.owner] || '?';
@@ -488,22 +491,55 @@ function renderEnteredSubs() {
 }
 
 function renderSubImpact() {
+  const playerBtns = [
+    `<button class="player-tab active" id="sub-filter-all" onclick="selectSubFilter(null)">Tous</button>`,
+    ...(DATA.mpg_players || []).map(pid => {
+      const col = (DATA.colors || {})[pid] || '#888';
+      const name = (DATA.display_names || {})[pid] || pid;
+      return `<button class="player-tab" id="sub-filter-${pid}" onclick="selectSubFilter('${pid}')">
+        <span class="player-dot" style="background:${col}"></span>${name}
+      </button>`;
+    })
+  ].join('');
   const nm = (DATA.missed_decisive || []).length;
   const ne = (DATA.entered_decisive || []).length;
   return `
+    <div class="filter-tabs" style="margin-bottom:12px">${playerBtns}</div>
     <div class="sub-tabs">
       <button class="sub-tab active" id="sub-tab-missed" onclick="selectSubTab('missed')">🚫 Ratés (${nm})</button>
       <button class="sub-tab" id="sub-tab-entered" onclick="selectSubTab('entered')">✅ Réussis (${ne})</button>
     </div>
-    <div id="sub-content-missed">${renderMissedSubs()}</div>
-    <div id="sub-content-entered" style="display:none">${renderEnteredSubs()}</div>`;
+    <div id="sub-content-missed">${renderMissedSubs(null)}</div>
+    <div id="sub-content-entered" style="display:none">${renderEnteredSubs(null)}</div>`;
 }
 
 function selectSubTab(tab) {
+  _subTab = tab;
   ['missed','entered'].forEach(t => {
     document.getElementById('sub-tab-' + t).classList.toggle('active', t === tab);
     document.getElementById('sub-content-' + t).style.display = t === tab ? '' : 'none';
   });
+}
+
+function selectSubFilter(pid) {
+  _subFilter = pid;
+  // Update player filter buttons
+  document.getElementById('sub-filter-all').classList.toggle('active', !pid);
+  document.getElementById('sub-filter-all').style.background = pid ? '' : 'var(--blue)';
+  document.getElementById('sub-filter-all').style.borderColor = pid ? '' : 'var(--blue)';
+  document.getElementById('sub-filter-all').style.color = pid ? '' : '#fff';
+  (DATA.mpg_players || []).forEach(p => {
+    const btn = document.getElementById('sub-filter-' + p);
+    const active = p === pid;
+    const col = (DATA.colors || {})[p] || '#888';
+    btn.classList.toggle('active', active);
+    btn.style.background = active ? col : '';
+    btn.style.borderColor = active ? col : '';
+    btn.style.color = active ? '#fff' : '';
+  });
+  // Re-render both tab contents
+  document.getElementById('sub-content-missed').innerHTML = renderMissedSubs(pid);
+  document.getElementById('sub-content-entered').innerHTML = renderEnteredSubs(pid);
 }
 
 // ── Render all sections ────────────────────────────────────────────────────
