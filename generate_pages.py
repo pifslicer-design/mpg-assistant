@@ -921,11 +921,20 @@ def build_joueurs_data(conn) -> dict:
     # player_id → {name, pos, goals, ratings, appearances, owners}
     agg: dict[str, dict] = {}
     hat_tricks: list[dict] = []
+    missed_decisive: list[dict] = []
+    entered_decisive: list[dict] = []
     # person_id → {rotaldos, total_goals, player_stats{player_id → {name,pos,goals,ratings,appearances}}}
     by_mpg: dict[str, dict] = {
         pid: {"rotaldos": 0, "total_goals": 0, "player_stats": {}}
         for pid in PLAYER_ORDER
     }
+
+    def _res(a: float, b: float) -> str:
+        if a > b: return "V"
+        if a < b: return "D"
+        return "N"
+
+    _SWING_VAL = {"D→V": 3, "N→V": 2, "D→N": 1}
 
     for row in rows:
         home_pid = row["home_pid"]
@@ -1022,6 +1031,84 @@ def build_joueurs_data(conn) -> dict:
                         "score": score_str,
                     })
 
+        # Sub impact analysis — decisive substitutions
+        hs_raw, as_raw = row["home_score"], row["away_score"]
+        if hs_raw is not None and as_raw is not None:
+            for side, person_id in [("home", home_pid), ("away", away_pid)]:
+                if not person_id or person_id not in by_mpg:
+                    continue
+                owner_s = int(hs_raw if side == "home" else as_raw)
+                opp_s   = int(as_raw if side == "home" else hs_raw)
+                opp_pid = away_pid if side == "home" else home_pid
+                pop = rj.get(side, {}).get("playersOnPitch", {})
+                active_sub = {
+                    v["playerId"] for k, v in pop.items()
+                    if k.isdigit() and 1 <= int(k) <= 11 and "playerId" in v
+                }
+                triggered = {
+                    v["playerId"]: v.get("starterId")
+                    for k, v in pop.items()
+                    if k.isdigit() and 1 <= int(k) <= 11
+                    and v.get("isSub") in ("tactical", "mandatory")
+                    and "playerId" in v
+                }
+                players_s = rj.get(side, {}).get("players", {})
+                for ts in rj.get(side, {}).get("tacticalSubs", []):
+                    sub_id     = ts.get("subId")
+                    starter_id = ts.get("starterId")
+                    threshold  = ts.get("rating")
+                    if not sub_id or not starter_id:
+                        continue
+                    sp  = players_s.get(sub_id, {})
+                    stp = players_s.get(starter_id, {})
+                    sub_goals     = sp.get("goals") or 0
+                    sub_rat       = sp.get("rating") or 0
+                    starter_goals = stp.get("goals") or 0
+                    starter_rat   = stp.get("rating") or 0
+                    if sub_goals < 1:
+                        continue
+                    def _n(p):
+                        return f"{p.get('firstName','') or ''} {p.get('lastName','') or ''}".strip()
+                    sub_name     = _n(sp) or sub_id
+                    starter_name = _n(stp) or starter_id
+
+                    if sub_id in triggered:
+                        # Sub entered — décisif si sans ses buts le résultat change
+                        hypo    = owner_s - sub_goals
+                        r_before = _res(hypo, opp_s)
+                        r_after  = _res(owner_s, opp_s)
+                        if r_before != r_after:
+                            rep_p = players_s.get(triggered[sub_id] or "", {})
+                            swing = f"{r_before}→{r_after}"
+                            entered_decisive.append({
+                                "sub": sub_name, "goals": sub_goals, "rating": sub_rat,
+                                "replaced": _n(rep_p),
+                                "owner": person_id, "opponent": opp_pid,
+                                "score": f"{owner_s}-{opp_s}",
+                                "hypo": f"{hypo}-{opp_s}",
+                                "swing": swing,
+                                "swing_val": _SWING_VAL.get(swing, 1),
+                                "gw": row["game_week"], "season": row["season"],
+                            })
+                    else:
+                        # Sub ne rentre pas — décisif si avec ses buts le résultat aurait changé
+                        hypo     = owner_s - starter_goals + sub_goals
+                        r_actual = _res(owner_s, opp_s)
+                        r_hypo   = _res(hypo, opp_s)
+                        if r_actual != r_hypo:
+                            swing = f"{r_actual}→{r_hypo}"
+                            missed_decisive.append({
+                                "sub": sub_name, "goals": sub_goals,
+                                "starter": starter_name, "starter_rat": starter_rat,
+                                "threshold": threshold,
+                                "owner": person_id, "opponent": opp_pid,
+                                "score": f"{owner_s}-{opp_s}",
+                                "hypo": f"{hypo}-{opp_s}",
+                                "swing": swing,
+                                "swing_val": _SWING_VAL.get(swing, 1),
+                                "gw": row["game_week"], "season": row["season"],
+                            })
+
     def _avg(ratings):
         return round(sum(ratings) / len(ratings), 2) if ratings else 0.0
 
@@ -1059,6 +1146,8 @@ def build_joueurs_data(conn) -> dict:
 
     # Hat-trick club (sorted by goals desc, then season desc)
     hat_tricks.sort(key=lambda x: (-x["goals"], -x["season"], -x["gw"]))
+    missed_decisive.sort(key=lambda x: (-x["swing_val"], -x["goals"], -x["season"], -x["gw"]))
+    entered_decisive.sort(key=lambda x: (-x["swing_val"], -x["goals"], -x["season"], -x["gw"]))
 
     # Voyageurs — players in most different MPG teams (top 15)
     voyageurs = [
@@ -1098,8 +1187,10 @@ def build_joueurs_data(conn) -> dict:
         "best_players":  best_players,
         "worst_players": worst_players,
         "most_used":     most_used,
-        "hat_tricks":    hat_tricks,
-        "voyageurs":     voyageurs,
+        "hat_tricks":       hat_tricks,
+        "missed_decisive":  missed_decisive,
+        "entered_decisive": entered_decisive,
+        "voyageurs":        voyageurs,
         "by_mpg":        by_mpg_final,
         "mpg_players":   PLAYER_ORDER,
         "display_names": {pid: display.get(pid, pid) for pid in PLAYER_ORDER},
@@ -1113,7 +1204,9 @@ def generate_joueurs() -> None:
     inject_const(BASE_DIR / "joueurs.html", "DATA", data)
     n_scorers = len(data["top_scorers"])
     n_ht = len(data["hat_tricks"])
-    print(f"  ✓ joueurs.html  ({n_scorers} buteurs, {n_ht} hat-tricks)")
+    n_missed = len(data["missed_decisive"])
+    n_entered = len(data["entered_decisive"])
+    print(f"  ✓ joueurs.html  ({n_scorers} buteurs, {n_ht} hat-tricks, {n_missed} ratés / {n_entered} réussis décisifs)")
 
 
 # ── registre des pages ─────────────────────────────────────────────────────────
