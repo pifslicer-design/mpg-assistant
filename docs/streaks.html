@@ -76,7 +76,7 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
 
 <header>
   <a href="index.html" style="position:absolute;top:16px;left:20px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.9);text-decoration:none;background:rgba(255,255,255,0.18);padding:4px 12px;border-radius:16px;">← Accueil</a>
-  <div class="hbadge">18 saisons · cross-divisions</div>
+  <div class="hbadge" id="hbadge">18 saisons · cross-divisions</div>
   <h1>Séries Consécutives</h1>
   <p>Records all-time · Série en cours par joueur</p>
 </header>
@@ -212,6 +212,7 @@ MODES.forEach((mode, i) => {
 });
 
 // Initial render
+document.getElementById('hbadge').textContent = STREAKS.last_snum + ' saisons · cross-divisions';
 document.getElementById('currentSectionTitle').textContent = MODE_TITLES[0];
 renderCurrentSection(activeMode);
 </script>
