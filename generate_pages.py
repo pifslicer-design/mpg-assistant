@@ -294,7 +294,13 @@ def build_podiums_data(conn) -> dict:
             })
         seasons.append({"snum": snum, "year": year_map[div_id], "standings": standings})
 
-    return {"seasons": seasons}
+    display = _load_display_names()
+    return {
+        "seasons":  seasons,
+        "names":    {pid: display.get(pid, pid) for pid in PLAYER_ORDER},
+        "colors":   PLAYER_COLORS,
+        "initials": PLAYER_INITIALS,
+    }
 
 
 # ── builders hall_of_fame / hall_of_shame ──────────────────────────────────────
