@@ -909,6 +909,7 @@ def build_joueurs_data(conn) -> dict:
 
     rows = conn.execute("""
         SELECT m.game_week, m.division_id, m.season,
+               m.home_score, m.away_score,
                t1.person_id AS home_pid, t2.person_id AS away_pid,
                m.raw_json
         FROM matches m
@@ -992,12 +993,24 @@ def build_joueurs_data(conn) -> dict:
 
                 # Hat-trick detection
                 if goals >= 3:
+                    opp_pid = away_pid if side == "home" else home_pid
+                    hs, as_ = row["home_score"], row["away_score"]
+                    if hs is not None and as_ is not None:
+                        owner_s = hs if side == "home" else as_
+                        opp_s   = as_ if side == "home" else hs
+                        def _fmt(v):
+                            return str(int(v)) if v % 1 == 0 else f"{v:.1f}"
+                        score_str = f"{_fmt(owner_s)}-{_fmt(opp_s)}"
+                    else:
+                        score_str = "?-?"
                     hat_tricks.append({
                         "name": name,
                         "goals": goals,
                         "gw": row["game_week"],
                         "season": row["season"],
                         "owner": person_id,
+                        "opponent": opp_pid,
+                        "score": score_str,
                     })
 
     def _avg(ratings):
