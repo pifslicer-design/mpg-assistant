@@ -123,6 +123,18 @@ PLAYER_ORDER = ["raph", "nico", "francois", "damien", "greg", "marc", "pierre", 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
+def slabel(div_id: str) -> str:
+    """Retourne le label d'affichage d'une division.
+
+    Ligue Numanuma (PWN77AILXZQ) : 'Old S1', 'Old S2'
+    Ligue Bédouins  (QU0SUZ6HQPB) : 'S1' … 'S18'
+    """
+    parts = div_id.split("_")
+    n = parts[-2]  # numéro de saison dans la ligue (ex: "1", "17")
+    if "PWN77AILXZQ" in div_id:
+        return f"Old S{n}"
+    return f"S{n}"
+
 def _load_display_names() -> dict[str, str]:
     data = yaml.safe_load(DEFAULT_MAPPING_PATH.read_text(encoding="utf-8"))
     return {
@@ -222,9 +234,10 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
     seasons: list[dict] = []
     for snum, div_id in enumerate(ordered_divs, 1):
         start = (snum - 1) * 14
+        lbl = slabel(div_id)
         for gw in range(1, 15):
-            labels.append(f"S{snum}.J{gw}")
-        seasons.append({"snum": snum, "year": div_season[div_id],
+            labels.append(f"{lbl}.J{gw}")
+        seasons.append({"snum": snum, "label": lbl, "year": div_season[div_id],
                         "start": start, "end": start + 13})
 
     matches = fetch_matches(conn, ordered_divs)
@@ -296,8 +309,10 @@ def build_podiums_data(conn) -> dict:
                 "bp":          row["goals_for"],
                 "bc":          row["goals_against"],
             })
-        seasons.append({"snum": snum, "year": year_map[div_id], "standings": standings})
+        seasons.append({"snum": snum, "label": slabel(div_id),
+                        "year": year_map[div_id], "standings": standings})
 
+    seasons.reverse()  # plus récente en premier
     display = _load_display_names()
     return {
         "seasons":  seasons,
@@ -339,7 +354,7 @@ def _build_hall_data(conn) -> tuple[list, list]:
                 continue
             s = stats[pid]
             s["seasons"] += 1
-            entry = {"snum": snum, "year": year,
+            entry = {"snum": snum, "label": slabel(div_id), "year": year,
                      "pts": row["points"], "v": row["wins"],
                      "n": row["draws"],   "d": row["losses"]}
             if i == 0:
@@ -393,6 +408,7 @@ def build_records_data(conn) -> dict:
             pid = row["person_id"]
             all_perf.append({
                 "snum":     snum,
+                "label":    slabel(div_id),
                 "year":     year,
                 "pid":      pid,
                 "display":  display.get(pid, pid),
@@ -440,7 +456,7 @@ def build_records_data(conn) -> dict:
             "display":  p["display"],
             "color":    p["color"],
             "initials": p["initials"],
-            "season":   f"S{p['snum']} · {p['year']}",
+            "season":   f"{p['label']} · {p['year']}",
         }
 
     def _rec(icon, label, p, value, sub):
@@ -554,15 +570,15 @@ def build_streaks_data(conn) -> dict:
     def _tip(start, end, ongoing=False):
         if not start:
             return ""
-        s_s  = snum_map.get(start["division_id"], "?")
-        s_gw = start["game_week"]
+        s_lbl = slabel(start["division_id"])
+        s_gw  = start["game_week"]
         if ongoing or not end:
-            return f"depuis J{s_gw} S{s_s}"
-        e_s  = snum_map.get(end["division_id"], "?")
-        e_gw = end["game_week"]
-        if s_s == e_s and s_gw == e_gw:
-            return f"J{s_gw} S{s_s}"
-        return f"J{s_gw} S{s_s} → J{e_gw} S{e_s}"
+            return f"depuis J{s_gw} {s_lbl}"
+        e_lbl = slabel(end["division_id"])
+        e_gw  = end["game_week"]
+        if s_lbl == e_lbl and s_gw == e_gw:
+            return f"J{s_gw} {s_lbl}"
+        return f"J{s_gw} {s_lbl} → J{e_gw} {e_lbl}"
 
     # 3 datasets
     hist        = compute_streaks(conn)                                          # fin S-prev (is_current exclu)
@@ -570,9 +586,18 @@ def build_streaks_data(conn) -> dict:
     season_only = compute_streaks(conn, division_ids=current_divs) if current_divs else {}
 
     # Numéros de saison pour les labels des onglets
-    hist_snums   = [v for k, v in snum_map.items() if k not in set(current_divs)]
+    current_div_set_early = set(current_divs)
+    hist_snums   = [v for k, v in snum_map.items() if k not in current_div_set_early]
     last_snum    = max(hist_snums) if hist_snums else 0
     current_snum = max(snum_map.values()) if current_divs else None
+
+    # Labels d'affichage pour les onglets (ex: "S17", "S18")
+    last_div_id    = max(
+        ((k, v) for k, v in snum_map.items() if k not in current_div_set_early),
+        key=lambda x: x[1], default=(None, 0),
+    )[0]
+    last_slabel    = slabel(last_div_id) if last_div_id else ""
+    current_slabel = slabel(current_divs[0]) if current_divs else None
 
     # ── All-time records (pour les 3 blocs du haut) ──
     all_time = []
@@ -623,12 +648,14 @@ def build_streaks_data(conn) -> dict:
         return cards
 
     return {
-        "all_time":     all_time,
-        "prev_season":  _cur_cards(hist),
-        "live":         _cur_cards(live_data, with_live=True),
-        "season_only":  _cur_cards(season_only),
-        "last_snum":    last_snum,
-        "current_snum": current_snum,
+        "all_time":       all_time,
+        "prev_season":    _cur_cards(hist),
+        "live":           _cur_cards(live_data, with_live=True),
+        "season_only":    _cur_cards(season_only),
+        "last_snum":      last_snum,
+        "current_snum":   current_snum,
+        "last_slabel":    last_slabel,
+        "current_slabel": current_slabel,
     }
 
 
@@ -1026,6 +1053,7 @@ def build_joueurs_data(conn) -> dict:
                         "goals": goals,
                         "gw": row["game_week"],
                         "season": row["season"],
+                        "label": slabel(row["division_id"]),
                         "owner": person_id,
                         "opponent": opp_pid,
                         "score": score_str,
@@ -1089,6 +1117,7 @@ def build_joueurs_data(conn) -> dict:
                                 "swing": swing,
                                 "swing_val": _SWING_VAL.get(swing, 1),
                                 "gw": row["game_week"], "season": row["season"],
+                                "label": slabel(row["division_id"]),
                             })
                     else:
                         # Sub ne rentre pas — décisif si avec ses buts le résultat aurait changé
@@ -1107,6 +1136,7 @@ def build_joueurs_data(conn) -> dict:
                                 "swing": swing,
                                 "swing_val": _SWING_VAL.get(swing, 1),
                                 "gw": row["game_week"], "season": row["season"],
+                                "label": slabel(row["division_id"]),
                             })
 
     def _avg(ratings):
