@@ -145,7 +145,7 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 | Divisions totales | 20 |
 | Divisions historiques complètes | 18 (hors COVID, hors en cours) |
 | Division COVID | 1 (_6_1, GW1-5 = 20 matchs) |
-| Saison en cours | 1 (_18_1, 8/56 matchs scorés ≈ GW2) |
+| Saison en cours | 1 (_18_1, ≈ GW3 scorée) |
 | Matchs total DB | 1 084 |
 | Matchs historiques (analytics) | 1 008 (18 × 56) |
 | Matchs avec scores | 1 036 |
@@ -161,33 +161,33 @@ CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
 | 0 équipe non-mappée | ✅ OK |
 | 11/11 tests | ✅ Passants |
 
-### ELO rankings (CLI, 19 saisons)
+### ELO rankings (CLI, 18 saisons — is_current exclu)
 
 | # | Joueur | ELO | W | D | L |
 |---|---|---|---|---|---|
-| 1 | Raph | 1537.7 | 118 | 47 | 89 |
-| 2 | Marc | 1520.6 | 93 | 43 | 118 |
-| 3 | Nico | 1516.9 | 114 | 47 | 93 |
-| 4 | Greg | 1510.9 | 104 | 46 | 104 |
-| 5 | Damien | 1509.9 | 110 | 50 | 94 |
-| 6 | Manu | 1504.1 | 88 | 47 | 119 |
-| 7 | François | 1470.6 | 110 | 53 | 91 |
-| 8 | Pierre | 1429.2 | 96 | 33 | 125 |
+| 1 | Raph | 1540.7 | 117 | 47 | 88 |
+| 2 | Nico | 1526.9 | 114 | 46 | 92 |
+| 3 | Greg | 1513.1 | 103 | 46 | 103 |
+| 4 | Marc | 1510.5 | 92 | 42 | 118 |
+| 5 | Manu | 1503.6 | 88 | 45 | 119 |
+| 6 | Damien | 1492.5 | 108 | 50 | 94 |
+| 7 | François | 1467.2 | 109 | 53 | 90 |
+| 8 | Pierre | 1445.4 | 96 | 33 | 123 |
 
-> ⚠️ Marc en 2e ELO malgré bilan négatif (93W/118L) — artefact à investiguer.
+> Note : ancienne table incluait S19 (bug `include_current` désormais corrigé). 252 matchs/joueur = 18 divisions × 14 GW.
 
-### Palmares CLI (18 saisons — is_current exclu, corrigé)
+### Palmares CLI (18 saisons — is_current exclu)
 
-| Joueur | Titres | Chapeaux |
-|---|---|---|
-| François | 5 | 1 |
-| Raph | 4 | 2 |
-| Damien | 2 | 0 |
-| Greg | 2 | 3 |
-| Nico | 2 | 0 |
-| Marc | 1 | 6 |
-| Pierre | 1 | 5 |
-| Manu | 1 | 2 |
+| Joueur | Titres | Podiums | Chapeaux | Moy pts |
+|---|---|---|---|---|
+| François | 5 | 7 | 1 | 1.51 |
+| Raph | 4 | 12 | 2 | 1.58 |
+| Damien | 2 | 7 | 0 | 1.48 |
+| Greg | 2 | 7 | 3 | 1.41 |
+| Nico | 2 | 6 | 0 | 1.54 |
+| Pierre | 1 | 6 | 4 | 1.27 |
+| Marc | 1 | 5 | 6 | 1.26 |
+| Manu | 1 | 4 | 2 | 1.23 |
 
 ---
 
@@ -308,4 +308,4 @@ bash sync_and_publish.sh   # pipeline complet + notification Gmail
 
 ---
 
-*Mis à jour le 2026-03-09 (session 4) par Claude Sonnet 4.6 — ne pas modifier manuellement*
+*Mis à jour le 2026-03-09 (session 4 — streaks enrichie) par Claude Sonnet 4.6 — ne pas modifier manuellement*
