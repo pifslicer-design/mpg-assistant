@@ -284,6 +284,7 @@ const SB_HEADERS = {
 
 let schedule = [];
 let unavailable = new Set();
+let clubsMap = {};
 
 const teamSelect  = document.getElementById('team-select');
 const matchInfo   = document.getElementById('match-info');
@@ -296,21 +297,31 @@ const btnLabel    = document.getElementById('btn-label');
 const resultZone  = document.getElementById('result-zone');
 const errorZone   = document.getElementById('error-zone');
 
-// ── Init : charge les équipes depuis mpg_schedule ──
+// ── Init : charge les équipes + clubs ──
 async function init() {
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/mpg_schedule?select=person_id,team_name,opponent_name,game_week,season_finished&order=team_name`,
-      { headers: SB_HEADERS }
-    );
-    if (!res.ok) throw new Error('Impossible de charger les équipes');
-    schedule = await res.json();
+    const [schedRes, clubsRes] = await Promise.all([
+      fetch(
+        `${SUPABASE_URL}/rest/v1/mpg_schedule?select=person_id,team_name,opponent_name,game_week,season_finished&order=team_name`,
+        { headers: SB_HEADERS }
+      ),
+      fetch(
+        `${SUPABASE_URL}/rest/v1/l1_clubs?select=id,name,short_name`,
+        { headers: SB_HEADERS }
+      ),
+    ]);
+    if (!schedRes.ok) throw new Error('Impossible de charger les équipes');
+    schedule = await schedRes.json();
     schedule.forEach(t => {
       const opt = document.createElement('option');
       opt.value = t.person_id;
       opt.textContent = t.team_name;
       teamSelect.appendChild(opt);
     });
+    if (clubsRes.ok) {
+      const clubs = await clubsRes.json();
+      clubs.forEach(c => { clubsMap[c.id] = c.short_name || c.name || c.id; });
+    }
   } catch (e) {
     showError(e.message);
   }
@@ -404,7 +415,7 @@ function renderRoster(players) {
         <div class="player-info">
           <div>
             <div class="player-name">${name}</div>
-            <div class="player-club">${lp.club_id || ''}</div>
+            <div class="player-club">${lp.club_id ? (clubsMap[lp.club_id] || lp.club_id) : ''}</div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
