@@ -39,15 +39,23 @@ $log_tail" || true
 trap 'on_error $LINENO' ERR
 
 # 1. Sync données
-echo "[1/4] Sync divisions..."
+echo "[1/5] Sync divisions..."
 "$PYTHON" mpg_client.py --divisions-file divisions.txt --sync-divisions
 
-# 2. Régénération pages HTML
-echo "[2/4] Régénération pages..."
+# 2. Sync Supabase (optionnel — nécessite SUPABASE_URL dans l'environnement)
+if [[ -n "${SUPABASE_URL:-}" ]]; then
+    echo "[2/5] Sync Supabase L1..."
+    "$PYTHON" sync_l1_to_supabase.py
+else
+    echo "[2/5] Sync Supabase ignoré (SUPABASE_URL non défini)"
+fi
+
+# 3. Régénération pages HTML
+echo "[3/5] Régénération pages..."
 "$PYTHON" generate_pages.py
 
-# 3. Commit + push si changements
-echo "[3/4] Publication GitHub Pages..."
+# 4. Commit + push si changements
+echo "[4/5] Publication GitHub Pages..."
 git add docs/
 if git diff --staged --quiet; then
     echo "Aucun changement détecté dans docs/ — pas de commit."
@@ -58,8 +66,8 @@ else
     PUBLISHED=true
 fi
 
-# 4. Notification succès
-echo "[4/4] Envoi notification..."
+# 5. Notification succès
+echo "[5/5] Envoi notification..."
 if [[ "$PUBLISHED" == "true" ]]; then
     "$PYTHON" notify.py \
         "✅ MPG sync OK — $TIMESTAMP" \

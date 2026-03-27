@@ -89,6 +89,10 @@ NAV_HTML = """<!-- NAV_START -->
       <span class="snav-label">⚽</span>
       <a href="joueurs.html">Joueurs</a>
     </div>
+    <div class="snav-group">
+      <span class="snav-label">🧠</span>
+      <a href="bestteam.html">Best Team</a>
+    </div>
   </div>
 </nav>
 <script>(function(){
@@ -1302,6 +1306,16 @@ def generate_bump() -> None:
 
 # ── registre des pages ─────────────────────────────────────────────────────────
 
+def generate_bestteam() -> None:
+    """Page statique bestteam.html — marque pour copie vers docs/."""
+    path = BASE_DIR / "bestteam.html"
+    if path.exists():
+        _modified.add(path)
+        print("  ✓ bestteam.html  (page statique)")
+    else:
+        print("  ⚠ bestteam.html introuvable — fichier ignoré")
+
+
 PAGES: dict[str, callable] = {
     "classement_cumul":         generate_classements,
     "classement_chronologique": generate_classements,
@@ -1314,6 +1328,7 @@ PAGES: dict[str, callable] = {
     "bonus_impact":             generate_bonus_impact,
     "joueurs":                  generate_joueurs,
     "bump":                     generate_bump,
+    "bestteam":                 generate_bestteam,
 }
 
 

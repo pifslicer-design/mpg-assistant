@@ -173,6 +173,66 @@ def _sync_division(
     return fetched
 
 
+def _snapshot_gw(division_id: str, gws: list[int]) -> dict:
+    """Retourne les scores actuels en DB pour les GW indiquées {match_id: (hs, as)}."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            f"SELECT id, home_score, away_score FROM matches "
+            f"WHERE division_id=? AND game_week IN ({','.join('?'*len(gws))})",
+            [division_id] + gws,
+        ).fetchall()
+    return {r["id"]: (r["home_score"], r["away_score"]) for r in rows}
+
+
+def _print_diff(before: dict, division_id: str, gws: list[int]) -> None:
+    """Compare les scores avant/après et affiche les changements."""
+    if not before:
+        return
+    data = yaml.safe_load(DEFAULT_MAPPING_PATH.read_text(encoding="utf-8"))
+    display = {
+        pid: info.get("display_name", pid)
+        for pid, info in data.get("persons", {}).items()
+    }
+    with get_conn() as conn:
+        rows = conn.execute(f"""
+            SELECT m.id, m.game_week, m.home_score, m.away_score,
+                   ht.person_id AS home_pid, ht.name AS home_name,
+                   at.person_id AS away_pid, at.name AS away_name
+            FROM matches m
+            JOIN teams ht ON m.home_team_id = ht.id
+            JOIN teams at ON m.away_team_id = at.id
+            WHERE m.division_id=? AND m.game_week IN ({','.join('?'*len(gws))})
+            ORDER BY m.game_week, m.id
+        """, [division_id] + gws).fetchall()
+
+    changes = []
+    for r in rows:
+        old = before.get(r["id"])
+        new = (r["home_score"], r["away_score"])
+        if old == new:
+            continue
+        home = display.get(r["home_pid"], r["home_name"] or "?")
+        away = display.get(r["away_pid"], r["away_name"] or "?")
+
+        def outcome(hs, as_):
+            if hs is None: return "?"
+            return "←" if hs > as_ else ("→" if as_ > hs else "=")
+
+        if old is None or old == (None, None):
+            changes.append(f"  J{r['game_week']} {home} {new[0]:.0f}–{new[1]:.0f} {away}  (nouveau)")
+        else:
+            o_str = f"{old[0]:.0f}–{old[1]:.0f} {outcome(old[0], old[1])}"
+            n_str = f"{new[0]:.0f}–{new[1]:.0f} {outcome(new[0], new[1])}"
+            changes.append(f"  J{r['game_week']} {home:<12} {o_str} → {n_str}  {away}")
+
+    if changes:
+        print("\n── Changements détectés ──")
+        for c in changes:
+            print(c)
+    else:
+        print("\n── Aucun changement de score ──")
+
+
 def _print_results(division_id: str, gw: int | None = None) -> None:
     """Affiche les résultats scorés de la division, groupés par journée."""
     data = yaml.safe_load(DEFAULT_MAPPING_PATH.read_text(encoding="utf-8"))
@@ -321,6 +381,8 @@ if __name__ == "__main__":
                         help="Label optionnel pour les logs du batch")
     parser.add_argument("--no-fetch",          action="store_true",
                         help="Ne pas appeler l'API (normalisation / export uniquement)")
+    parser.add_argument("--gw", nargs="+", type=int, metavar="N",
+                        help="Fetcher des journées spécifiques (ex: --gw 6 ou --gw 6 7)")
     # Fetch
     parser.add_argument("--force",             action="store_true", help="Refetch toutes les GW")
     # Affichage
@@ -372,8 +434,19 @@ if __name__ == "__main__":
 
     # ── Fetch (sauf --no-fetch) ─────────────────────────────────────────────
     if not args.no_fetch:
-        with client:
-            _sync_division(client, league_id, division_id_effective, force=args.force)
+        if args.gw:
+            # Fetch journées spécifiques avec diff avant/après
+            gws = sorted(args.gw)
+            print(f"[FETCH] Journées spécifiques : {gws}")
+            before = _snapshot_gw(division_id_effective, gws)
+            with client:
+                for gw in gws:
+                    fetch_matches(client, division_id_effective, gw, gw)
+            refresh_divisions_metadata()
+            _print_diff(before, division_id_effective, gws)
+        else:
+            with client:
+                _sync_division(client, league_id, division_id_effective, force=args.force)
 
     # ── Post-sync : normalisation identités (toutes les équipes, idempotent) ──
     # On applique sur l'ensemble des équipes (pas seulement la division courante)

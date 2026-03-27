@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Best Team — MPG Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#4054CC; --green:#45C945; --red:#C0303A;
+  --grad:linear-gradient(135deg,#4054CC 0%,#45C945 100%);
+  --bg:#F4F6F8; --surface:#FFFFFF; --border:#D8DAE8;
+  --text:#1A1F2E; --muted:#959DAF;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);}
+
+header{background:var(--grad);padding:40px 24px 48px;text-align:center;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 50%,rgba(255,255,255,.08) 0%,transparent 60%);}
+.hbadge{display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:14px;}
+header h1{font-size:clamp(24px,4vw,40px);font-weight:900;color:#fff;letter-spacing:-.5px;}
+header p{margin-top:10px;font-size:15px;color:rgba(255,255,255,.8);font-weight:600;}
+
+main{max-width:860px;margin:-20px auto 40px;padding:0 20px;position:relative;z-index:1;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(64,84,204,.06);margin-bottom:20px;}
+.card-title{font-size:14px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+/* SELECT */
+.team-select{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:12px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:var(--text);background:var(--bg);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23959DAF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;}
+.team-select:focus{outline:none;border-color:var(--blue);}
+
+/* MATCH INFO */
+.match-info{margin-top:12px;padding:12px 16px;background:var(--bg);border-radius:10px;display:flex;align-items:center;gap:12px;}
+.match-vs{font-weight:800;font-size:15px;}
+.match-gw{font-size:12px;color:var(--muted);font-weight:700;margin-top:2px;}
+.match-fin{color:var(--muted);font-style:italic;font-size:14px;font-weight:600;}
+
+/* ROSTER */
+.pos-section{margin-bottom:16px;}
+.pos-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.pos-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.5px;}
+.pos-G{background:#FDECEA;color:#C0303A;}
+.pos-D{background:#E8F0FD;color:#4054CC;}
+.pos-M{background:#EDFAED;color:#2A7A2A;}
+.pos-A{background:#FFF4E0;color:#C08A00;}
+.pos-count{font-size:12px;color:var(--muted);font-weight:700;}
+
+.player-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg);}
+.player-row:last-child{border-bottom:none;}
+.player-info{display:flex;align-items:center;gap:10px;min-width:0;}
+.player-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.player-club{font-size:11px;color:var(--muted);font-weight:600;}
+.player-cote{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;}
+
+.toggle-btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;transition:all .15s;white-space:nowrap;}
+.toggle-btn.dispo{background:var(--bg);color:var(--muted);}
+.toggle-btn.dispo:hover{border:1px solid var(--muted);}
+.toggle-btn.indispo{background:#FDECEA;color:var(--red);}
+
+/* GENERATE BUTTON */
+.btn-generate{width:100%;padding:16px;background:var(--grad);color:#fff;border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;}
+.btn-generate:hover:not(:disabled){opacity:.9;}
+.btn-generate:disabled{opacity:.55;cursor:not-allowed;}
+
+/* SPINNER */
+.spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESULT */
+.result-hidden{display:none;}
+
+.formation-big{font-size:52px;font-weight:900;text-align:center;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:4px;}
+.formation-label{text-align:center;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:20px;}
+
+/* TERRAIN */
+.pitch{background:linear-gradient(180deg,#266b26 0%,#2d7a2d 25%,#266b26 50%,#2d7a2d 75%,#266b26 100%);border-radius:12px;padding:20px 12px;position:relative;overflow:hidden;margin-bottom:20px;}
+.pitch::after{content:'';position:absolute;top:50%;left:8%;right:8%;height:2px;background:rgba(255,255,255,.2);}
+.pitch-row{display:flex;justify-content:center;gap:8px;margin-bottom:14px;position:relative;z-index:1;}
+.pitch-row:last-child{margin-bottom:0;}
+.pitch-player{background:rgba(255,255,255,.93);border-radius:10px;padding:7px 10px;text-align:center;min-width:58px;max-width:82px;position:relative;box-shadow:0 2px 6px rgba(0,0,0,.22);}
+.pitch-player-name{font-size:10px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pitch-player-score{font-size:9px;color:var(--muted);font-weight:700;margin-top:2px;}
+.cap-badge{position:absolute;top:-7px;right:-7px;background:#FFD700;color:#5a3800;font-size:9px;font-weight:900;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+.data-flag{position:absolute;top:-7px;left:-4px;font-size:11px;line-height:1;}
+
+/* BENCH */
+.bench-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.bench-player{background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;}
+.bench-name{font-size:12px;font-weight:800;}
+.bench-score{font-size:11px;color:var(--muted);font-weight:700;}
+
+/* AI COMMENT */
+.ai-card{background:linear-gradient(135deg,#f0f3ff 0%,#edfaed 100%);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px;}
+.ai-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.ai-icon{font-size:22px;line-height:1;}
+.ai-title{font-size:13px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;}
+.ai-text{font-size:14px;font-weight:600;line-height:1.65;color:var(--text);}
+
+/* META */
+.meta-row{display:flex;gap:16px;flex-wrap:wrap;}
+.meta-item{font-size:11px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:4px;}
+
+/* ERROR */
+.error-card{background:#FDECEA;border:1px solid #f5c6c6;border-radius:12px;padding:16px 20px;color:var(--red);font-weight:700;font-size:14px;margin-bottom:20px;}
+
+footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
+footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;}
+
+@media(max-width:560px){
+  .bench-grid{grid-template-columns:1fr 1fr;}
+  .pitch-player{min-width:46px;padding:5px 6px;}
+  .pitch-player-name{font-size:9px;}
+  .pitch-row{gap:5px;}
+}
+</style>
+</head>
+<body>
+<!-- NAV_START -->
+<style>
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #D8DAE8;
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 32px;
+    height: 48px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(64,84,204,0.08);
+  }
+  .snav-logo {
+    font-weight: 900; font-size: 15px; color: #4054CC;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .snav-groups { display: flex; gap: 24px; overflow-x: auto; }
+  .snav-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .snav-label { font-size: 13px; font-weight: 700; color: #959DAF; }
+  .snav-group a {
+    font-size: 13px; font-weight: 600; color: #1A1F2E;
+    text-decoration: none; padding: 2px 0;
+  }
+  .snav-group a:hover { color: #4054CC; }
+  .snav-group a.active { color: #4054CC; border-bottom: 2px solid #4054CC; }
+  .snav-sep { color: #D8DAE8; }
+  @media (max-width: 640px) {
+    .snav-groups { gap: 16px; }
+    .snav-label { display: none; }
+  }
+</style>
+<nav class="site-nav">
+  <a class="snav-logo" href="index.html">⚽ MPG</a>
+  <div class="snav-groups">
+    <div class="snav-group">
+      <span class="snav-label">🏆</span>
+      <a href="podiums.html">Podiums</a><span class="snav-sep">·</span>
+      <a href="hall_of_fame.html">Hall of Fame</a><span class="snav-sep">·</span>
+      <a href="hall_of_shame.html">Hall of Shame</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">📈</span>
+      <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
+      <a href="classement_cumul.html">Cumulé</a><span class="snav-sep">·</span>
+      <a href="bump.html">Rangs</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚡</span>
+      <a href="streaks.html">Séries</a><span class="snav-sep">·</span>
+      <a href="records.html">Records</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🔍</span>
+      <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
+      <a href="bonus_impact.html">Bonus</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚽</span>
+      <a href="joueurs.html">Joueurs</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🧠</span>
+      <a href="bestteam.html">Best Team</a>
+    </div>
+  </div>
+</nav>
+<script>(function(){
+  var p = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href') === p) a.classList.add('active');
+  });
+})();</script>
+<!-- NAV_END -->
+
+<header>
+  <div class="hbadge">IA · Ligue privée · 8 équipes</div>
+  <h1>Best Team</h1>
+  <p>Génère ta compo optimale pour la prochaine journée</p>
+</header>
+
+<main>
+
+  <div id="error-zone"></div>
+
+  <!-- TEAM SELECTION -->
+  <div class="card">
+    <div class="card-title">🎯 Ton équipe</div>
+    <select id="team-select" class="team-select">
+      <option value="">— Choisir une équipe —</option>
+    </select>
+    <div id="match-info" style="display:none;" class="match-info">
+      <div>
+        <div class="match-vs" id="match-vs"></div>
+        <div class="match-gw" id="match-gw"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROSTER -->
+  <div id="roster-card" class="card" style="display:none;">
+    <div class="card-title">👥 Roster — Disponibilités</div>
+    <div id="roster-content"></div>
+  </div>
+
+  <!-- FORMATION SELECT -->
+  <div id="formation-card" class="card" style="display:none;">
+    <div class="card-title">📐 Formation</div>
+    <select id="formation-select" class="team-select">
+      <option value="">Auto (meilleure formation)</option>
+      <option value="3-4-3">3-4-3</option>
+      <option value="3-5-2">3-5-2</option>
+      <option value="4-3-3">4-3-3</option>
+      <option value="4-4-2">4-4-2</option>
+      <option value="4-5-1">4-5-1</option>
+      <option value="5-3-2">5-3-2</option>
+      <option value="5-4-1">5-4-1</option>
+    </select>
+  </div>
+
+  <!-- GENERATE -->
+  <button id="btn-generate" class="btn-generate" style="display:none;" disabled>
+    <span id="btn-label">Générer mon équipe</span>
+  </button>
+
+  <!-- RESULT -->
+  <div id="result-zone" class="result-hidden">
+
+    <div class="card">
+      <div id="formation-big" class="formation-big"></div>
+      <div id="formation-label" class="formation-label"></div>
+      <div class="pitch" id="pitch"></div>
+      <div class="card-title" style="margin-top:4px;">🪑 Banc</div>
+      <div class="bench-grid" id="bench"></div>
+    </div>
+
+    <div class="ai-card" id="ai-card" style="display:none;">
+      <div class="ai-header">
+        <div class="ai-icon">🧠</div>
+        <div class="ai-title">Analyse IA</div>
+      </div>
+      <div class="ai-text" id="ai-text"></div>
+    </div>
+
+    <div class="card">
+      <div class="meta-row" id="meta-row"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  Données L1 · Supabase + Claude Haiku · <span>MPG Assistant</span>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://rnqvttsqeonemxrapoiz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJucXZ0dHNxZW9uZW14cmFwb2l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0ODE1NjUsImV4cCI6MjA5MDA1NzU2NX0.Cd0tvMEgXsNvSYvve54Hgb_WYLhY9K1zf0sOFwALOV8';
+
+const SB_HEADERS = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+};
+
+let schedule = [];
+let unavailable = new Set();
+
+const teamSelect  = document.getElementById('team-select');
+const matchInfo   = document.getElementById('match-info');
+const matchVsEl   = document.getElementById('match-vs');
+const matchGwEl   = document.getElementById('match-gw');
+const rosterCard  = document.getElementById('roster-card');
+const rosterEl    = document.getElementById('roster-content');
+const btnGen      = document.getElementById('btn-generate');
+const btnLabel    = document.getElementById('btn-label');
+const resultZone  = document.getElementById('result-zone');
+const errorZone   = document.getElementById('error-zone');
+
+// ── Init : charge les équipes depuis mpg_schedule ──
+async function init() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/mpg_schedule?select=person_id,team_name,opponent_name,game_week,season_finished&order=team_name`,
+      { headers: SB_HEADERS }
+    );
+    if (!res.ok) throw new Error('Impossible de charger les équipes');
+    schedule = await res.json();
+    schedule.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.person_id;
+      opt.textContent = t.team_name;
+      teamSelect.appendChild(opt);
+    });
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+// ── Sélection d'équipe ──
+teamSelect.addEventListener('change', async () => {
+  const personId = teamSelect.value;
+  unavailable.clear();
+  resultZone.classList.add('result-hidden');
+  hideError();
+
+  if (!personId) {
+    matchInfo.style.display = 'none';
+    rosterCard.style.display = 'none';
+    document.getElementById('formation-card').style.display = 'none';
+    btnGen.style.display = 'none';
+    return;
+  }
+
+  // Affiche le prochain match
+  const team = schedule.find(t => t.person_id === personId);
+  if (team) {
+    if (team.season_finished) {
+      matchInfo.innerHTML = `<div class="match-fin">Saison terminée — rendez-vous à la prochaine !</div>`;
+    } else {
+      matchVsEl.textContent = `vs ${team.opponent_name}`;
+      matchGwEl.textContent = `Journée ${team.game_week}`;
+      matchInfo.innerHTML = '';
+      matchInfo.append(
+        Object.assign(document.createElement('div'), {
+          innerHTML: `<div class="match-vs">vs ${team.opponent_name}</div><div class="match-gw">Journée ${team.game_week}</div>`
+        })
+      );
+    }
+    matchInfo.style.display = 'flex';
+  }
+
+  // Charge le roster
+  rosterCard.style.display = 'block';
+  document.getElementById('formation-card').style.display = 'block';
+  document.getElementById('formation-select').value = '';
+  rosterEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Chargement du roster…</div>';
+  btnGen.style.display = 'flex';
+  btnGen.disabled = true;
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/mpg_rosters?select=player_id,price,l1_players(first_name,last_name,position,quotation,quotation_trend,club_id)&person_id=eq.${encodeURIComponent(personId)}&order=player_id`,
+      { headers: SB_HEADERS }
+    );
+    if (!res.ok) throw new Error('Impossible de charger le roster');
+    const players = await res.json();
+    renderRoster(players);
+    btnGen.disabled = false;
+  } catch (e) {
+    rosterEl.innerHTML = `<div class="error-card">${e.message}</div>`;
+  }
+});
+
+// ── Affichage du roster groupé par position ──
+function renderRoster(players) {
+  const POS_ORDER = ['G', 'D', 'M', 'A'];
+  const byPos = { G: [], D: [], M: [], A: [] };
+  players.forEach(p => {
+    const pos = p.l1_players?.position || 'M';
+    (byPos[pos] || byPos['M']).push(p);
+  });
+
+  rosterEl.innerHTML = '';
+  POS_ORDER.forEach(pos => {
+    const grp = byPos[pos];
+    if (!grp.length) return;
+    const sec = document.createElement('div');
+    sec.className = 'pos-section';
+
+    const header = document.createElement('div');
+    header.className = 'pos-header';
+    header.innerHTML = `<span class="pos-badge pos-${pos}">${pos}</span><span class="pos-count">${grp.length} joueur${grp.length > 1 ? 's' : ''}</span>`;
+    sec.appendChild(header);
+
+    grp.forEach(p => {
+      const lp = p.l1_players || {};
+      const name = `${lp.first_name || ''} ${lp.last_name || ''}`.trim() || p.player_id;
+      const cote = lp.quotation ? `${lp.quotation}M` : '—';
+      const trend = lp.quotation_trend === 'up' ? ' ↑' : lp.quotation_trend === 'down' ? ' ↓' : '';
+
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      row.innerHTML = `
+        <div class="player-info">
+          <div>
+            <div class="player-name">${name}</div>
+            <div class="player-club">${lp.club_id || ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <span class="player-cote">${cote}${trend}</span>
+          <button class="toggle-btn dispo" data-id="${p.player_id}">Dispo</button>
+        </div>`;
+      row.querySelector('button').addEventListener('click', function() {
+        togglePlayer(this, p.player_id);
+      });
+      sec.appendChild(row);
+    });
+    rosterEl.appendChild(sec);
+  });
+}
+
+// ── Toggle indisponibilité ──
+function togglePlayer(btn, playerId) {
+  if (unavailable.has(playerId)) {
+    unavailable.delete(playerId);
+    btn.textContent = 'Dispo';
+    btn.className = 'toggle-btn dispo';
+  } else {
+    unavailable.add(playerId);
+    btn.textContent = 'Indispo';
+    btn.className = 'toggle-btn indispo';
+  }
+}
+
+// ── Appel Edge Function ──
+btnGen.addEventListener('click', async () => {
+  const personId = teamSelect.value;
+  if (!personId) return;
+
+  btnGen.disabled = true;
+  btnLabel.textContent = 'Génération en cours…';
+  const spinner = document.createElement('div');
+  spinner.className = 'spinner';
+  btnGen.insertBefore(spinner, btnLabel);
+  resultZone.classList.add('result-hidden');
+  hideError();
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/best-team`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ person_id: personId, unavailable: [...unavailable], window: 10, formation: document.getElementById('formation-select').value || undefined }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+    renderResult(data);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    btnGen.disabled = false;
+    btnLabel.textContent = 'Générer mon équipe';
+    spinner.remove();
+  }
+});
+
+// ── Rendu du résultat ──
+function renderResult(data) {
+  const formation = data.formation || '—';
+  document.getElementById('formation-big').textContent = formation;
+
+  const team = data.team_name || '';
+  const gw = data.next_match?.game_week ? `J${data.next_match.game_week}` : '';
+  const opp = data.next_match?.opponent || '';
+  document.getElementById('formation-label').textContent =
+    [team, gw && opp ? `${gw} · vs ${opp}` : (gw || opp)].filter(Boolean).join(' — ');
+
+  renderPitch(formation, data.starters || []);
+  renderBench(data.substitutes || []);
+
+  if (data.commentary) {
+    document.getElementById('ai-text').textContent = data.commentary;
+    document.getElementById('ai-card').style.display = 'block';
+  } else {
+    document.getElementById('ai-card').style.display = 'none';
+  }
+
+  const meta = data.meta || {};
+  const items = [];
+  if (meta.window) items.push(`Fenêtre ${meta.window} matchs`);
+  if (meta.data_freshness) items.push(`Données ${new Date(meta.data_freshness).toLocaleDateString('fr-FR')}`);
+  if (meta.generated_at) items.push(`Généré ${new Date(meta.generated_at).toLocaleString('fr-FR', {dateStyle:'short',timeStyle:'short'})}`);
+  document.getElementById('meta-row').innerHTML = items.map(s => `<span class="meta-item">📋 ${s}</span>`).join('');
+
+  resultZone.classList.remove('result-hidden');
+  setTimeout(() => resultZone.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+
+// ── Terrain CSS ──
+function renderPitch(formation, starters) {
+  const pitch = document.getElementById('pitch');
+  pitch.innerHTML = '';
+  if (!starters.length) return;
+
+  // Grouper par position
+  const byPos = { G: [], D: [], M: [], A: [] };
+  starters.forEach(p => { (byPos[p.position] || byPos['M']).push(p); });
+
+  // Construire les rangées top→bottom : ATT, MID, DEF, GK
+  const rows = [byPos.A, byPos.M, byPos.D, byPos.G].filter(r => r.length > 0);
+
+  rows.forEach(rowPlayers => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'pitch-row';
+    rowPlayers.forEach(p => {
+      const lastName = (p.name || '').split(' ').slice(-1)[0] || '?';
+      const el = document.createElement('div');
+      el.className = 'pitch-player';
+      el.innerHTML =
+        (p.captain ? '<div class="cap-badge">C</div>' : '') +
+        (p.data_flag ? '<div class="data-flag">⚠️</div>' : '') +
+        `<div class="pitch-player-name">${lastName}</div>` +
+        (p.score != null ? `<div class="pitch-player-score">${(+p.score).toFixed(1)}</div>` : '');
+      rowEl.appendChild(el);
+    });
+    pitch.appendChild(rowEl);
+  });
+}
+
+// ── Banc ──
+function renderBench(subs) {
+  const bench = document.getElementById('bench');
+  bench.innerHTML = '';
+  const posOrder = { G: 0, D: 1, M: 2, A: 3 };
+  subs.sort((a, b) => (posOrder[a.position] ?? 9) - (posOrder[b.position] ?? 9) || (b.score ?? 0) - (a.score ?? 0));
+  subs.forEach(p => {
+    const lastName = (p.name || '').split(' ').slice(-1)[0] || '?';
+    const div = document.createElement('div');
+    div.className = 'bench-player';
+    div.innerHTML =
+      `<span class="pos-badge pos-${p.position || 'M'}">${p.position || '?'}</span>` +
+      `<div><div class="bench-name">${lastName}</div>` +
+      `<div class="bench-score">${p.score != null ? (+p.score).toFixed(1) : '—'}</div></div>` +
+      (p.data_flag ? '<span title="Données limitées" style="margin-left:auto;">⚠️</span>' : '');
+    bench.appendChild(div);
+  });
+}
+
+// ── Erreurs ──
+function showError(msg) {
+  errorZone.innerHTML = `<div class="error-card">❌ ${msg}</div>`;
+}
+function hideError() {
+  errorZone.innerHTML = '';
+}
+
+init();
+</script>
+</body>
+</html>

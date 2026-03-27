@@ -221,10 +221,18 @@ def save_teams(division_id: str, teams: list[dict]) -> None:
 
 def save_matches(game_week: int, matches: list[dict], division_id: str) -> None:
     now = _now()
+    saved = 0
+    skipped = 0
     with get_conn() as conn:
         for m in matches:
             home = m.get("home") or m.get("homeTeam") or {}
             away = m.get("away") or m.get("awayTeam") or {}
+            home_score = home.get("score")
+            away_score = away.get("score")
+            # Ne pas stocker les matchs sans scores (calendrier futur)
+            if home_score is None or away_score is None:
+                skipped += 1
+                continue
             season = m.get("championshipSeason")
             conn.execute("""
                 INSERT INTO matches
@@ -244,14 +252,16 @@ def save_matches(game_week: int, matches: list[dict], division_id: str) -> None:
                 division_id,
                 home.get("teamId"),
                 away.get("teamId"),
-                home.get("score"),
-                away.get("score"),
+                home_score,
+                away_score,
                 json.dumps(home.get("bonuses", {})),
                 json.dumps(away.get("bonuses", {})),
                 json.dumps(m),
                 now,
             ))
-    print(f"[DB] GW{game_week} — {len(matches)} matchs sauvegardés [{division_id}]")
+            saved += 1
+    label = f"{saved} sauvegardés" + (f", {skipped} sans scores ignorés" if skipped else "")
+    print(f"[DB] GW{game_week} — {label} [{division_id}]")
 
 
 def mark_finalized_up_to(gw: int, division_id: str) -> None:
@@ -266,9 +276,10 @@ def mark_finalized_up_to(gw: int, division_id: str) -> None:
 
 
 def get_last_fetched_game_week(division_id: str) -> int:
+    """Retourne la dernière GW avec au moins 1 score (matchs joués uniquement)."""
     with get_conn() as conn:
         row = conn.execute(
-            "SELECT MAX(game_week) AS max_gw FROM matches WHERE division_id=?",
+            "SELECT MAX(game_week) AS max_gw FROM matches WHERE division_id=? AND home_score IS NOT NULL",
             (division_id,),
         ).fetchone()
         return row["max_gw"] or 0
