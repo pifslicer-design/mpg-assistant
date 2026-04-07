@@ -14,7 +14,7 @@ from mpg_db import (
 )
 from mpg_fetchers import fetch_league, fetch_teams, fetch_matches
 from mpg_people import DEFAULT_MAPPING_PATH
-from mpg_bonuses import print_bonus_report
+from mpg_bonuses import print_bonus_report, print_bonus_advice
 from mpg_export import build_export, write_export, SCOPES
 from mpg_stats import print_stats_report
 from mpg_legacy_engine import (
@@ -387,6 +387,7 @@ if __name__ == "__main__":
     parser.add_argument("--force",             action="store_true", help="Refetch toutes les GW")
     # Affichage
     parser.add_argument("--bonuses",           action="store_true", help="Rapport bonus restants")
+    parser.add_argument("--bonus-advice",      action="store_true", help="Conseil bonus pour la prochaine journée")
     parser.add_argument("--stats",             action="store_true", help="Afficher classement stats")
     parser.add_argument("--include-covid",      action="store_true",
                         help="Inclure les divisions COVID dans les stats")
@@ -463,6 +464,9 @@ if __name__ == "__main__":
     # ── Sorties ────────────────────────────────────────────────────────────
     if args.bonuses:
         print_bonus_report(division_id=division_id_effective)
+
+    if args.bonus_advice:
+        print_bonus_advice(division_id=division_id_effective)
 
     if args.stats:
         print_stats_report(

@@ -8,49 +8,49 @@ BONUS_CATALOG: dict[str, dict] = {
     "boostOnePlayer": {
         "ui_label":      "McDo",
         "short":         "McDo",
-        "stock_default": 3,          # 3 utilisations/saison (seul bonus avec stock > 1)
+        "stock_default": 3,          # 3 utilisations/saison ; +1 au joueur ciblé
         "is_consumable": True,
     },
     "boostAllPlayers": {
         "ui_label":      "Zahia",
         "short":         "Boost",
-        "stock_default": 1,
+        "stock_default": 1,          # +0.5 à tous les titulaires (pas les remplaçants entrants)
         "is_consumable": True,
     },
     "removeGoal": {
         "ui_label":      "Valise à Nanard",
         "short":         "Sifflet",
-        "stock_default": 1,
+        "stock_default": 1,          # retire un but à l'adversaire
         "is_consumable": True,
     },
     "mirror": {
         "ui_label":      "Miroir",
         "short":         "Miroir",
-        "stock_default": 1,
-        "is_consumable": True,       # copie la compo adverse, joué activement
+        "stock_default": 1,          # retourne le bonus adverse contre lui ; vs Décathlon → +0.5 déf adverse seulement
+        "is_consumable": True,
     },
     "fourStrikers": {
         "ui_label":      "Décathlon",
         "short":         "4 att.",
-        "stock_default": 1,
+        "stock_default": 1,          # permet le 4-2-4 (4 attaquants titulaires, formation non dispo hors bonus)
         "is_consumable": True,
     },
     "blockTacticalSubs": {
         "ui_label":      "Tonton Pat'",
         "short":         "Blocage",
-        "stock_default": 1,
+        "stock_default": 1,          # empêche les remplacements tactiques de l'adversaire
         "is_consumable": True,
     },
     "nerfGoalkeeper": {
         "ui_label":      "Suarez",
         "short":         "Nérf gk",
-        "stock_default": 1,
+        "stock_default": 1,          # -1 au gardien adverse
         "is_consumable": True,
     },
     "nerfAllPlayers": {
         "ui_label":      "Cheat Code",
         "short":         "Nérf",
-        "stock_default": 1,
+        "stock_default": 1,          # -0.5 à tous les joueurs adverses hors gardien
         "is_consumable": True,
     },
 
