@@ -885,8 +885,8 @@ def generate_h2h() -> None:
 # ── builders bonus_impact ─────────────────────────────────────────────────────
 
 def build_bonus_usage(conn) -> dict:
-    """Returns PLAYER_USAGE {display_name: {bonus_type: count}} from 18 historical divisions."""
-    divs = list_included_divisions(conn)
+    """Returns PLAYER_USAGE {display_name: {bonus_type: count}} — journées finalisées seulement."""
+    divs = list_included_divisions(conn, include_current=True)
     ph = ",".join("?" * len(divs))
 
     team_rows = conn.execute(
@@ -898,7 +898,7 @@ def build_bonus_usage(conn) -> dict:
 
     match_rows = conn.execute(
         f"SELECT home_team_id, away_team_id, home_bonuses, away_bonuses "
-        f"FROM matches WHERE division_id IN ({ph})",
+        f"FROM matches WHERE division_id IN ({ph}) AND is_finalized=1",
         divs,
     ).fetchall()
 
@@ -926,10 +926,10 @@ def build_bonus_usage(conn) -> dict:
 def generate_bonus_impact() -> None:
     with get_conn() as conn:
         player_usage = build_bonus_usage(conn)
-        divs = list_included_divisions(conn)
+        divs = list_included_divisions(conn, include_current=True)
         ph = ",".join("?" * len(divs))
         n_matches = conn.execute(
-            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph})", divs
+            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph}) AND is_finalized=1", divs
         ).fetchone()[0]
     html_path = BASE_DIR / "bonus_impact.html"
     inject_const(html_path, "PLAYER_USAGE", player_usage)
@@ -954,6 +954,7 @@ def build_joueurs_data(conn) -> dict:
         JOIN teams t1 ON m.home_team_id = t1.id
         JOIN teams t2 ON m.away_team_id = t2.id
         WHERE m.raw_json LIKE '%lastName%'
+          AND m.is_finalized=1
     """).fetchall()
 
     # player_id → {name, pos, goals, ratings, appearances, owners}
@@ -1245,7 +1246,7 @@ def generate_joueurs() -> None:
         divs = list_included_divisions(conn, include_current=True)
         ph = ",".join("?" * len(divs))
         n_matches = conn.execute(
-            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph})", divs
+            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph}) AND is_finalized=1", divs
         ).fetchone()[0]
     inject_const(BASE_DIR / "joueurs.html", "DATA", data)
     inject_const(BASE_DIR / "joueurs.html", "N_MATCHES", n_matches)
