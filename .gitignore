@@ -30,6 +30,7 @@ logs/
 !docs/
 !docs/*.html
 !bump.html
+!chatte.html
 !index.html
 Infos.txt
 sync.log

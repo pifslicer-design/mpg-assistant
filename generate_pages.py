@@ -83,7 +83,8 @@ NAV_HTML = """<!-- NAV_START -->
     <div class="snav-group">
       <span class="snav-label">🔍</span>
       <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
-      <a href="bonus_impact.html">Bonus</a>
+      <a href="bonus_impact.html">Bonus</a><span class="snav-sep">·</span>
+      <a href="chatte.html">Chatte</a>
     </div>
     <div class="snav-group">
       <span class="snav-label">⚽</span>
@@ -1367,6 +1368,216 @@ def generate_bestteam() -> None:
         print("  ⚠ bestteam.html introuvable — fichier ignoré")
 
 
+# ── Chatte (buts IRL) ──────────────────────────────────────────────────────────
+# Méthode François : par division, on compare les buts IRL pris d'un joueur
+# au "buts pris si équitable" = (Σ buts marqués division − ses buts marqués) / (N−1).
+# % chatte > 0  → équitable > pris (chanceux),  formule (équitable / pris) − 1
+# % chatte < 0  → équitable < pris (malchanceux), formule 1 − (pris / équitable)
+# Le changement de dénominateur est volontaire pour symétriser les valeurs
+# (assumé par François comme "entourloupe mathématique").
+
+def _match_irl_goals(raw_json: str) -> tuple[int, int]:
+    """Buts IRL (home_for, away_for) d'un match, CSC adverses inclus."""
+    d = json.loads(raw_json)
+    h, a = d["home"], d["away"]
+    ph = {v["playerId"] for v in h["playersOnPitch"].values()}
+    pa = {v["playerId"] for v in a["playersOnPitch"].values()}
+    irl_h = sum(p.get("goals", 0) for pid, p in h["players"].items() if pid in ph)
+    irl_a = sum(p.get("goals", 0) for pid, p in a["players"].items() if pid in pa)
+    og_h  = sum(p.get("ownGoals", 0) for pid, p in h["players"].items() if pid in ph)
+    og_a  = sum(p.get("ownGoals", 0) for pid, p in a["players"].items() if pid in pa)
+    return irl_h + og_a, irl_a + og_h
+
+
+def _chatte_pct(g: float, a: float, tot: float, n: int) -> tuple[float, float]:
+    """Retourne (équitable, pct_chatte) — pct est un float (1.0 = +100%)."""
+    if n <= 1:
+        return 0.0, 0.0
+    eq = (tot - g) / (n - 1)
+    if eq > a:
+        return eq, ((eq / a) - 1.0) if a > 0 else 0.0
+    if eq <= 0:
+        return eq, 0.0
+    return eq, (-(a / eq) + 1.0)
+
+
+def _compute_chatte_for_div(conn, div_id: str) -> dict:
+    """Retourne {'rows': [...], 'total_gf': X, 'n_matches': N, 'n_finalized': F}.
+
+    rows: [{pid, gf, ga, eq, chatte}, ...] uniquement pour les person_id mappés.
+    """
+    teams = conn.execute(
+        "SELECT id, person_id FROM teams WHERE division_id=? AND person_id IS NOT NULL",
+        (div_id,),
+    ).fetchall()
+    team_to_pid = {t["id"]: t["person_id"] for t in teams}
+
+    matches = conn.execute(
+        "SELECT home_team_id, away_team_id, raw_json, is_finalized FROM matches WHERE division_id=?",
+        (div_id,),
+    ).fetchall()
+
+    gf: dict[str, int] = {}
+    ga: dict[str, int] = {}
+    n_finalized = 0
+    for m in matches:
+        if not m["is_finalized"]:
+            continue
+        n_finalized += 1
+        for_h, for_a = _match_irl_goals(m["raw_json"])
+        hp = team_to_pid.get(m["home_team_id"])
+        ap = team_to_pid.get(m["away_team_id"])
+        if not hp or not ap:
+            continue
+        gf[hp] = gf.get(hp, 0) + for_h
+        ga[hp] = ga.get(hp, 0) + for_a
+        gf[ap] = gf.get(ap, 0) + for_a
+        ga[ap] = ga.get(ap, 0) + for_h
+
+    if not gf:
+        return {"rows": [], "total_gf": 0, "n_matches": len(matches), "n_finalized": n_finalized}
+
+    tot = sum(gf.values())
+    n = len(gf)
+    rows = []
+    for pid in gf:
+        eq, ch = _chatte_pct(gf[pid], ga[pid], tot, n)
+        rows.append({
+            "pid": pid, "gf": gf[pid], "ga": ga[pid],
+            "eq": round(eq, 2), "chatte": round(ch, 4),
+        })
+    rows.sort(key=lambda r: -r["chatte"])
+    return {
+        "rows": rows, "total_gf": tot,
+        "n_matches": len(matches), "n_finalized": n_finalized,
+    }
+
+
+def build_chatte_data(conn) -> dict:
+    """Données pour chatte.html : saison en cours + all-time + grille par saison."""
+    snum_map, year_map = _snum_map(conn)
+    current_divs = _current_division_ids(conn)
+    display = _load_display_names()
+
+    # Ordonnancement : saisons complètes par année + saison en cours en dernier
+    ordered = sorted(snum_map.items(), key=lambda x: x[1])
+    cur_extra: list[tuple[str, int]] = []
+    if current_divs:
+        next_s = (max(snum_map.values()) + 1) if snum_map else 1
+        for cur in conn.execute(
+            "SELECT division_id, season FROM divisions_metadata WHERE is_current=1"
+        ).fetchall():
+            cur_extra.append((cur["division_id"], next_s))
+            year_map[cur["division_id"]] = cur["season"]
+
+    seasons = []
+    chatte_by_pid_by_div: dict[str, dict[str, float]] = {}
+    counts_by_pid_by_div: dict[str, dict[str, tuple[int, int]]] = {}
+
+    for div_id, _ in ordered + cur_extra:
+        d = _compute_chatte_for_div(conn, div_id)
+        if not d["rows"]:
+            continue
+        is_current = div_id in set(current_divs)
+        seasons.append({
+            "label":     slabel(div_id),
+            "year":      year_map.get(div_id, ""),
+            "current":   is_current,
+            "n_matches": d["n_finalized"],
+            "total_gf":  d["total_gf"],
+        })
+        chatte_by_pid_by_div[div_id] = {r["pid"]: r["chatte"] for r in d["rows"]}
+        counts_by_pid_by_div[div_id] = {r["pid"]: (r["gf"], r["ga"]) for r in d["rows"]}
+
+    # Saison en cours = dernière du tableau si is_current, sinon None
+    current = None
+    if current_divs:
+        cd = current_divs[0]
+        d = _compute_chatte_for_div(conn, cd)
+        current = {
+            "div_id":      cd,
+            "label":       slabel(cd),
+            "year":        year_map.get(cd, ""),
+            "n_matches":   d["n_finalized"],
+            "n_total":     d["n_matches"],
+            "total_gf":    d["total_gf"],
+            "rows":        [
+                {**r, "name": display.get(r["pid"], r["pid"]),
+                 "color": PLAYER_COLORS.get(r["pid"], "#888")}
+                for r in d["rows"]
+            ],
+        }
+
+    # Classement all-time : moyenne arithmétique des % chatte sur saisons jouées
+    # (saisons COMPLÈTES uniquement — on exclut la saison en cours pour éviter
+    # qu'un mid-season tire les chiffres). Les valeurs inf (ga=0) sont ignorées.
+    histo_divs = [div_id for div_id, _ in ordered if div_id in chatte_by_pid_by_div]
+    series_by_pid: dict[str, list[float]] = {}
+    for div_id in histo_divs:
+        for pid, ch in chatte_by_pid_by_div[div_id].items():
+            series_by_pid.setdefault(pid, []).append(ch)
+
+    all_time = []
+    for pid in PLAYER_ORDER:
+        chs = series_by_pid.get(pid, [])
+        if not chs:
+            continue
+        n = len(chs)
+        mean = sum(chs) / n
+        srt = sorted(chs)
+        med = srt[n // 2] if n % 2 else (srt[n // 2 - 1] + srt[n // 2]) / 2
+        all_time.append({
+            "pid":    pid,
+            "name":   display.get(pid, pid),
+            "color":  PLAYER_COLORS.get(pid, "#888"),
+            "mean":   round(mean, 4),
+            "median": round(med, 4),
+            "best":   round(max(chs), 4),
+            "worst":  round(min(chs), 4),
+            "n_pos":  sum(1 for c in chs if c > 0),
+            "n_neg":  sum(1 for c in chs if c < 0),
+            "n":      n,
+        })
+    all_time.sort(key=lambda r: -r["mean"])
+
+    # Grille par saison : matrice joueur × saison
+    grid_rows = []
+    for pid in PLAYER_ORDER:
+        cells = []
+        for s in seasons:
+            div_id = next((d for d, _ in ordered + cur_extra if slabel(d) == s["label"]
+                           and year_map.get(d) == s["year"]), None)
+            if not div_id:
+                cells.append(None); continue
+            ch = chatte_by_pid_by_div.get(div_id, {}).get(pid)
+            counts = counts_by_pid_by_div.get(div_id, {}).get(pid)
+            if ch is None or counts is None:
+                cells.append(None)
+            else:
+                cells.append({"chatte": round(ch, 4), "gf": counts[0], "ga": counts[1]})
+        grid_rows.append({
+            "pid":   pid,
+            "name":  display.get(pid, pid),
+            "color": PLAYER_COLORS.get(pid, "#888"),
+            "cells": cells,
+        })
+
+    return {
+        "current":  current,
+        "all_time": all_time,
+        "by_season": {"seasons": seasons, "rows": grid_rows},
+    }
+
+
+def generate_chatte() -> None:
+    with get_conn() as conn:
+        data = build_chatte_data(conn)
+    inject_const(BASE_DIR / "chatte.html", "CHATTE", data)
+    n_s = len(data["by_season"]["seasons"])
+    n_p = len(data["all_time"])
+    print(f"  ✓ chatte.html  ({n_s} saisons, {n_p} joueurs all-time)")
+
+
 PAGES: dict[str, callable] = {
     "classement_cumul":         generate_classements,
     "classement_chronologique": generate_classements,
@@ -1380,6 +1591,7 @@ PAGES: dict[str, callable] = {
     "joueurs":                  generate_joueurs,
     "bump":                     generate_bump,
     "bestteam":                 generate_bestteam,
+    "chatte":                   generate_chatte,
 }
 
 
