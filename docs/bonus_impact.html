@@ -259,11 +259,7 @@
 
 <div class="container">
 
-  <div class="insight-box">
-    💡 <strong>La révélation :</strong> La <strong>Valise</strong> est le bonus le plus dévastateur — elle change le résultat <em>dans 36.5% des matchs</em> où elle est utilisée (+0.81 but d'écart en moyenne).
-    Zahia est la plus efficace en termes d'impact global (+0.59 but, 12.8% de résultats changés).
-    Le Mirror change désormais 4% des résultats (8 activations sur 99 utilisations).
-  </div>
+  <div class="insight-box" id="insight-box"></div>
 
   <h2>Classement des bonus</h2>
 
@@ -393,6 +389,20 @@ players.forEach(name => {
       td.innerHTML = `<span style="color:#ccc">—</span>`;
     }
   });
+
+  (function() {
+    const sorted = Object.entries(IMPACT).sort((a,b) => b[1].result_changed_pct - a[1].result_changed_pct);
+    const [k1,v1] = sorted[0], [k2,v2] = sorted[1];
+    const lbl = k => BONUS_META[k] ? BONUS_META[k].label : k;
+    const pct = v => v.toFixed(1);
+    const delta = v => '+' + v.toFixed(2);
+    document.getElementById('insight-box').innerHTML =
+      '💡 <strong>La révélation :</strong> La <strong>' + lbl(k1) + '</strong> est le bonus le plus dévastateur' +
+      ' — elle change le résultat <em>dans ' + pct(v1.result_changed_pct) + '% des matchs</em>' +
+      ' où elle est utilisée (' + delta(v1.avg_goal_delta) + ' but d'écart en moyenne).' +
+      ' ' + lbl(k2) + ' est la plus efficace en termes d'impact global' +
+      ' (' + delta(v2.avg_goal_delta) + ' but, ' + pct(v2.result_changed_pct) + '% de résultats changés).';
+  })();
   document.getElementById('nm-val').textContent = N_MATCHES.toLocaleString('fr-FR');
 });
 </script>

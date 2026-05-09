@@ -728,6 +728,7 @@ def build_h2h_data(conn) -> dict:
 def generate_h2h() -> None:
     with get_conn() as conn:
         h2h = build_h2h_data(conn)
+        n_seasons = len(list_included_divisions(conn, include_current=True))
     display = _load_display_names()
 
     def _gd_str(gd: int) -> str:
@@ -870,8 +871,45 @@ def generate_h2h() -> None:
 
     p.append('    </div>\n  </div>\n</main>')
 
+    # ── insight texte dynamique ───────────────────────────────────────────────
+    duels = []
+    for i, p1 in enumerate(PLAYER_ORDER):
+        for p2 in PLAYER_ORDER[i + 1:]:
+            w1, w2 = h2h[p1][p2]["w"], h2h[p2][p1]["w"]
+            total = w1 + w2
+            if total == 0:
+                continue
+            winner, loser = (p1, p2) if w1 >= w2 else (p2, p1)
+            duels.append((max(w1, w2) / total, total, winner, loser, max(w1, w2), min(w1, w2)))
+    duels.sort(key=lambda x: (-x[0], -x[1]))
+    t1, t2 = duels[0], duels[1]
+    best_wr = max(PLAYER_ORDER, key=lambda p: totals[p]["pts"])
+    total_m = totals[best_wr]["w"] + totals[best_wr]["n"] + totals[best_wr]["d"]
+    wr_pct = round(totals[best_wr]["w"] / total_m * 100, 1) if total_m else 0
+    d = display
+    insight = (
+        f'{d.get(t1[2], t1[2])} écrase {d.get(t1[3], t1[3])} {t1[4]}V-{t1[5]}V'
+        f' — le duel le plus déséquilibré'
+        f' · {d.get(t2[2], t2[2])}-{d.get(t2[3], t2[3])} : {t2[4]}V-{t2[5]}V'
+        f' · {d.get(best_wr, best_wr)} mène le classement général avec {wr_pct}% de victoires'
+    )
+
     html_path = BASE_DIR / "h2h.html"
     content = html_path.read_text(encoding="utf-8")
+
+    # Badge saisons dynamique
+    content = re.sub(
+        r'<div class="hbadge">[^<]*</div>',
+        f'<div class="hbadge">{n_seasons} saisons · hors COVID</div>',
+        content, count=1,
+    )
+    # Insight paragraph dynamique
+    content = re.sub(
+        r'<p style="margin-top:10px;[^"]*">[^<]*</p>',
+        f'<p style="margin-top:10px;font-size:13px;color:rgba(255,255,255,0.72);font-weight:600;">{insight}</p>',
+        content, count=1,
+    )
+
     start = content.index('<main>')
     end = content.index('</main>') + len('</main>')
     html_path.write_text(content[:start] + ''.join(p) + content[end:], encoding="utf-8")
