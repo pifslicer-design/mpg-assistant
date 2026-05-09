@@ -687,9 +687,9 @@ def _h2h_cell_style(w: int, d: int, total: int) -> tuple[str, str]:
 
 
 def build_h2h_data(conn) -> dict:
-    """Compute H2H W/N/D/GD for all player pairs from 18 historical divisions."""
-    divs = list_included_divisions(conn)
-    matches = fetch_matches(conn, divs)
+    """Compute H2H W/N/D/GD for all player pairs — journées finalisées seulement."""
+    divs = list_included_divisions(conn, include_current=True)
+    matches = fetch_matches(conn, divs, finalized_only=True)
 
     h2h: dict[str, dict] = {
         p1: {p2: {"w": 0, "n": 0, "d": 0, "gd": 0.0}

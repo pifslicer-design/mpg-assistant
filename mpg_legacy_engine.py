@@ -116,7 +116,7 @@ def list_included_divisions(
     return [r["division_id"] for r in rows]
 
 
-def fetch_matches(conn, division_ids: list[str]) -> list[dict]:
+def fetch_matches(conn, division_ids: list[str], finalized_only: bool = False) -> list[dict]:
     """Charge les matchs joués des divisions demandées.
 
     L'outcome est dérivé des scores réels (le champ finalResult du JSON MPG
@@ -149,6 +149,7 @@ def fetch_matches(conn, division_ids: list[str]) -> list[dict]:
         WHERE m.division_id IN ({ph})
           AND m.home_score IS NOT NULL
           AND m.away_score IS NOT NULL
+          {"AND m.is_finalized=1" if finalized_only else ""}
         ORDER BY m.season ASC, m.division_id ASC, m.game_week ASC, m.id ASC
     """, division_ids).fetchall()
 
