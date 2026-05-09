@@ -224,12 +224,22 @@ def _sync_division(
         fetched = fetch_matches(client, division_id, from_gw, to_gw)
 
     last_db = get_last_fetched_game_week(division_id)
-    current_gw, _ = _resolve_current_gw(last_db)
-    finalized_up_to = current_gw - 2
+    refresh_divisions_metadata()
+
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT is_current FROM divisions_metadata WHERE division_id=?", (division_id,)
+        ).fetchone()
+        is_current = row["is_current"] if row else 0
+
+    if is_current:
+        current_gw, _ = _resolve_current_gw(last_db)
+        finalized_up_to = current_gw - 2
+    else:
+        finalized_up_to = last_db
+
     if finalized_up_to >= 1:
         mark_finalized_up_to(finalized_up_to, division_id)
-
-    refresh_divisions_metadata()
 
     return fetched
 
