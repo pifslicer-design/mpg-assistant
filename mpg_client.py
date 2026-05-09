@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import subprocess
 import sys
 from collections import defaultdict
 from dotenv import load_dotenv
@@ -35,20 +36,80 @@ def _get_env(key: str) -> str:
     return value
 
 
-def build_client() -> tuple[httpx.Client, str, str]:
-    """Retourne (client httpx authentifié, league_id, division_id)."""
+class CurlResponse:
+    """Wrapper curl pour imiter l'interface httpx.Response."""
+    def __init__(self, status_code: int, content: bytes):
+        self.status_code = status_code
+        self.content = content
+        self.text = content.decode("utf-8", errors="replace")
+
+    def json(self):
+        return json.loads(self.text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise httpx.HTTPStatusError(
+                f"Client error '{self.status_code}'",
+                request=None, response=self,
+            )
+
+    @property
+    def headers(self):
+        return {}
+
+
+class CurlClient:
+    """Client HTTP qui appelle curl en subprocess pour contourner le fingerprint TLS."""
+    def __init__(self, base_url: str, token: str, timeout: float = 15.0):
+        self.base_url = base_url.rstrip("/")
+        self._token = token
+        self._timeout = timeout
+        self._headers = [
+            ("Accept", "application/json, text/plain, */*"),
+            ("Accept-Language", "en-US,en;q=0.9,fr;q=0.8,it;q=0.7"),
+            ("Authorization", token),
+            ("amplitude-session-id", "1778342843340"),
+            ("Origin", "https://mpg.football"),
+            ("Referer", "https://mpg.football/"),
+            ("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"),
+            ("client-version", "5.3.0"),
+            ("language", "fr-FR"),
+            ("platform", "web"),
+            ("sec-ch-ua", '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"'),
+            ("sec-ch-ua-mobile", "?0"),
+            ("sec-ch-ua-platform", '"Windows"'),
+            ("Sec-Fetch-Dest", "empty"),
+            ("Sec-Fetch-Mode", "cors"),
+            ("Sec-Fetch-Site", "same-site"),
+        ]
+
+    def get(self, path: str) -> CurlResponse:
+        url = self.base_url + path
+        cmd = ["curl", "-s", "-w", "\n__STATUS__%{http_code}", url]
+        for name, value in self._headers:
+            cmd += ["-H", f"{name}: {value}"]
+        result = subprocess.run(cmd, capture_output=True, timeout=self._timeout)
+        raw = result.stdout.decode("utf-8", errors="replace")
+        if "\n__STATUS__" in raw:
+            body, status_str = raw.rsplit("\n__STATUS__", 1)
+            status_code = int(status_str.strip())
+        else:
+            body, status_code = raw, 0
+        return CurlResponse(status_code, body.encode("utf-8"))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        pass
+
+
+def build_client() -> tuple[CurlClient, str, str]:
+    """Retourne (client curl authentifié, league_id, division_id)."""
     token = _get_env("MPG_TOKEN")
     league_id = _get_env("LEAGUE_ID")
     division_id = _get_env("DIVISION_ID")
-
-    client = httpx.Client(
-        base_url=BASE_URL,
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        timeout=15.0,
-    )
+    client = CurlClient(base_url=BASE_URL, token=token)
     return client, league_id, division_id
 
 

@@ -1,10 +1,9 @@
 """MPG — fonctions de récupération API."""
 
-import httpx
 from mpg_db import save_league, save_teams, save_matches, set_manifest
 
 
-def fetch_league(client: httpx.Client, league_id: str) -> dict:
+def fetch_league(client, league_id: str) -> dict:
     resp = client.get(f"/league/{league_id}")
     resp.raise_for_status()
     data = resp.json()
@@ -12,7 +11,7 @@ def fetch_league(client: httpx.Client, league_id: str) -> dict:
     return data
 
 
-def fetch_teams(client: httpx.Client, division_id: str) -> list[dict]:
+def fetch_teams(client, division_id: str) -> list[dict]:
     resp = client.get(f"/teams/division/{division_id}")
     resp.raise_for_status()
     data = resp.json()
@@ -23,7 +22,7 @@ def fetch_teams(client: httpx.Client, division_id: str) -> list[dict]:
     return teams
 
 
-def fetch_matches(client: httpx.Client, division_id: str, from_gw: int, to_gw: int) -> int:
+def fetch_matches(client, division_id: str, from_gw: int, to_gw: int) -> int:
     """Fetch les game-weeks [from_gw, to_gw] inclus. Retourne le nb de matchs sauvegardés."""
     manifest_key = f"last_non_empty_gw_saved::{division_id}"
     total = 0
