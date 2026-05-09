@@ -926,10 +926,16 @@ def build_bonus_usage(conn) -> dict:
 def generate_bonus_impact() -> None:
     with get_conn() as conn:
         player_usage = build_bonus_usage(conn)
+        divs = list_included_divisions(conn)
+        ph = ",".join("?" * len(divs))
+        n_matches = conn.execute(
+            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph})", divs
+        ).fetchone()[0]
     html_path = BASE_DIR / "bonus_impact.html"
     inject_const(html_path, "PLAYER_USAGE", player_usage)
+    inject_const(html_path, "N_MATCHES", n_matches)
     n_total = sum(sum(v.values()) for v in player_usage.values())
-    print(f"  ✓ bonus_impact.html  ({n_total} bonus utilisations)")
+    print(f"  ✓ bonus_impact.html  ({n_total} bonus utilisations, {n_matches} matchs)")
 
 
 # ── builders joueurs ──────────────────────────────────────────────────────────
@@ -1236,7 +1242,13 @@ def build_joueurs_data(conn) -> dict:
 def generate_joueurs() -> None:
     with get_conn() as conn:
         data = build_joueurs_data(conn)
+        divs = list_included_divisions(conn, include_current=True)
+        ph = ",".join("?" * len(divs))
+        n_matches = conn.execute(
+            f"SELECT COUNT(*) FROM matches WHERE division_id IN ({ph})", divs
+        ).fetchone()[0]
     inject_const(BASE_DIR / "joueurs.html", "DATA", data)
+    inject_const(BASE_DIR / "joueurs.html", "N_MATCHES", n_matches)
     n_scorers = len(data["top_scorers"])
     n_ht = len(data["hat_tricks"])
     n_missed = len(data["missed_decisive"])
