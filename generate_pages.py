@@ -1609,9 +1609,80 @@ def build_chatte_data(conn) -> dict:
     }
 
 
+_CHATTE_AI_SYSTEM = (
+    "Tu es le commentateur officiel d'une ligue privée MPG entre 8 potes "
+    "(depuis 2016). Pour cette page « % Chatte » qui mesure la chance défensive "
+    "(buts pris IRL vs moyenne attendue), produis un commentaire DRÔLE, "
+    "SARCASTIQUE et CHAMBREUR sur le classement de la saison en cours. "
+    "Style : punchlines acides mais bienveillantes, vocabulaire foot/MPG, "
+    "tutoyer les joueurs. Pas de bullet points, pas de titre, pas d'emoji. "
+    "Réponds en 2 ou 3 phrases, maximum 70 mots. Français."
+)
+
+
+def _fallback_commentary(current: dict) -> str:
+    """Commentaire généré localement si pas d'API key Anthropic."""
+    if not current or not current.get("rows"):
+        return "Pas encore assez de matchs pour départager les chateux des chouilles. Patience."
+    rows = current["rows"]
+    top = rows[0]
+    bot = rows[-1]
+    label = current.get("label", "")
+    n, ntot = current.get("n_matches", 0), current.get("n_total", 0)
+    return (
+        f"Après {n}/{ntot} matchs en {label}, {top['name']} caracole en tête de la chatte "
+        f"avec {round(top['chatte']*100):+}% — sa défense est cadenassée par les dieux du foot. "
+        f"À l'opposé, {bot['name']} se prend une rouste cosmique à {round(bot['chatte']*100):+}% : "
+        f"il aurait besoin d'un trèfle à cinq feuilles."
+    )
+
+
+def _build_chatte_commentary(data: dict) -> str:
+    """Génère le commentaire IA si ANTHROPIC_API_KEY dispo, sinon fallback."""
+    cur = data.get("current")
+    if not cur:
+        return _fallback_commentary(cur)
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except Exception:
+        pass
+    import os
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return _fallback_commentary(cur)
+    try:
+        from anthropic import Anthropic
+        client = Anthropic()
+        rows_txt = "\n".join(
+            f"  - {r['name']:<10} : marqués {r['gf']}, pris {r['ga']}, équitable {r['eq']:.1f}, "
+            f"% chatte {r['chatte']*100:+.0f}%"
+            for r in cur["rows"]
+        )
+        user = (
+            f"Saison en cours : {cur['label']} ({cur['year']}), "
+            f"{cur['n_matches']}/{cur['n_total']} matchs joués, "
+            f"{cur['total_gf']} buts IRL au total dans la ligue.\n\n"
+            f"Classement de la chatte (tri du + chateux au + chouille) :\n"
+            f"{rows_txt}\n\n"
+            f"Donne ton commentaire."
+        )
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=200,
+            system=_CHATTE_AI_SYSTEM,
+            messages=[{"role": "user", "content": user}],
+        )
+        text = "".join(b.text for b in msg.content if hasattr(b, "text")).strip()
+        return text or _fallback_commentary(cur)
+    except Exception as exc:
+        print(f"  ⚠ Commentaire IA échoué ({exc}) — fallback local")
+        return _fallback_commentary(cur)
+
+
 def generate_chatte() -> None:
     with get_conn() as conn:
         data = build_chatte_data(conn)
+    data["commentary"] = _build_chatte_commentary(data)
     inject_const(BASE_DIR / "chatte.html", "CHATTE", data)
     n_s = len(data["by_season"]["seasons"])
     n_p = len(data["all_time"])
