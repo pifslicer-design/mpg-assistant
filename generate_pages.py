@@ -1565,10 +1565,47 @@ def build_chatte_data(conn) -> dict:
             "cells": cells,
         })
 
+    # Cumul buts IRL all-time (toutes saisons confondues, incl. en cours)
+    cumul_rows = []
+    for pid in PLAYER_ORDER:
+        gf_t = ga_t = n_m = n_s = 0
+        for div_id, _ in ordered + cur_extra:
+            counts = counts_by_pid_by_div.get(div_id, {}).get(pid)
+            if not counts:
+                continue
+            gf_t += counts[0]
+            ga_t += counts[1]
+            # n_finalized de cette div
+            d_meta = next((s for s in seasons if s["label"] == slabel(div_id)
+                           and s["year"] == year_map.get(div_id)), None)
+            if d_meta:
+                n_m += d_meta["n_matches"]
+            n_s += 1
+        if n_s == 0:
+            continue
+        # Sur N joueurs et 14 matchs/saison/joueur, on ne peut pas reconstituer
+        # exactement « matchs joués par ce joueur » sans autre data — on utilise
+        # le cumul pondéré (n_m est somme des n_finalized des divs où il a joué,
+        # qui ≈ matchs de la division × densité de présence).
+        # Approximation simple : matchs joués ≈ 2*n_m/N (chaque match implique 2 joueurs)
+        # mais comme N varie, on prend juste la moyenne par saison.
+        cumul_rows.append({
+            "pid":   pid,
+            "name":  display.get(pid, pid),
+            "color": PLAYER_COLORS.get(pid, "#888"),
+            "gf":    gf_t,
+            "ga":    ga_t,
+            "gd":    gf_t - ga_t,
+            "n_seasons": n_s,
+            "gf_per_season": round(gf_t / n_s, 1),
+            "ga_per_season": round(ga_t / n_s, 1),
+        })
+
     return {
         "current":  current,
         "all_time": all_time,
         "by_season": {"seasons": seasons, "rows": grid_rows},
+        "cumul":    cumul_rows,
     }
 
 

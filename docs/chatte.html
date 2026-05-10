@@ -38,6 +38,14 @@ table.t td.dot{padding-left:0;width:14px;}
 table.t td.dot span{display:inline-block;width:10px;height:10px;border-radius:50%;}
 table.t .pct{font-weight:900;border-radius:6px;padding:2px 8px;display:inline-block;min-width:64px;text-align:center;}
 table.t tbody tr:hover{background:#FAFBFC;}
+table.t.sortable th[data-sort]{cursor:pointer;user-select:none;position:relative;padding-right:18px;}
+table.t.sortable th[data-sort]:hover{color:var(--blue);}
+table.t.sortable th[data-sort]::after{content:"⇅";position:absolute;right:6px;opacity:.35;font-size:.7em;}
+table.t.sortable th[data-sort].asc::after{content:"▲";opacity:.85;color:var(--blue);}
+table.t.sortable th[data-sort].desc::after{content:"▼";opacity:.85;color:var(--blue);}
+table.t .num{font-variant-numeric:tabular-nums;}
+table.t .pos{color:var(--good-strong);font-weight:800;}
+table.t .neg{color:var(--bad-strong);font-weight:800;}
 
 /* Heatmap */
 .grid-wrap{overflow-x:auto;margin:-4px;}
@@ -192,14 +200,32 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px;}
   </section>
 
   <section class="card">
-    <h2>Classement all-time <span class="sub">moyenne des 18 saisons complètes (D18 en cours exclue)</span></h2>
+    <h2>Classement all-time <span class="sub" id="alltime-sub"></span></h2>
     <div class="desc">Moyenne arithmétique du % chatte par saison jouée.</div>
     <table class="t" id="tbl-alltime">
       <thead><tr>
         <th></th><th>Joueur</th>
         <th>Moyenne</th><th>Médiane</th>
         <th>Best</th><th>Worst</th>
-        <th title="Nombre de saisons en chatte positive / négative (sur 18 saisons complètes)">Bilan saisons</th>
+        <th id="th-bilan">Bilan saisons</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Cumul buts IRL <span class="sub" id="cumul-sub"></span></h2>
+    <div class="desc">Cumul sur tout l'historique (saison en cours incluse). Cliquer sur un en-tête pour trier.</div>
+    <table class="t sortable" id="tbl-cumul">
+      <thead><tr>
+        <th></th>
+        <th data-sort="name">Joueur</th>
+        <th data-sort="gf" title="Total buts marqués IRL par les joueurs alignés (incl. CSC adverses)">Marqués</th>
+        <th data-sort="ga" title="Total buts pris IRL (incl. CSC propres)">Pris</th>
+        <th data-sort="gd" title="Différence buts marqués − buts pris">Diff.</th>
+        <th data-sort="gf_per_season">Marqués/saison</th>
+        <th data-sort="ga_per_season">Pris/saison</th>
+        <th data-sort="n_seasons">Saisons</th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -224,7 +250,7 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px;}
 <footer>MPG Assistant · % Chatte</footer>
 
 <script>
-const CHATTE={"current":{"div_id":"mpg_division_QU0SUZ6HQPB_18_1","label":"S18","year":2025,"n_matches":48,"n_total":56,"total_gf":177,"rows":[{"pid":"francois","gf":25,"ga":17,"eq":21.71,"chatte":0.2773,"name":"François","color":"#1E5C3A"},{"pid":"damien","gf":26,"ga":18,"eq":21.57,"chatte":0.1984,"name":"Damien","color":"#C08A00"},{"pid":"nico","gf":13,"ga":20,"eq":23.43,"chatte":0.1714,"name":"Nico","color":"#2E6A99"},{"pid":"raph","gf":24,"ga":22,"eq":21.86,"chatte":-0.0065,"name":"Raph","color":"#C0303A"},{"pid":"marc","gf":15,"ga":24,"eq":23.14,"chatte":-0.037,"name":"Marc","color":"#1A3D50"},{"pid":"greg","gf":26,"ga":23,"eq":21.57,"chatte":-0.0662,"name":"Greg","color":"#D4643A"},{"pid":"pierre","gf":26,"ga":25,"eq":21.57,"chatte":-0.1589,"name":"Pierre","color":"#2A8FA0"},{"pid":"manu","gf":22,"ga":28,"eq":22.14,"chatte":-0.2645,"name":"Manu","color":"#7A1A1E"}]},"all_time":[{"pid":"manu","name":"Manu","color":"#7A1A1E","mean":0.1155,"median":0.0775,"best":0.6975,"worst":-0.3494,"n_pos":12,"n_neg":6,"n":18},{"pid":"francois","name":"François","color":"#1E5C3A","mean":0.082,"median":0.0483,"best":0.5714,"worst":-0.2727,"n_pos":13,"n_neg":5,"n":18},{"pid":"nico","name":"Nico","color":"#2E6A99","mean":0.0345,"median":0.0023,"best":0.602,"worst":-0.3566,"n_pos":9,"n_neg":9,"n":18},{"pid":"greg","name":"Greg","color":"#D4643A","mean":0.0132,"median":-0.0136,"best":0.2857,"worst":-0.5928,"n_pos":9,"n_neg":9,"n":18},{"pid":"marc","name":"Marc","color":"#1A3D50","mean":0.0093,"median":-0.0379,"best":0.6224,"worst":-0.293,"n_pos":7,"n_neg":11,"n":18},{"pid":"damien","name":"Damien","color":"#C08A00","mean":-0.0001,"median":-0.0001,"best":0.2795,"worst":-0.4911,"n_pos":9,"n_neg":9,"n":18},{"pid":"raph","name":"Raph","color":"#C0303A","mean":-0.0134,"median":0.0261,"best":0.2571,"worst":-0.4566,"n_pos":10,"n_neg":8,"n":18},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","mean":-0.0691,"median":-0.1087,"best":0.2556,"worst":-0.3711,"n_pos":6,"n_neg":12,"n":18}],"by_season":{"seasons":[{"label":"Old S1","year":2016,"current":false,"n_matches":56,"total_gf":181},{"label":"Old S2","year":2016,"current":false,"n_matches":56,"total_gf":201},{"label":"S1","year":2017,"current":false,"n_matches":56,"total_gf":184},{"label":"S2","year":2017,"current":false,"n_matches":56,"total_gf":208},{"label":"S3","year":2018,"current":false,"n_matches":56,"total_gf":173},{"label":"S4","year":2018,"current":false,"n_matches":56,"total_gf":156},{"label":"S5","year":2019,"current":false,"n_matches":56,"total_gf":187},{"label":"S7","year":2020,"current":false,"n_matches":56,"total_gf":190},{"label":"S8","year":2020,"current":false,"n_matches":56,"total_gf":209},{"label":"S9","year":2021,"current":false,"n_matches":56,"total_gf":241},{"label":"S10","year":2021,"current":false,"n_matches":56,"total_gf":246},{"label":"S11","year":2022,"current":false,"n_matches":56,"total_gf":226},{"label":"S12","year":2022,"current":false,"n_matches":56,"total_gf":238},{"label":"S13","year":2023,"current":false,"n_matches":56,"total_gf":175},{"label":"S14","year":2023,"current":false,"n_matches":56,"total_gf":237},{"label":"S15","year":2024,"current":false,"n_matches":56,"total_gf":192},{"label":"S16","year":2024,"current":false,"n_matches":56,"total_gf":236},{"label":"S17","year":2025,"current":false,"n_matches":56,"total_gf":202},{"label":"S18","year":2025,"current":true,"n_matches":48,"total_gf":177}],"rows":[{"pid":"raph","name":"Raph","color":"#C0303A","cells":[{"chatte":-0.1667,"gf":19,"ga":27},{"chatte":0.1837,"gf":27,"ga":21},{"chatte":0.1293,"gf":18,"ga":21},{"chatte":-0.1598,"gf":39,"ga":28},{"chatte":-0.0405,"gf":25,"ga":22},{"chatte":-0.1838,"gf":20,"ga":23},{"chatte":0.2381,"gf":31,"ga":18},{"chatte":0.0373,"gf":23,"ga":23},{"chatte":0.0833,"gf":27,"ga":24},{"chatte":0.1323,"gf":27,"ga":27},{"chatte":-0.1553,"gf":40,"ga":34},{"chatte":0.2298,"gf":28,"ga":23},{"chatte":-0.1313,"gf":40,"ga":32},{"chatte":0.1933,"gf":33,"ga":17},{"chatte":0.0148,"gf":31,"ga":29},{"chatte":-0.4566,"gf":19,"ga":36},{"chatte":-0.4471,"gf":28,"ga":43},{"chatte":0.2571,"gf":26,"ga":20},{"chatte":-0.0065,"gf":24,"ga":22}]},{"pid":"nico","name":"Nico","color":"#2E6A99","cells":[{"chatte":0.1429,"gf":37,"ga":18},{"chatte":0.1633,"gf":30,"ga":21},{"chatte":-0.1364,"gf":30,"ga":25},{"chatte":0.2585,"gf":23,"ga":21},{"chatte":0.2101,"gf":29,"ga":17},{"chatte":-0.3566,"gf":27,"ga":25},{"chatte":0.0519,"gf":25,"ga":22},{"chatte":0.1364,"gf":15,"ga":22},{"chatte":-0.0426,"gf":21,"ga":28},{"chatte":0.0443,"gf":29,"ga":29},{"chatte":-0.0046,"gf":30,"ga":31},{"chatte":-0.1546,"gf":32,"ga":32},{"chatte":-0.1034,"gf":35,"ga":32},{"chatte":-0.1126,"gf":24,"ga":24},{"chatte":0.0092,"gf":18,"ga":31},{"chatte":0.602,"gf":35,"ga":14},{"chatte":-0.0534,"gf":30,"ga":31},{"chatte":-0.0341,"gf":26,"ga":26},{"chatte":0.1714,"gf":13,"ga":20}]},{"pid":"francois","name":"François","color":"#1E5C3A","cells":[{"chatte":-0.0455,"gf":27,"ga":23},{"chatte":0.0311,"gf":35,"ga":23},{"chatte":-0.2115,"gf":28,"ga":27},{"chatte":0.0457,"gf":25,"ga":25},{"chatte":-0.2727,"gf":30,"ga":26},{"chatte":0.2857,"gf":30,"ga":14},{"chatte":-0.1807,"gf":21,"ga":28},{"chatte":0.2143,"gf":20,"ga":20},{"chatte":0.0053,"gf":19,"ga":27},{"chatte":0.5714,"gf":32,"ga":19},{"chatte":0.051,"gf":40,"ga":28},{"chatte":0.0857,"gf":36,"ga":25},{"chatte":0.0357,"gf":35,"ga":28},{"chatte":0.2521,"gf":26,"ga":17},{"chatte":0.2733,"gf":32,"ga":23},{"chatte":0.0584,"gf":29,"ga":22},{"chatte":0.3043,"gf":26,"ga":23},{"chatte":-0.0272,"gf":18,"ga":27},{"chatte":0.2773,"gf":25,"ga":17}]},{"pid":"damien","name":"Damien","color":"#C08A00","cells":[{"chatte":0.0476,"gf":27,"ga":21},{"chatte":-0.0116,"gf":28,"ga":25},{"chatte":0.1286,"gf":26,"ga":20},{"chatte":0.0114,"gf":31,"ga":25},{"chatte":-0.05,"gf":13,"ga":24},{"chatte":-0.0526,"gf":23,"ga":20},{"chatte":-0.2229,"gf":21,"ga":29},{"chatte":-0.4911,"gf":21,"ga":36},{"chatte":0.1118,"gf":30,"ga":23},{"chatte":-0.0616,"gf":30,"ga":32},{"chatte":0.2033,"gf":27,"ga":26},{"chatte":0.2671,"gf":22,"ga":23},{"chatte":0.1005,"gf":30,"ga":27},{"chatte":-0.2194,"gf":20,"ga":27},{"chatte":-0.1502,"gf":24,"ga":35},{"chatte":0.1361,"gf":25,"ga":21},{"chatte":0.2795,"gf":30,"ga":23},{"chatte":-0.0282,"gf":25,"ga":26},{"chatte":0.1984,"gf":26,"ga":18}]},{"pid":"greg","name":"Greg","color":"#D4643A","cells":[{"chatte":0.1579,"gf":27,"ga":19},{"chatte":-0.1395,"gf":29,"ga":28},{"chatte":0.2857,"gf":22,"ga":18},{"chatte":0.0286,"gf":28,"ga":25},{"chatte":0.2857,"gf":20,"ga":17},{"chatte":-0.0694,"gf":12,"ga":22},{"chatte":0.2381,"gf":31,"ga":18},{"chatte":0.1805,"gf":33,"ga":19},{"chatte":-0.1011,"gf":31,"ga":28},{"chatte":0.0048,"gf":30,"ga":30},{"chatte":-0.131,"gf":17,"ga":37},{"chatte":0.0899,"gf":20,"ga":27},{"chatte":-0.0483,"gf":31,"ga":31},{"chatte":-0.0321,"gf":19,"ga":23},{"chatte":0.1667,"gf":41,"ga":24},{"chatte":-0.5928,"gf":25,"ga":38},{"chatte":-0.05,"gf":36,"ga":30},{"chatte":-0.0355,"gf":33,"ga":25},{"chatte":-0.0662,"gf":26,"ga":23}]},{"pid":"marc","name":"Marc","color":"#1A3D50","cells":[{"chatte":-0.103,"gf":16,"ga":26},{"chatte":-0.129,"gf":15,"ga":30},{"chatte":0.6224,"gf":25,"ga":14},{"chatte":0.0571,"gf":23,"ga":25},{"chatte":-0.293,"gf":16,"ga":29},{"chatte":-0.0426,"gf":15,"ga":21},{"chatte":0.0952,"gf":26,"ga":21},{"chatte":0.4196,"gf":31,"ga":16},{"chatte":-0.2514,"gf":30,"ga":32},{"chatte":-0.2913,"gf":35,"ga":38},{"chatte":-0.107,"gf":31,"ga":34},{"chatte":0.1548,"gf":32,"ga":24},{"chatte":0.3095,"gf":18,"ga":24},{"chatte":0.0311,"gf":9,"ga":23},{"chatte":-0.0333,"gf":27,"ga":31},{"chatte":-0.0116,"gf":19,"ga":25},{"chatte":-0.128,"gf":25,"ga":34},{"chatte":-0.1329,"gf":29,"ga":28},{"chatte":-0.037,"gf":15,"ga":24}]},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","cells":[{"chatte":-0.1317,"gf":14,"ga":27},{"chatte":0.0571,"gf":16,"ga":25},{"chatte":-0.1317,"gf":17,"ga":27},{"chatte":-0.096,"gf":10,"ga":31},{"chatte":0.0195,"gf":16,"ga":22},{"chatte":0.1032,"gf":17,"ga":18},{"chatte":0.1633,"gf":16,"ga":21},{"chatte":-0.1595,"gf":27,"ga":27},{"chatte":0.0833,"gf":27,"ga":24},{"chatte":-0.2759,"gf":38,"ga":37},{"chatte":-0.0188,"gf":33,"ga":31},{"chatte":-0.3711,"gf":32,"ga":38},{"chatte":-0.1214,"gf":32,"ga":33},{"chatte":-0.0662,"gf":24,"ga":23},{"chatte":-0.2537,"gf":36,"ga":36},{"chatte":0.2556,"gf":25,"ga":19},{"chatte":-0.1722,"gf":27,"ga":35},{"chatte":-0.1278,"gf":22,"ga":29},{"chatte":-0.1589,"gf":26,"ga":25}]},{"pid":"manu","name":"Manu","color":"#7A1A1E","cells":[{"chatte":0.1929,"gf":14,"ga":20},{"chatte":-0.0889,"gf":21,"ga":28},{"chatte":-0.3494,"gf":18,"ga":32},{"chatte":-0.095,"gf":29,"ga":28},{"chatte":0.3304,"gf":24,"ga":16},{"chatte":0.5824,"gf":12,"ga":13},{"chatte":-0.2281,"gf":16,"ga":30},{"chatte":-0.1118,"gf":20,"ga":27},{"chatte":0.1491,"gf":24,"ga":23},{"chatte":0.0887,"gf":20,"ga":29},{"chatte":0.2457,"gf":28,"ga":25},{"chatte":-0.1782,"gf":24,"ga":34},{"chatte":0.0184,"gf":17,"ga":31},{"chatte":0.0544,"gf":20,"ga":21},{"chatte":0.0663,"gf":28,"ga":28},{"chatte":0.4874,"gf":15,"ga":17},{"chatte":0.6975,"gf":34,"ga":17},{"chatte":0.2177,"gf":23,"ga":21},{"chatte":-0.2645,"gf":22,"ga":28}]}]}};
+const CHATTE={"current":{"div_id":"mpg_division_QU0SUZ6HQPB_18_1","label":"S18","year":2025,"n_matches":48,"n_total":56,"total_gf":177,"rows":[{"pid":"francois","gf":25,"ga":17,"eq":21.71,"chatte":0.2773,"name":"François","color":"#1E5C3A"},{"pid":"damien","gf":26,"ga":18,"eq":21.57,"chatte":0.1984,"name":"Damien","color":"#C08A00"},{"pid":"nico","gf":13,"ga":20,"eq":23.43,"chatte":0.1714,"name":"Nico","color":"#2E6A99"},{"pid":"raph","gf":24,"ga":22,"eq":21.86,"chatte":-0.0065,"name":"Raph","color":"#C0303A"},{"pid":"marc","gf":15,"ga":24,"eq":23.14,"chatte":-0.037,"name":"Marc","color":"#1A3D50"},{"pid":"greg","gf":26,"ga":23,"eq":21.57,"chatte":-0.0662,"name":"Greg","color":"#D4643A"},{"pid":"pierre","gf":26,"ga":25,"eq":21.57,"chatte":-0.1589,"name":"Pierre","color":"#2A8FA0"},{"pid":"manu","gf":22,"ga":28,"eq":22.14,"chatte":-0.2645,"name":"Manu","color":"#7A1A1E"}]},"all_time":[{"pid":"manu","name":"Manu","color":"#7A1A1E","mean":0.1155,"median":0.0775,"best":0.6975,"worst":-0.3494,"n_pos":12,"n_neg":6,"n":18},{"pid":"francois","name":"François","color":"#1E5C3A","mean":0.082,"median":0.0483,"best":0.5714,"worst":-0.2727,"n_pos":13,"n_neg":5,"n":18},{"pid":"nico","name":"Nico","color":"#2E6A99","mean":0.0345,"median":0.0023,"best":0.602,"worst":-0.3566,"n_pos":9,"n_neg":9,"n":18},{"pid":"greg","name":"Greg","color":"#D4643A","mean":0.0132,"median":-0.0136,"best":0.2857,"worst":-0.5928,"n_pos":9,"n_neg":9,"n":18},{"pid":"marc","name":"Marc","color":"#1A3D50","mean":0.0093,"median":-0.0379,"best":0.6224,"worst":-0.293,"n_pos":7,"n_neg":11,"n":18},{"pid":"damien","name":"Damien","color":"#C08A00","mean":-0.0001,"median":-0.0001,"best":0.2795,"worst":-0.4911,"n_pos":9,"n_neg":9,"n":18},{"pid":"raph","name":"Raph","color":"#C0303A","mean":-0.0134,"median":0.0261,"best":0.2571,"worst":-0.4566,"n_pos":10,"n_neg":8,"n":18},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","mean":-0.0691,"median":-0.1087,"best":0.2556,"worst":-0.3711,"n_pos":6,"n_neg":12,"n":18}],"by_season":{"seasons":[{"label":"Old S1","year":2016,"current":false,"n_matches":56,"total_gf":181},{"label":"Old S2","year":2016,"current":false,"n_matches":56,"total_gf":201},{"label":"S1","year":2017,"current":false,"n_matches":56,"total_gf":184},{"label":"S2","year":2017,"current":false,"n_matches":56,"total_gf":208},{"label":"S3","year":2018,"current":false,"n_matches":56,"total_gf":173},{"label":"S4","year":2018,"current":false,"n_matches":56,"total_gf":156},{"label":"S5","year":2019,"current":false,"n_matches":56,"total_gf":187},{"label":"S7","year":2020,"current":false,"n_matches":56,"total_gf":190},{"label":"S8","year":2020,"current":false,"n_matches":56,"total_gf":209},{"label":"S9","year":2021,"current":false,"n_matches":56,"total_gf":241},{"label":"S10","year":2021,"current":false,"n_matches":56,"total_gf":246},{"label":"S11","year":2022,"current":false,"n_matches":56,"total_gf":226},{"label":"S12","year":2022,"current":false,"n_matches":56,"total_gf":238},{"label":"S13","year":2023,"current":false,"n_matches":56,"total_gf":175},{"label":"S14","year":2023,"current":false,"n_matches":56,"total_gf":237},{"label":"S15","year":2024,"current":false,"n_matches":56,"total_gf":192},{"label":"S16","year":2024,"current":false,"n_matches":56,"total_gf":236},{"label":"S17","year":2025,"current":false,"n_matches":56,"total_gf":202},{"label":"S18","year":2025,"current":true,"n_matches":48,"total_gf":177}],"rows":[{"pid":"raph","name":"Raph","color":"#C0303A","cells":[{"chatte":-0.1667,"gf":19,"ga":27},{"chatte":0.1837,"gf":27,"ga":21},{"chatte":0.1293,"gf":18,"ga":21},{"chatte":-0.1598,"gf":39,"ga":28},{"chatte":-0.0405,"gf":25,"ga":22},{"chatte":-0.1838,"gf":20,"ga":23},{"chatte":0.2381,"gf":31,"ga":18},{"chatte":0.0373,"gf":23,"ga":23},{"chatte":0.0833,"gf":27,"ga":24},{"chatte":0.1323,"gf":27,"ga":27},{"chatte":-0.1553,"gf":40,"ga":34},{"chatte":0.2298,"gf":28,"ga":23},{"chatte":-0.1313,"gf":40,"ga":32},{"chatte":0.1933,"gf":33,"ga":17},{"chatte":0.0148,"gf":31,"ga":29},{"chatte":-0.4566,"gf":19,"ga":36},{"chatte":-0.4471,"gf":28,"ga":43},{"chatte":0.2571,"gf":26,"ga":20},{"chatte":-0.0065,"gf":24,"ga":22}]},{"pid":"nico","name":"Nico","color":"#2E6A99","cells":[{"chatte":0.1429,"gf":37,"ga":18},{"chatte":0.1633,"gf":30,"ga":21},{"chatte":-0.1364,"gf":30,"ga":25},{"chatte":0.2585,"gf":23,"ga":21},{"chatte":0.2101,"gf":29,"ga":17},{"chatte":-0.3566,"gf":27,"ga":25},{"chatte":0.0519,"gf":25,"ga":22},{"chatte":0.1364,"gf":15,"ga":22},{"chatte":-0.0426,"gf":21,"ga":28},{"chatte":0.0443,"gf":29,"ga":29},{"chatte":-0.0046,"gf":30,"ga":31},{"chatte":-0.1546,"gf":32,"ga":32},{"chatte":-0.1034,"gf":35,"ga":32},{"chatte":-0.1126,"gf":24,"ga":24},{"chatte":0.0092,"gf":18,"ga":31},{"chatte":0.602,"gf":35,"ga":14},{"chatte":-0.0534,"gf":30,"ga":31},{"chatte":-0.0341,"gf":26,"ga":26},{"chatte":0.1714,"gf":13,"ga":20}]},{"pid":"francois","name":"François","color":"#1E5C3A","cells":[{"chatte":-0.0455,"gf":27,"ga":23},{"chatte":0.0311,"gf":35,"ga":23},{"chatte":-0.2115,"gf":28,"ga":27},{"chatte":0.0457,"gf":25,"ga":25},{"chatte":-0.2727,"gf":30,"ga":26},{"chatte":0.2857,"gf":30,"ga":14},{"chatte":-0.1807,"gf":21,"ga":28},{"chatte":0.2143,"gf":20,"ga":20},{"chatte":0.0053,"gf":19,"ga":27},{"chatte":0.5714,"gf":32,"ga":19},{"chatte":0.051,"gf":40,"ga":28},{"chatte":0.0857,"gf":36,"ga":25},{"chatte":0.0357,"gf":35,"ga":28},{"chatte":0.2521,"gf":26,"ga":17},{"chatte":0.2733,"gf":32,"ga":23},{"chatte":0.0584,"gf":29,"ga":22},{"chatte":0.3043,"gf":26,"ga":23},{"chatte":-0.0272,"gf":18,"ga":27},{"chatte":0.2773,"gf":25,"ga":17}]},{"pid":"damien","name":"Damien","color":"#C08A00","cells":[{"chatte":0.0476,"gf":27,"ga":21},{"chatte":-0.0116,"gf":28,"ga":25},{"chatte":0.1286,"gf":26,"ga":20},{"chatte":0.0114,"gf":31,"ga":25},{"chatte":-0.05,"gf":13,"ga":24},{"chatte":-0.0526,"gf":23,"ga":20},{"chatte":-0.2229,"gf":21,"ga":29},{"chatte":-0.4911,"gf":21,"ga":36},{"chatte":0.1118,"gf":30,"ga":23},{"chatte":-0.0616,"gf":30,"ga":32},{"chatte":0.2033,"gf":27,"ga":26},{"chatte":0.2671,"gf":22,"ga":23},{"chatte":0.1005,"gf":30,"ga":27},{"chatte":-0.2194,"gf":20,"ga":27},{"chatte":-0.1502,"gf":24,"ga":35},{"chatte":0.1361,"gf":25,"ga":21},{"chatte":0.2795,"gf":30,"ga":23},{"chatte":-0.0282,"gf":25,"ga":26},{"chatte":0.1984,"gf":26,"ga":18}]},{"pid":"greg","name":"Greg","color":"#D4643A","cells":[{"chatte":0.1579,"gf":27,"ga":19},{"chatte":-0.1395,"gf":29,"ga":28},{"chatte":0.2857,"gf":22,"ga":18},{"chatte":0.0286,"gf":28,"ga":25},{"chatte":0.2857,"gf":20,"ga":17},{"chatte":-0.0694,"gf":12,"ga":22},{"chatte":0.2381,"gf":31,"ga":18},{"chatte":0.1805,"gf":33,"ga":19},{"chatte":-0.1011,"gf":31,"ga":28},{"chatte":0.0048,"gf":30,"ga":30},{"chatte":-0.131,"gf":17,"ga":37},{"chatte":0.0899,"gf":20,"ga":27},{"chatte":-0.0483,"gf":31,"ga":31},{"chatte":-0.0321,"gf":19,"ga":23},{"chatte":0.1667,"gf":41,"ga":24},{"chatte":-0.5928,"gf":25,"ga":38},{"chatte":-0.05,"gf":36,"ga":30},{"chatte":-0.0355,"gf":33,"ga":25},{"chatte":-0.0662,"gf":26,"ga":23}]},{"pid":"marc","name":"Marc","color":"#1A3D50","cells":[{"chatte":-0.103,"gf":16,"ga":26},{"chatte":-0.129,"gf":15,"ga":30},{"chatte":0.6224,"gf":25,"ga":14},{"chatte":0.0571,"gf":23,"ga":25},{"chatte":-0.293,"gf":16,"ga":29},{"chatte":-0.0426,"gf":15,"ga":21},{"chatte":0.0952,"gf":26,"ga":21},{"chatte":0.4196,"gf":31,"ga":16},{"chatte":-0.2514,"gf":30,"ga":32},{"chatte":-0.2913,"gf":35,"ga":38},{"chatte":-0.107,"gf":31,"ga":34},{"chatte":0.1548,"gf":32,"ga":24},{"chatte":0.3095,"gf":18,"ga":24},{"chatte":0.0311,"gf":9,"ga":23},{"chatte":-0.0333,"gf":27,"ga":31},{"chatte":-0.0116,"gf":19,"ga":25},{"chatte":-0.128,"gf":25,"ga":34},{"chatte":-0.1329,"gf":29,"ga":28},{"chatte":-0.037,"gf":15,"ga":24}]},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","cells":[{"chatte":-0.1317,"gf":14,"ga":27},{"chatte":0.0571,"gf":16,"ga":25},{"chatte":-0.1317,"gf":17,"ga":27},{"chatte":-0.096,"gf":10,"ga":31},{"chatte":0.0195,"gf":16,"ga":22},{"chatte":0.1032,"gf":17,"ga":18},{"chatte":0.1633,"gf":16,"ga":21},{"chatte":-0.1595,"gf":27,"ga":27},{"chatte":0.0833,"gf":27,"ga":24},{"chatte":-0.2759,"gf":38,"ga":37},{"chatte":-0.0188,"gf":33,"ga":31},{"chatte":-0.3711,"gf":32,"ga":38},{"chatte":-0.1214,"gf":32,"ga":33},{"chatte":-0.0662,"gf":24,"ga":23},{"chatte":-0.2537,"gf":36,"ga":36},{"chatte":0.2556,"gf":25,"ga":19},{"chatte":-0.1722,"gf":27,"ga":35},{"chatte":-0.1278,"gf":22,"ga":29},{"chatte":-0.1589,"gf":26,"ga":25}]},{"pid":"manu","name":"Manu","color":"#7A1A1E","cells":[{"chatte":0.1929,"gf":14,"ga":20},{"chatte":-0.0889,"gf":21,"ga":28},{"chatte":-0.3494,"gf":18,"ga":32},{"chatte":-0.095,"gf":29,"ga":28},{"chatte":0.3304,"gf":24,"ga":16},{"chatte":0.5824,"gf":12,"ga":13},{"chatte":-0.2281,"gf":16,"ga":30},{"chatte":-0.1118,"gf":20,"ga":27},{"chatte":0.1491,"gf":24,"ga":23},{"chatte":0.0887,"gf":20,"ga":29},{"chatte":0.2457,"gf":28,"ga":25},{"chatte":-0.1782,"gf":24,"ga":34},{"chatte":0.0184,"gf":17,"ga":31},{"chatte":0.0544,"gf":20,"ga":21},{"chatte":0.0663,"gf":28,"ga":28},{"chatte":0.4874,"gf":15,"ga":17},{"chatte":0.6975,"gf":34,"ga":17},{"chatte":0.2177,"gf":23,"ga":21},{"chatte":-0.2645,"gf":22,"ga":28}]}]},"cumul":[{"pid":"raph","name":"Raph","color":"#C0303A","gf":525,"ga":490,"gd":35,"n_seasons":19,"gf_per_season":27.6,"ga_per_season":25.8},{"pid":"nico","name":"Nico","color":"#2E6A99","gf":509,"ga":469,"gd":40,"n_seasons":19,"gf_per_season":26.8,"ga_per_season":24.7},{"pid":"francois","name":"François","color":"#1E5C3A","gf":534,"ga":442,"gd":92,"n_seasons":19,"gf_per_season":28.1,"ga_per_season":23.3},{"pid":"damien","name":"Damien","color":"#C08A00","gf":479,"ga":481,"gd":-2,"n_seasons":19,"gf_per_season":25.2,"ga_per_season":25.3},{"pid":"greg","name":"Greg","color":"#D4643A","gf":511,"ga":482,"gd":29,"n_seasons":19,"gf_per_season":26.9,"ga_per_season":25.4},{"pid":"marc","name":"Marc","color":"#1A3D50","gf":437,"ga":499,"gd":-62,"n_seasons":19,"gf_per_season":23.0,"ga_per_season":26.3},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","gf":455,"ga":528,"gd":-73,"n_seasons":19,"gf_per_season":23.9,"ga_per_season":27.8},{"pid":"manu","name":"Manu","color":"#7A1A1E","gf":409,"ga":468,"gd":-59,"n_seasons":19,"gf_per_season":21.5,"ga_per_season":24.6}]};
 
 function chatteColor(pct){
   // pct ∈ [-1, +∞] (typiquement ±0.7) → couleur dégradée
@@ -289,6 +315,13 @@ function renderGrid(){
 
 // ── All-time ──
 function renderAllTime(){
+  const n = (CHATTE.all_time[0] && CHATTE.all_time[0].n) || 0;
+  document.getElementById('alltime-sub').textContent =
+    `moyenne des ${n} saisons complètes (saison en cours exclue)`;
+  document.getElementById('th-bilan').setAttribute(
+    'title',
+    `Nombre de saisons en chatte positive / négative (sur ${n} saisons complètes)`
+  );
   const tb = document.querySelector('#tbl-alltime tbody');
   tb.innerHTML = CHATTE.all_time.map((r,i) => `
     <tr>
@@ -296,15 +329,59 @@ function renderAllTime(){
       <td class="team">${i+1}. ${r.name}</td>
       <td><span class="pct" style="background:${chatteColor(r.mean)};color:${r.mean>=0?'#1E5C3A':'#7A1A1E'}">${pctTxt(r.mean)}</span></td>
       <td>${pctTxt(r.median)}</td>
-      <td style="color:var(--good-strong);font-weight:800">${pctTxt(r.best)}</td>
-      <td style="color:var(--bad-strong);font-weight:800">${pctTxt(r.worst)}</td>
-      <td><span style="color:var(--good-strong);font-weight:800">${r.n_pos}</span> / <span style="color:var(--bad-strong);font-weight:800">${r.n_neg}</span></td>
+      <td class="pos">${pctTxt(r.best)}</td>
+      <td class="neg">${pctTxt(r.worst)}</td>
+      <td><span class="pos">${r.n_pos}</span> / <span class="neg">${r.n_neg}</span></td>
     </tr>`).join('');
 }
+
+// ── Cumul buts IRL (triable) ──
+const _cumulState = { key: 'gd', dir: 'desc' };
+function renderCumul(){
+  const data = (CHATTE.cumul || []).slice();
+  const totalSeasons = data.reduce((m,r) => Math.max(m, r.n_seasons), 0);
+  document.getElementById('cumul-sub').textContent =
+    `${totalSeasons} saisons cumulées par joueur`;
+  const k = _cumulState.key, dir = _cumulState.dir === 'asc' ? 1 : -1;
+  data.sort((a,b) => {
+    const va = a[k], vb = b[k];
+    if(typeof va === 'string') return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+  const tb = document.querySelector('#tbl-cumul tbody');
+  tb.innerHTML = data.map((r,i) => `
+    <tr>
+      <td class="dot"><span style="background:${r.color}"></span></td>
+      <td class="team">${i+1}. ${r.name}</td>
+      <td class="num">${r.gf}</td>
+      <td class="num">${r.ga}</td>
+      <td class="num ${r.gd>=0?'pos':'neg'}">${r.gd>0?'+':''}${r.gd}</td>
+      <td class="num">${r.gf_per_season.toFixed(1)}</td>
+      <td class="num">${r.ga_per_season.toFixed(1)}</td>
+      <td class="num">${r.n_seasons}</td>
+    </tr>`).join('');
+  document.querySelectorAll('#tbl-cumul th[data-sort]').forEach(th => {
+    th.classList.remove('asc','desc');
+    if(th.dataset.sort === _cumulState.key) th.classList.add(_cumulState.dir);
+  });
+}
+document.querySelectorAll('#tbl-cumul th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const k = th.dataset.sort;
+    if(_cumulState.key === k){
+      _cumulState.dir = _cumulState.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+      _cumulState.key = k;
+      _cumulState.dir = (k === 'name') ? 'asc' : 'desc';
+    }
+    renderCumul();
+  });
+});
 
 renderCurrent();
 renderGrid();
 renderAllTime();
+renderCumul();
 </script>
 </body>
 </html>
