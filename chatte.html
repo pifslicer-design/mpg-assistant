@@ -214,6 +214,20 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px;}
   </section>
 
   <section class="card">
+    <h2>Comment c'est calculé ?</h2>
+    <div class="notes">
+      <p>Pour chaque joueur, on compare ses <strong>buts pris IRL</strong> à un <strong>« buts pris si équitable »</strong> = moyenne des buts marqués par les <em>autres</em> équipes de la saison. Logique : un joueur ne se prend pas ses propres buts, donc en moyenne il devrait encaisser ce que les N−1 autres marquent.</p>
+      <p>Formule : <code>équitable = (Σ buts marqués − tes buts marqués) / (N−1)</code></p>
+      <p>Pour le <strong>% Chatte</strong> :</p>
+      <ul style="margin-left:20px;">
+        <li>Si <code>équitable &gt; pris</code> (chanceux) : <code>(équitable / pris) − 1</code></li>
+        <li>Si <code>équitable &lt; pris</code> (malchanceux) : <code>1 − (pris / équitable)</code></li>
+      </ul>
+      <p class="small">⚠️ Seuls les buts IRL des onze alignés sont comptés (pas les bonus, ni les ratings, ni le coach). C'est la vraie chatte : tu choisis ta défense, mais qu'elle prenne 0 ou 5 buts dépend des matchs IRL. Le changement de dénominateur entre les deux formules est volontaire (symétrie visuelle des chiffres) — assumé comme « entourloupe mathématique » par François, l'inventeur de la formule. Et puis on fait ce qu'on veut, naaa.</p>
+    </div>
+  </section>
+
+  <section class="card">
     <h2>Cumul buts IRL <span class="sub" id="cumul-sub"></span></h2>
     <div class="desc">Cumul sur tout l'historique (saison en cours incluse). Cliquer sur un en-tête pour trier.</div>
     <table class="t sortable" id="tbl-cumul">
@@ -229,20 +243,6 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px;}
       </tr></thead>
       <tbody></tbody>
     </table>
-  </section>
-
-  <section class="card">
-    <h2>Comment c'est calculé ?</h2>
-    <div class="notes">
-      <p>Pour chaque joueur, on compare ses <strong>buts pris IRL</strong> à un <strong>« buts pris si équitable »</strong> = moyenne des buts marqués par les <em>autres</em> équipes de la saison. Logique : un joueur ne se prend pas ses propres buts, donc en moyenne il devrait encaisser ce que les N−1 autres marquent.</p>
-      <p>Formule : <code>équitable = (Σ buts marqués − tes buts marqués) / (N−1)</code></p>
-      <p>Pour le <strong>% Chatte</strong> :</p>
-      <ul style="margin-left:20px;">
-        <li>Si <code>équitable &gt; pris</code> (chanceux) : <code>(équitable / pris) − 1</code></li>
-        <li>Si <code>équitable &lt; pris</code> (malchanceux) : <code>1 − (pris / équitable)</code></li>
-      </ul>
-      <p class="small">⚠️ Seuls les buts IRL des onze alignés sont comptés (pas les bonus, ni les ratings, ni le coach). C'est la vraie chatte : tu choisis ta défense, mais qu'elle prenne 0 ou 5 buts dépend des matchs IRL. Le changement de dénominateur entre les deux formules est volontaire (symétrie visuelle des chiffres) — assumé comme « entourloupe mathématique » par François, l'inventeur de la formule. Et puis on fait ce qu'on veut, naaa.</p>
-    </div>
   </section>
 
 </main>
