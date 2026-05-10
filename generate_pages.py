@@ -1511,37 +1511,46 @@ def build_chatte_data(conn) -> dict:
             ],
         }
 
-    # Classement all-time : moyenne arithmétique des % chatte sur saisons jouées
-    # (saisons COMPLÈTES uniquement — on exclut la saison en cours pour éviter
-    # qu'un mid-season tire les chiffres). Les valeurs inf (ga=0) sont ignorées.
+    # Classement all-time : on applique la formule chatte sur le CUMUL des
+    # buts marqués/pris sur toutes les saisons complètes (= traiter l'historique
+    # comme une seule méga-saison). Plus rigoureux qu'une moyenne de pourcentages.
+    # Saison en cours exclue. Best/Worst/Bilan restent par saison.
     histo_divs = [div_id for div_id, _ in ordered if div_id in chatte_by_pid_by_div]
     series_by_pid: dict[str, list[float]] = {}
+    gf_alltime: dict[str, int] = {}
+    ga_alltime: dict[str, int] = {}
     for div_id in histo_divs:
         for pid, ch in chatte_by_pid_by_div[div_id].items():
             series_by_pid.setdefault(pid, []).append(ch)
+        for pid, (g, a) in counts_by_pid_by_div[div_id].items():
+            gf_alltime[pid] = gf_alltime.get(pid, 0) + g
+            ga_alltime[pid] = ga_alltime.get(pid, 0) + a
+    total_ligue_gf = sum(gf_alltime.values())
+    n_teams = len(gf_alltime)
 
     all_time = []
     for pid in PLAYER_ORDER:
         chs = series_by_pid.get(pid, [])
-        if not chs:
+        if not chs or pid not in gf_alltime:
             continue
-        n = len(chs)
-        mean = sum(chs) / n
-        srt = sorted(chs)
-        med = srt[n // 2] if n % 2 else (srt[n // 2 - 1] + srt[n // 2]) / 2
+        eq, chatte_cumul = _chatte_pct(
+            gf_alltime[pid], ga_alltime[pid], total_ligue_gf, n_teams
+        )
         all_time.append({
-            "pid":    pid,
-            "name":   display.get(pid, pid),
-            "color":  PLAYER_COLORS.get(pid, "#888"),
-            "mean":   round(mean, 4),
-            "median": round(med, 4),
-            "best":   round(max(chs), 4),
-            "worst":  round(min(chs), 4),
-            "n_pos":  sum(1 for c in chs if c > 0),
-            "n_neg":  sum(1 for c in chs if c < 0),
-            "n":      n,
+            "pid":          pid,
+            "name":         display.get(pid, pid),
+            "color":        PLAYER_COLORS.get(pid, "#888"),
+            "gf":           gf_alltime[pid],
+            "ga":           ga_alltime[pid],
+            "eq":           round(eq, 1),
+            "chatte_cumul": round(chatte_cumul, 4),
+            "best":         round(max(chs), 4),
+            "worst":        round(min(chs), 4),
+            "n_pos":        sum(1 for c in chs if c > 0),
+            "n_neg":        sum(1 for c in chs if c < 0),
+            "n":            len(chs),
         })
-    all_time.sort(key=lambda r: -r["mean"])
+    all_time.sort(key=lambda r: -r["chatte_cumul"])
 
     # Grille par saison : matrice joueur × saison
     grid_rows = []
