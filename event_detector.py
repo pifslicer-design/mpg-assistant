@@ -377,10 +377,17 @@ def detect_gw_extreme_scores(conn, gw_info: dict) -> list[dict]:
 # 4. Records de série (réutilise compute_streaks → notable_events)
 # ──────────────────────────────────────────────────────────────────────────────
 
-def detect_streak_records(conn) -> list[dict]:
-    """Réutilise compute_streaks pour détecter égalisations / dépassements."""
+def detect_streak_records(conn, gw_info: Optional[dict] = None) -> list[dict]:
+    """Réutilise compute_streaks pour détecter égalisations / dépassements.
+
+    Si gw_info est fourni, tronque la division courante à game_week<=gw — utile
+    pour reconstituer l'état des séries à une journée passée (backfill recaps).
+    """
     display = _load_display_names()
-    live = compute_streaks(conn, include_current=True)
+    max_gw_per_div = None
+    if gw_info:
+        max_gw_per_div = {gw_info["division_id"]: gw_info["game_week"]}
+    live = compute_streaks(conn, include_current=True, max_gw_per_div=max_gw_per_div)
     events: list[dict] = []
 
     cat_meta = [
@@ -524,12 +531,17 @@ def detect_decisive_bonuses(conn, gw_info: dict) -> list[dict]:
 # Aggregator
 # ──────────────────────────────────────────────────────────────────────────────
 
-def detect_all_events(conn) -> Optional[dict]:
+def detect_all_events(conn, gw_info_override: Optional[dict] = None) -> Optional[dict]:
     """Détecte tous les événements de la dernière journée terminée.
+
+    Si gw_info_override est fourni (clés: season, division_id, game_week, slabel),
+    bypass la détection auto et calcule pour cette journée précise (backfill).
+    Pour `detect_alltime_records`, l'historique pris en compte est tout ce qui
+    est antérieur à game_week (au sein de la division courante).
 
     Retourne None si pas de journée finalisée.
     """
-    gw_info = find_last_finalized_gw(conn)
+    gw_info = gw_info_override or find_last_finalized_gw(conn)
     if not gw_info:
         return None
 
@@ -537,7 +549,7 @@ def detect_all_events(conn) -> Optional[dict]:
     events.extend(detect_season_status(conn, gw_info))
     events.extend(detect_alltime_records(conn, gw_info))
     events.extend(detect_gw_extreme_scores(conn, gw_info))
-    events.extend(detect_streak_records(conn))
+    events.extend(detect_streak_records(conn, gw_info))
     events.extend(detect_decisive_bonuses(conn, gw_info))
 
     return {

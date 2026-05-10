@@ -476,6 +476,7 @@ def compute_streaks(
     include_incomplete: bool = False,
     include_current: bool = False,
     division_ids: list[str] | None = None,
+    max_gw_per_div: dict[str, int] | None = None,
 ) -> dict[str, dict]:
     """Séries consécutives par person_id (cross-divisions).
 
@@ -501,6 +502,12 @@ def compute_streaks(
             conn, include_covid, include_incomplete, include_current
         )
     matches = fetch_matches(conn, division_ids)
+    if max_gw_per_div:
+        matches = [
+            m for m in matches
+            if m["division_id"] not in max_gw_per_div
+            or m["game_week"] <= max_gw_per_div[m["division_id"]]
+        ]
 
     seq_by_player: dict[str, list] = defaultdict(list)
     for m in matches:
