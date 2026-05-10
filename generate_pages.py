@@ -1459,8 +1459,11 @@ def build_chatte_data(conn) -> dict:
     current_divs = _current_division_ids(conn)
     display = _load_display_names()
 
-    # Ordonnancement : saisons complètes par année + saison en cours en dernier
-    ordered = sorted(snum_map.items(), key=lambda x: x[1])
+    # Ordonnancement : par (année, numéro de saison parsé du div_id) pour éviter
+    # le tri lexico qui mettrait S10 avant S9.
+    def _sort_key(div_id: str) -> tuple[int, int]:
+        return (year_map.get(div_id, 0), int(div_id.split("_")[-2]))
+    ordered = sorted(snum_map.items(), key=lambda x: _sort_key(x[0]))
     cur_extra: list[tuple[str, int]] = []
     if current_divs:
         next_s = (max(snum_map.values()) + 1) if snum_map else 1
