@@ -119,6 +119,61 @@
   .cat-links a:last-child { border-bottom: none; }
   .cat-links a:hover { color: #2a3ab0; }
 
+  /* RECAP — résumé post-journée */
+  .recap-card {
+    background: linear-gradient(135deg, rgba(255,215,90,0.10) 0%, var(--surface) 70%);
+    border: 1.5px solid rgba(212,158,40,0.40);
+    border-radius: 18px;
+    padding: 20px 22px;
+    margin-bottom: 22px;
+    box-shadow: 0 2px 10px rgba(64,84,204,0.08);
+  }
+  .recap-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #A07820;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 8px;
+  }
+  .recap-meta .recap-gw {
+    background: #A07820;
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 14px;
+    font-size: 13px;
+    letter-spacing: 0;
+  }
+  .recap-title {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .recap-body { font-size: 14px; line-height: 1.6; color: var(--text); }
+  .recap-body ul { padding-left: 0; list-style: none; }
+  .recap-body li {
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(0,0,0,0.06);
+  }
+  .recap-body li:last-child { border-bottom: none; }
+  .recap-body strong { font-weight: 800; }
+  .recap-archive {
+    text-align: right;
+    margin-top: 10px;
+  }
+  .recap-archive a {
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .recap-archive a:hover { color: var(--blue); }
+
   /* FOOTER */
   footer {
     text-align: center;
@@ -218,6 +273,16 @@
 </header>
 
 <main>
+  <section class="recap-card" id="recapSection" style="display:none;">
+    <div class="recap-meta">
+      <span class="recap-gw" id="recapGw">J? S?</span>
+      <span>Résumé de la dernière journée</span>
+    </div>
+    <h2 class="recap-title" id="recapTitle"></h2>
+    <div class="recap-body" id="recapBody"></div>
+    <div class="recap-archive"><a href="recaps.html">Voir les résumés précédents →</a></div>
+  </section>
+
   <div class="cat-grid">
 
     <div class="cat-card">
@@ -266,6 +331,17 @@
 <footer>
   Saison en cours exclue des stats historiques · <span>MPG Assistant</span>
 </footer>
+
+<script>
+const RECAP={"available":true,"season":2025,"slabel":"S18","game_week":12,"title":"Manu et Raph se sauvent mutuellement à la Zahia","summary_html":"<ul>\n<li>🤝 <strong>Manu</strong> et <strong>Raph</strong> ont tous les deux sorti Zahia l'un contre l'autre — résultat : 4-4, les deux sauvés d'une défaite. Symbiose totale, ou fainéantise tactique ?</li>\n<li>🎯 Coup de bol ou génie ? Sans leurs bonus respectifs, les deux perdaient. Deux boulets qui se noient ensemble et remontent à la surface.</li>\n<li>💥 <strong>Damien</strong> atomise <strong>Greg</strong> 4-1 — la claque la plus propre de la journée, Greg peut aller se cacher jusqu'à la J13.</li>\n<li>🔥 <strong>François</strong> est à 11 matchs sans défaite, à UNE longueur de son record perso de 12. Encore un nul et il s'égalise lui-même — fascinant.</li>\n</ul>"};
+(function() {
+  if (!RECAP || !RECAP.available) return;
+  document.getElementById('recapSection').style.display = '';
+  document.getElementById('recapGw').textContent = 'J' + RECAP.game_week + ' ' + RECAP.slabel;
+  document.getElementById('recapTitle').textContent = RECAP.title || '';
+  document.getElementById('recapBody').innerHTML = RECAP.summary_html || '';
+})();
+</script>
 
 </body>
 </html>

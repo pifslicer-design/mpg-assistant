@@ -116,7 +116,7 @@ def list_included_divisions(
     return [r["division_id"] for r in rows]
 
 
-def fetch_matches(conn, division_ids: list[str], finalized_only: bool = False) -> list[dict]:
+def fetch_matches(conn, division_ids: list[str], finalized_only: bool = True) -> list[dict]:
     """Charge les matchs joués des divisions demandées.
 
     L'outcome est dérivé des scores réels (le champ finalResult du JSON MPG
@@ -125,7 +125,11 @@ def fetch_matches(conn, division_ids: list[str], finalized_only: bool = False) -
       home_score < away_score → 3 (away win)
       home_score = away_score → 2 (draw)
 
-    Seuls les matchs avec home_score ET away_score non nuls sont inclus.
+    Par défaut, seuls les matchs finalisés (is_finalized=1) sont inclus —
+    sinon les scores partiels live d'une journée en cours (souvent 0-0)
+    contamineraient toutes les stats. Passer finalized_only=False pour
+    inclure les matchs en cours (déconseillé pour des stats agrégées).
+
     Retourne une liste triée (season, division_id, game_week, match_id) pour
     garantir l'ordre déterministe requis par l'ELO.
     """
@@ -435,6 +439,37 @@ def compute_elo(
     }
 
 
+def _best_in_prefix(seq: list, prefix_len: int, kind: str) -> tuple[int, dict | None, dict | None]:
+    """Meilleure série de type 'kind' dans seq[:prefix_len].
+
+    kind ∈ {'W', 'L', 'UB'} où UB = invaincu (W ou D).
+    Retourne (best_value, start_meta, end_meta) — start/end None si best == 0.
+    """
+    best = 0
+    cur = 0
+    cur_si = 0
+    bs = be = None
+    for i in range(prefix_len):
+        r = seq[i][0]
+        if kind == "W":
+            cond = (r == "W")
+        elif kind == "UB":
+            cond = (r != "L")
+        else:  # 'L'
+            cond = (r == "L")
+        if cond:
+            if cur == 0:
+                cur_si = i
+            cur += 1
+        else:
+            cur = 0
+        if cur > best:
+            best = cur
+            bs = seq[cur_si][1]
+            be = seq[i][1]
+    return best, bs, be
+
+
 def compute_streaks(
     conn,
     include_covid: bool = False,
@@ -550,19 +585,37 @@ def compute_streaks(
                 break
         cur_ub_start = seq[cur_ub_si][1] if n > 0 and cur_ub > 0 else None
 
+        # Records "antérieurs" (excluant la série en cours du même type).
+        # Permet de détecter "série en cours qui égale/dépasse le record historique".
+        cur_w_len = cur_length if cur_type == "W" else 0
+        cur_l_len = cur_length if cur_type == "L" else 0
+
+        bw_excl, bw_excl_s, bw_excl_e = _best_in_prefix(seq, n - cur_w_len, "W")
+        bl_excl, bl_excl_s, bl_excl_e = _best_in_prefix(seq, n - cur_l_len, "L")
+        bub_excl, bub_excl_s, bub_excl_e = _best_in_prefix(seq, n - cur_ub, "UB")
+
         result[pid] = {
             "best_win":              bw,
             "best_win_start":        bw_s,
             "best_win_end":          bw_e,
             "best_win_ongoing":      bw_ei == n - 1,
+            "best_win_excl":         bw_excl,
+            "best_win_excl_start":   bw_excl_s,
+            "best_win_excl_end":     bw_excl_e,
             "best_unbeaten":         bub,
             "best_unbeaten_start":   bub_s,
             "best_unbeaten_end":     bub_e,
             "best_unbeaten_ongoing": bub_ei == n - 1,
+            "best_unbeaten_excl":    bub_excl,
+            "best_unbeaten_excl_start": bub_excl_s,
+            "best_unbeaten_excl_end":   bub_excl_e,
             "best_loss":             bl,
             "best_loss_start":       bl_s,
             "best_loss_end":         bl_e,
             "best_loss_ongoing":     bl_ei == n - 1,
+            "best_loss_excl":        bl_excl,
+            "best_loss_excl_start":  bl_excl_s,
+            "best_loss_excl_end":    bl_excl_e,
             "current_type":          cur_type,
             "current_length":        cur_length,
             "current_start":         cur_start,

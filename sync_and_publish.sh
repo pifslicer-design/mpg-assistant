@@ -38,6 +38,14 @@ $log_tail" || true
 }
 trap 'on_error $LINENO' ERR
 
+# 0. Charger .env (SUPABASE_URL, ANTHROPIC_API_KEY, etc.)
+if [[ -f .env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+
 # 1. Sync données
 echo "[1/5] Sync divisions..."
 "$PYTHON" mpg_client.py --divisions-file divisions.txt --sync-divisions

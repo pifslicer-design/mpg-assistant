@@ -67,6 +67,19 @@ main{max-width:1000px;margin:-20px auto 40px;padding:0 20px;position:relative;z-
 .current-ub{font-size:10px;color:var(--blue);font-weight:700;margin-top:3px;}
 .live-dot{color:var(--green);font-size:10px;vertical-align:middle;}
 
+/* ── Bandeau d'événements (égalisations / dépassements en cours) ── */
+.notable{margin-bottom:24px;}
+.notable-card{background:linear-gradient(135deg,rgba(255,215,90,0.10) 0%,rgba(255,255,255,1) 70%);border:1.5px solid rgba(212,158,40,0.35);border-radius:14px;padding:16px 18px;}
+.notable-title{font-size:12px;font-weight:800;color:#A07820;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.notable-list{display:flex;flex-direction:column;gap:8px;}
+.notable-item{display:flex;align-items:baseline;gap:10px;font-size:14px;line-height:1.4;}
+.notable-emoji{font-size:18px;line-height:1;flex:0 0 auto;}
+.notable-text{flex:1;}
+.notable-name{font-weight:800;}
+.notable-value{font-weight:800;color:var(--text);}
+.notable-since{color:var(--muted);font-size:12px;font-weight:600;}
+.notable-old{color:var(--muted);font-size:12px;font-weight:600;font-style:italic;}
+
 footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
 footer a{color:var(--blue);text-decoration:none;font-weight:700;}
 footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;}
@@ -154,6 +167,13 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
 </header>
 
 <main>
+  <section class="notable" id="notableSection" style="display:none;">
+    <div class="notable-card">
+      <div class="notable-title"><span>⚡</span> Records en cours</div>
+      <div class="notable-list" id="notableList"></div>
+    </div>
+  </section>
+
   <div class="section-title">Records all-time</div>
   <div class="streaks-grid" id="streaksGrid"></div>
 
@@ -171,7 +191,7 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
 </footer>
 
 <script>
-const STREAKS={"all_time":[{"pid":"raph","name":"Raph","color":"#C0303A","best_win":8,"best_win_tip":"J13 S9 → J6 S11","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J8 S2 → J3 S3","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J13 S7 → J3 S8","best_loss_ongoing":false},{"pid":"nico","name":"Nico","color":"#2E6A99","best_win":7,"best_win_tip":"J4 S17 → J10 S17","best_win_ongoing":false,"best_unbeaten":11,"best_unbeaten_tip":"J6 S1 → J2 S2","best_unbeaten_ongoing":false,"best_loss":4,"best_loss_tip":"J14 S3 → J3 S4","best_loss_ongoing":false},{"pid":"francois","name":"François","color":"#1E5C3A","best_win":6,"best_win_tip":"J3 S4 → J8 S4","best_win_ongoing":false,"best_unbeaten":12,"best_unbeaten_tip":"J12 S3 → J9 S4","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 S7 → J2 S8","best_loss_ongoing":false},{"pid":"damien","name":"Damien","color":"#C08A00","best_win":8,"best_win_tip":"J1 Old S1 → J8 Old S1","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J9 Old S2 → J4 S1","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J3 S13 → J7 S13","best_loss_ongoing":false},{"pid":"greg","name":"Greg","color":"#D4643A","best_win":5,"best_win_tip":"J13 S1 → J3 S2","best_win_ongoing":false,"best_unbeaten":9,"best_unbeaten_tip":"J8 S3 → J2 S4","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J9 S4 → J14 S4","best_loss_ongoing":false},{"pid":"marc","name":"Marc","color":"#1A3D50","best_win":5,"best_win_tip":"J11 S8 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J8 S11 → J14 S11","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J8 S14 → J13 S14","best_loss_ongoing":false},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","best_win":5,"best_win_tip":"J11 S8 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J11 S8 → J3 S10","best_unbeaten_ongoing":false,"best_loss":10,"best_loss_tip":"J9 S16 → J4 S17","best_loss_ongoing":false},{"pid":"manu","name":"Manu","color":"#7A1A1E","best_win":5,"best_win_tip":"J1 S17 → J5 S17","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J13 S1 → J5 S2","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 Old S2 → J2 S1","best_loss_ongoing":false}],"prev_season":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"W","length":1,"tip":"depuis J14 S17","unbeaten":1,"unbeaten_tip":""},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"L","length":1,"tip":"depuis J14 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"francois","name":"François","color":"#1E5C3A","type":"L","length":4,"tip":"depuis J11 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"damien","name":"Damien","color":"#C08A00","type":"W","length":1,"tip":"depuis J14 S17","unbeaten":1,"unbeaten_tip":""},{"pid":"greg","name":"Greg","color":"#D4643A","type":"W","length":4,"tip":"depuis J11 S17","unbeaten":4,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"W","length":3,"tip":"depuis J12 S17","unbeaten":3,"unbeaten_tip":""},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"L","length":2,"tip":"depuis J13 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"L","length":1,"tip":"depuis J14 S17","unbeaten":0,"unbeaten_tip":""}],"live":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":4,"unbeaten_tip":"depuis J10 S18","is_live":true},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":2,"unbeaten_tip":"depuis J12 S18","is_live":true},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":3,"tip":"depuis J11 S18","unbeaten":12,"unbeaten_tip":"depuis J2 S18","is_live":true},{"pid":"damien","name":"Damien","color":"#C08A00","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":3,"unbeaten_tip":"depuis J11 S18","is_live":true},{"pid":"greg","name":"Greg","color":"#D4643A","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":2,"unbeaten_tip":"","is_live":true},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":2,"unbeaten_tip":"","is_live":true}],"season_only":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":4,"unbeaten_tip":"depuis J10 S18"},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":2,"unbeaten_tip":"depuis J12 S18"},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":3,"tip":"depuis J11 S18","unbeaten":12,"unbeaten_tip":"depuis J2 S18"},{"pid":"damien","name":"Damien","color":"#C08A00","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":3,"unbeaten_tip":"depuis J11 S18"},{"pid":"greg","name":"Greg","color":"#D4643A","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":2,"unbeaten_tip":""},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"D","length":1,"tip":"depuis J13 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"D","length":2,"tip":"depuis J12 S18","unbeaten":2,"unbeaten_tip":""}],"last_snum":18,"current_snum":19,"last_slabel":"S17","current_slabel":"S18"};
+const STREAKS={"all_time":[{"pid":"raph","name":"Raph","color":"#C0303A","best_win":8,"best_win_tip":"J13 S9 → J6 S11","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J8 S2 → J3 S3","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J13 S7 → J3 S8","best_loss_ongoing":false},{"pid":"nico","name":"Nico","color":"#2E6A99","best_win":7,"best_win_tip":"J4 S17 → J10 S17","best_win_ongoing":false,"best_unbeaten":11,"best_unbeaten_tip":"J6 S1 → J2 S2","best_unbeaten_ongoing":false,"best_loss":4,"best_loss_tip":"J14 S3 → J3 S4","best_loss_ongoing":false},{"pid":"francois","name":"François","color":"#1E5C3A","best_win":6,"best_win_tip":"J3 S4 → J8 S4","best_win_ongoing":false,"best_unbeaten":12,"best_unbeaten_tip":"J12 S3 → J9 S4","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 S7 → J2 S8","best_loss_ongoing":false},{"pid":"damien","name":"Damien","color":"#C08A00","best_win":8,"best_win_tip":"J1 Old S1 → J8 Old S1","best_win_ongoing":false,"best_unbeaten":10,"best_unbeaten_tip":"J9 Old S2 → J4 S1","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J3 S13 → J7 S13","best_loss_ongoing":false},{"pid":"greg","name":"Greg","color":"#D4643A","best_win":5,"best_win_tip":"J13 S1 → J3 S2","best_win_ongoing":false,"best_unbeaten":9,"best_unbeaten_tip":"J8 S3 → J2 S4","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J9 S4 → J14 S4","best_loss_ongoing":false},{"pid":"marc","name":"Marc","color":"#1A3D50","best_win":5,"best_win_tip":"J11 S8 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J8 S11 → J14 S11","best_unbeaten_ongoing":false,"best_loss":6,"best_loss_tip":"J8 S14 → J13 S14","best_loss_ongoing":false},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","best_win":5,"best_win_tip":"J11 S8 → J1 S10","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J11 S8 → J3 S10","best_unbeaten_ongoing":false,"best_loss":10,"best_loss_tip":"J9 S16 → J4 S17","best_loss_ongoing":false},{"pid":"manu","name":"Manu","color":"#7A1A1E","best_win":5,"best_win_tip":"J1 S17 → J5 S17","best_win_ongoing":false,"best_unbeaten":7,"best_unbeaten_tip":"J13 S1 → J5 S2","best_unbeaten_ongoing":false,"best_loss":5,"best_loss_tip":"J12 Old S2 → J2 S1","best_loss_ongoing":false}],"notable_events":[{"kind":"approaching","category":"unbeaten","pid":"francois","name":"François","color":"#1E5C3A","value":11,"old_record":12,"since":"depuis J2 S18","emoji":"👀","label":"matchs sans défaite"}],"prev_season":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"W","length":1,"tip":"depuis J14 S17","unbeaten":1,"unbeaten_tip":""},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"L","length":1,"tip":"depuis J14 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"francois","name":"François","color":"#1E5C3A","type":"L","length":4,"tip":"depuis J11 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"damien","name":"Damien","color":"#C08A00","type":"W","length":1,"tip":"depuis J14 S17","unbeaten":1,"unbeaten_tip":""},{"pid":"greg","name":"Greg","color":"#D4643A","type":"W","length":4,"tip":"depuis J11 S17","unbeaten":4,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"W","length":3,"tip":"depuis J12 S17","unbeaten":3,"unbeaten_tip":""},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"L","length":2,"tip":"depuis J13 S17","unbeaten":0,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"L","length":1,"tip":"depuis J14 S17","unbeaten":0,"unbeaten_tip":""}],"live":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":3,"unbeaten_tip":"depuis J10 S18","is_live":true},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"W","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":2,"tip":"depuis J11 S18","unbeaten":11,"unbeaten_tip":"depuis J2 S18","is_live":true},{"pid":"damien","name":"Damien","color":"#C08A00","type":"W","length":2,"tip":"depuis J11 S18","unbeaten":2,"unbeaten_tip":"","is_live":true},{"pid":"greg","name":"Greg","color":"#D4643A","type":"L","length":1,"tip":"depuis J12 S18","unbeaten":0,"unbeaten_tip":"","is_live":true},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":"","is_live":true},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"L","length":1,"tip":"depuis J12 S18","unbeaten":0,"unbeaten_tip":"","is_live":true},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":"","is_live":true}],"season_only":[{"pid":"raph","name":"Raph","color":"#C0303A","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":3,"unbeaten_tip":"depuis J10 S18"},{"pid":"nico","name":"Nico","color":"#2E6A99","type":"W","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"francois","name":"François","color":"#1E5C3A","type":"D","length":2,"tip":"depuis J11 S18","unbeaten":11,"unbeaten_tip":"depuis J2 S18"},{"pid":"damien","name":"Damien","color":"#C08A00","type":"W","length":2,"tip":"depuis J11 S18","unbeaten":2,"unbeaten_tip":""},{"pid":"greg","name":"Greg","color":"#D4643A","type":"L","length":1,"tip":"depuis J12 S18","unbeaten":0,"unbeaten_tip":""},{"pid":"marc","name":"Marc","color":"#1A3D50","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":""},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","type":"L","length":1,"tip":"depuis J12 S18","unbeaten":0,"unbeaten_tip":""},{"pid":"manu","name":"Manu","color":"#7A1A1E","type":"D","length":1,"tip":"depuis J12 S18","unbeaten":1,"unbeaten_tip":""}],"last_snum":18,"current_snum":19,"last_slabel":"S17","current_slabel":"S18"};
 
 // ── Config ──
 const TYPE_LABEL  = { W: 'Victoires', D: 'Nuls', L: 'Défaites' };
@@ -285,8 +305,67 @@ MODES.forEach((mode, i) => {
   tabsContainer.appendChild(btn);
 });
 
+// ── Bandeau d'événements (records en cours) ──
+function renderNotable() {
+  const events = STREAKS.notable_events || [];
+  const section = document.getElementById('notableSection');
+  const list = document.getElementById('notableList');
+  if (!events.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  list.innerHTML = '';
+  const VERB = {
+    equaled:   { win: 'égale son record de', unbeaten: 'égale son record d\'invincibilité', loss: 'égale son record de défaites consécutives' },
+    surpassed: { win: 'bat son record de',   unbeaten: 'bat son record d\'invincibilité',   loss: 'bat son record de défaites consécutives' },
+  };
+  // Pour le kind "approaching" : "Encore X et <Nom> égale son record …"
+  const NEXT_NEEDED = {
+    win:      'une victoire',
+    unbeaten: 'un nul ou une victoire',
+    loss:     'une défaite',
+  };
+  for (const ev of events) {
+    const item = document.createElement('div');
+    item.className = 'notable-item';
+    if (ev.kind === 'approaching') {
+      const need  = NEXT_NEEDED[ev.category] || 'un match';
+      const verb  = VERB.equaled[ev.category];
+      const extra = (ev.category === 'win') ? ' ' + ev.label : '';
+      item.innerHTML =
+        `<span class="notable-emoji">${ev.emoji}</span>` +
+        `<span class="notable-text">` +
+          `Encore ${need} et ` +
+          `<span class="notable-name" style="color:${ev.color};">${ev.name}</span> ` +
+          `${verb}${extra} ` +
+          `<span class="notable-value">(${ev.old_record})</span>` +
+          ` — <span class="notable-since">série actuelle : ${ev.value}, ${ev.since}</span>` +
+        `</span>`;
+    } else {
+      const verb = VERB[ev.kind][ev.category];
+      const labelExtra = (ev.category === 'win') ? ' ' + ev.label : '';
+      const old = (ev.kind === 'surpassed')
+        ? ` <span class="notable-old">(ancien : ${ev.old_record})</span>`
+        : '';
+      item.innerHTML =
+        `<span class="notable-emoji">${ev.emoji}</span>` +
+        `<span class="notable-text">` +
+          `<span class="notable-name" style="color:${ev.color};">${ev.name}</span> ` +
+          `${verb}${labelExtra} ` +
+          `<span class="notable-value">(${ev.value})</span>` +
+          `${old} — <span class="notable-since">${ev.since}</span>` +
+        `</span>`;
+    }
+    list.appendChild(item);
+  }
+}
+renderNotable();
+
 // Initial render
-document.getElementById('hbadge').textContent = STREAKS.last_snum + ' saisons · cross-divisions';
+const _doneS = STREAKS.last_snum;
+const _curS  = STREAKS.current_snum;
+const _badgeTxt = (_curS && _curS > _doneS)
+  ? `${_doneS} saisons terminées + 1 en cours · cross-divisions`
+  : `${_doneS} saisons · cross-divisions`;
+document.getElementById('hbadge').textContent = _badgeTxt;
 document.getElementById('currentSectionTitle').textContent = MODE_TITLES[0];
 renderCurrentSection(activeMode);
 </script>

@@ -586,6 +586,11 @@ def build_streaks_data(conn) -> dict:
             return f"J{s_gw} {s_lbl}"
         return f"J{s_gw} {s_lbl} → J{e_gw} {e_lbl}"
 
+    def _since(start):
+        if not start:
+            return ""
+        return f"depuis J{start['game_week']} {slabel(start['division_id'])}"
+
     # 3 datasets
     hist        = compute_streaks(conn)                                          # fin S-prev (is_current exclu)
     live_data   = compute_streaks(conn, include_current=True)                    # toutes saisons
@@ -606,25 +611,99 @@ def build_streaks_data(conn) -> dict:
     current_slabel = slabel(current_divs[0]) if current_divs else None
 
     # ── All-time records (pour les 3 blocs du haut) ──
+    # On utilise live_data (toutes saisons, série en cours incluse) pour que
+    # les records reflètent l'instant. Les tips sont enrichis via _excl pour
+    # signaler les égalisations / dépassements en cours.
+    def _cat_current(s, cat):
+        """Retourne (cur_len, cur_start) pour la série en cours de catégorie cat."""
+        if cat == "win":
+            cur_len = s["current_length"] if s["current_type"] == "W" else 0
+            return cur_len, s["current_start"] if cur_len else None
+        if cat == "loss":
+            cur_len = s["current_length"] if s["current_type"] == "L" else 0
+            return cur_len, s["current_start"] if cur_len else None
+        return s["current_unbeaten_length"], s["current_unbeaten_start"]
+
+    def _enriched_tip(s, cat):
+        """Tip de base + suffixe 'égalé depuis…' ou 'ancien record N (J… → J…)'."""
+        val_best  = s[f"best_{cat}"]
+        val_excl  = s[f"best_{cat}_excl"]
+        start     = s[f"best_{cat}_start"]
+        end       = s[f"best_{cat}_end"]
+        ongoing   = s[f"best_{cat}_ongoing"]
+        cur_len, cur_start = _cat_current(s, cat)
+        base = _tip(start, end, ongoing)
+        if ongoing and val_excl > 0 and val_best > val_excl:
+            old_tip = _tip(s[f"best_{cat}_excl_start"], s[f"best_{cat}_excl_end"])
+            return f"{base} · ancien record {val_excl} ({old_tip})"
+        if not ongoing and val_excl > 0 and cur_len == val_excl == val_best:
+            return f"{base} · égalé {_since(cur_start)}"
+        return base
+
     all_time = []
     for pid in PLAYER_ORDER:
-        h = hist.get(pid)
-        if not h:
+        s = live_data.get(pid)
+        if not s:
             continue
         all_time.append({
             "pid":                   pid,
             "name":                  display.get(pid, pid),
             "color":                 PLAYER_COLORS[pid],
-            "best_win":              h["best_win"],
-            "best_win_tip":          _tip(h["best_win_start"], h["best_win_end"], h["best_win_ongoing"]),
-            "best_win_ongoing":      h["best_win_ongoing"],
-            "best_unbeaten":         h["best_unbeaten"],
-            "best_unbeaten_tip":     _tip(h["best_unbeaten_start"], h["best_unbeaten_end"], h["best_unbeaten_ongoing"]),
-            "best_unbeaten_ongoing": h["best_unbeaten_ongoing"],
-            "best_loss":             h["best_loss"],
-            "best_loss_tip":         _tip(h["best_loss_start"], h["best_loss_end"], h["best_loss_ongoing"]),
-            "best_loss_ongoing":     h["best_loss_ongoing"],
+            "best_win":              s["best_win"],
+            "best_win_tip":          _enriched_tip(s, "win"),
+            "best_win_ongoing":      s["best_win_ongoing"],
+            "best_unbeaten":         s["best_unbeaten"],
+            "best_unbeaten_tip":     _enriched_tip(s, "unbeaten"),
+            "best_unbeaten_ongoing": s["best_unbeaten_ongoing"],
+            "best_loss":             s["best_loss"],
+            "best_loss_tip":         _enriched_tip(s, "loss"),
+            "best_loss_ongoing":     s["best_loss_ongoing"],
         })
+
+    # ── Bandeau d'événements (égalisations / dépassements / à 1 match) ──
+    # cat_meta : (cat, label, emoji_equaled, emoji_surpassed, emoji_approaching)
+    cat_meta = [
+        ("win",      "victoires consécutives", "🔥", "🚀", "👀"),
+        ("unbeaten", "matchs sans défaite",    "✨", "🌟", "👀"),
+        ("loss",     "défaites consécutives",  "💀", "☠️", "⏳"),
+    ]
+    notable_events = []
+    for pid in PLAYER_ORDER:
+        s = live_data.get(pid)
+        if not s:
+            continue
+        name = display.get(pid, pid)
+        color = PLAYER_COLORS[pid]
+        for cat, label, em_eq, em_over, em_appr in cat_meta:
+            cur_len, cur_start = _cat_current(s, cat)
+            if cur_len == 0:
+                continue
+            excl = s[f"best_{cat}_excl"]
+            if excl <= 0:
+                continue
+            if cur_len >= excl:
+                kind = "equaled" if cur_len == excl else "surpassed"
+                emoji = em_eq if kind == "equaled" else em_over
+            elif cur_len == excl - 1:
+                kind = "approaching"
+                emoji = em_appr
+            else:
+                continue
+            notable_events.append({
+                "kind":       kind,
+                "category":   cat,
+                "pid":        pid,
+                "name":       name,
+                "color":      color,
+                "value":      cur_len,
+                "old_record": excl,
+                "since":      _since(cur_start),
+                "emoji":      emoji,
+                "label":      label,
+            })
+    # Ordre : dépassements > égalisations > approches ; par valeur décroissante au sein
+    _kind_rank = {"surpassed": 0, "equaled": 1, "approaching": 2}
+    notable_events.sort(key=lambda e: (_kind_rank.get(e["kind"], 9), -e["value"]))
 
     # ── Cartes "série en cours" (pour les 3 onglets) ──
     current_div_set = set(current_divs)
@@ -655,6 +734,7 @@ def build_streaks_data(conn) -> dict:
 
     return {
         "all_time":       all_time,
+        "notable_events": notable_events,
         "prev_season":    _cur_cards(hist),
         "live":           _cur_cards(live_data, with_live=True),
         "season_only":    _cur_cards(season_only),
@@ -1698,6 +1778,166 @@ def generate_chatte() -> None:
     print(f"  ✓ chatte.html  ({n_s} saisons, {n_p} joueurs all-time)")
 
 
+# ── builders index (résumé post-journée) ──────────────────────────────────────
+
+# Flag global réglé via CLI : --regen-recap force la régénération du résumé
+# de la journée même si déjà en cache.
+_FORCE_REGEN_RECAP = False
+
+
+def _ensure_recap_table(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS journee_recap (
+            season       INTEGER,
+            division_id  TEXT,
+            game_week    INTEGER,
+            events_json  TEXT,
+            summary_json TEXT,
+            generated_at TEXT,
+            PRIMARY KEY (season, division_id, game_week)
+        )
+        """
+    )
+
+
+def _load_recap(conn, season: int, division_id: str, gw: int) -> dict | None:
+    row = conn.execute(
+        "SELECT events_json, summary_json FROM journee_recap "
+        "WHERE season=? AND division_id=? AND game_week=?",
+        (season, division_id, gw),
+    ).fetchone()
+    if not row:
+        return None
+    try:
+        return {
+            "events":  json.loads(row["events_json"]),
+            "summary": json.loads(row["summary_json"]),
+        }
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+
+def _save_recap(conn, season: int, division_id: str, gw: int,
+                events: list, summary: dict) -> None:
+    from datetime import datetime, timezone
+    conn.execute(
+        "INSERT OR REPLACE INTO journee_recap "
+        "(season, division_id, game_week, events_json, summary_json, generated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            season, division_id, gw,
+            json.dumps(events, ensure_ascii=False, default=str),
+            json.dumps(summary, ensure_ascii=False),
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    conn.commit()
+
+
+def _md_to_html(md: str) -> str:
+    """Conversion markdown → HTML minimaliste (puces + gras + italique)."""
+    lines = md.strip().split("\n")
+    out: list[str] = []
+    in_list = False
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            continue
+        if line.startswith("- ") or line.startswith("* "):
+            if not in_list:
+                out.append("<ul>")
+                in_list = True
+            content = line[2:].strip()
+            content = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", content)
+            content = re.sub(r"_(.+?)_", r"<em>\1</em>", content)
+            out.append(f"<li>{content}</li>")
+        else:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            content = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", line)
+            content = re.sub(r"_(.+?)_", r"<em>\1</em>", content)
+            out.append(f"<p>{content}</p>")
+    if in_list:
+        out.append("</ul>")
+    return "\n".join(out)
+
+
+def _build_recaps_history(conn, limit: int = 30) -> list[dict]:
+    """Retourne la liste des recaps cachés, du plus récent au plus ancien."""
+    rows = conn.execute(
+        "SELECT season, division_id, game_week, summary_json, generated_at "
+        "FROM journee_recap ORDER BY season DESC, division_id DESC, game_week DESC "
+        "LIMIT ?",
+        (limit,),
+    ).fetchall()
+    out: list[dict] = []
+    for r in rows:
+        try:
+            summary = json.loads(r["summary_json"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+        out.append({
+            "season":       r["season"],
+            "division_id":  r["division_id"],
+            "slabel":       slabel(r["division_id"]),
+            "game_week":    r["game_week"],
+            "title":        summary.get("title", ""),
+            "summary_html": _md_to_html(summary.get("summary_md", "")),
+            "generated_at": r["generated_at"],
+        })
+    return out
+
+
+def generate_index() -> None:
+    """Génère le résumé post-journée + l'historique pour index.html et recaps.html."""
+    from event_detector import detect_all_events
+    from summary_writer import write_summary
+
+    with get_conn() as conn:
+        _ensure_recap_table(conn)
+        detection = detect_all_events(conn)
+
+        if not detection:
+            payload = {"available": False}
+            inject_const(BASE_DIR / "index.html", "RECAP", payload)
+            inject_const(BASE_DIR / "recaps.html", "RECAPS", [])
+            print("  ✓ index.html / recaps.html  (pas de journée terminée)")
+            return
+
+        season = detection["season"]
+        div_id = detection["division_id"]
+        gw     = detection["game_week"]
+
+        cached = None if _FORCE_REGEN_RECAP else _load_recap(conn, season, div_id, gw)
+        if cached:
+            summary = cached["summary"]
+            events  = cached["events"]
+        else:
+            summary = write_summary(detection)
+            events  = detection["events"]
+            _save_recap(conn, season, div_id, gw, events, summary)
+
+        payload = {
+            "available":    True,
+            "season":       season,
+            "slabel":       detection["slabel"],
+            "game_week":    gw,
+            "title":        summary.get("title", ""),
+            "summary_html": _md_to_html(summary.get("summary_md", "")),
+        }
+        inject_const(BASE_DIR / "index.html", "RECAP", payload)
+
+        history = _build_recaps_history(conn)
+        inject_const(BASE_DIR / "recaps.html", "RECAPS", history)
+        print(f"  ✓ index.html / recaps.html  (J{gw} {detection['slabel']}, "
+              f"{len(events)} événements, {'cache' if cached else 'nouveau'})")
+
+
 PAGES: dict[str, callable] = {
     "classement_cumul":         generate_classements,
     "classement_chronologique": generate_classements,
@@ -1712,14 +1952,20 @@ PAGES: dict[str, callable] = {
     "bump":                     generate_bump,
     "bestteam":                 generate_bestteam,
     "chatte":                   generate_chatte,
+    "index":                    generate_index,
 }
 
 
 def main() -> None:
-    global _modified
+    global _modified, _FORCE_REGEN_RECAP
     _modified = set()
 
-    targets = sys.argv[1:] or list(PAGES.keys())
+    args = sys.argv[1:]
+    if "--regen-recap" in args:
+        _FORCE_REGEN_RECAP = True
+        args = [a for a in args if a != "--regen-recap"]
+
+    targets = args or list(PAGES.keys())
     print(f"generate_pages.py — {len(targets)} page(s) demandée(s)")
     done: set = set()
     errors = 0
