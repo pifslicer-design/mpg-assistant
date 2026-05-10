@@ -72,6 +72,18 @@ table.grid td.empty{background:#F0F2F6;color:transparent;}
   width:min(640px,92vw);aspect-ratio:640/480;background:#000;}
 .gif-hero .gif-box iframe{display:block;border:0;width:100%;height:100%;}
 
+/* Hero row : GIF à gauche + Saison en cours à droite */
+.hero-row{display:flex;gap:22px;align-items:stretch;margin-bottom:22px;flex-wrap:wrap;}
+.hero-row .gif-hero{margin:0;flex:0 0 340px;align-items:flex-start;}
+.hero-row .gif-hero .gif-box{width:340px;aspect-ratio:4/3;}
+.hero-row > .card{flex:1 1 520px;margin-bottom:0;}
+@media(max-width:840px){
+  .hero-row{flex-direction:column;align-items:center;}
+  .hero-row .gif-hero{flex:0 0 auto;}
+  .hero-row .gif-hero .gif-box{width:min(560px,92vw);}
+  .hero-row > .card{width:100%;flex:1 1 auto;}
+}
+
 /* Notes */
 .notes{font-size:.78rem;color:var(--text);line-height:1.55;}
 .notes p{margin-bottom:8px;}
@@ -171,25 +183,27 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:16px;}
 
 <main class="main">
 
-  <div class="gif-hero">
-    <div class="gif-box">
-      <iframe src="https://tenor.com/embed/14568561"
-        frameborder="0" allowfullscreen referrerpolicy="no-referrer"></iframe>
+  <div class="hero-row">
+    <div class="gif-hero">
+      <div class="gif-box">
+        <iframe src="https://tenor.com/embed/14568561"
+          frameborder="0" allowfullscreen referrerpolicy="no-referrer"></iframe>
+      </div>
     </div>
-  </div>
 
-  <section class="card">
-    <h2>Saison en cours <span class="sub" id="cur-label"></span></h2>
-    <div class="desc" id="cur-desc">Calculé sur les buts IRL marqués / encaissés.</div>
-    <table class="t" id="tbl-current">
-      <thead><tr>
-        <th></th><th>Équipe</th>
-        <th>Buts marqués</th><th>Buts pris</th>
-        <th>Pris si équitable</th><th>% Chatte</th>
-      </tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
+    <section class="card">
+      <h2>Saison en cours <span class="sub" id="cur-label"></span></h2>
+      <div class="desc" id="cur-desc">Calculé sur les buts IRL marqués / encaissés.</div>
+      <table class="t" id="tbl-current">
+        <thead><tr>
+          <th></th><th>Équipe</th>
+          <th>Marqués</th><th>Pris</th>
+          <th>Équitable</th><th>% Chatte</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </div>
 
   <section class="card">
     <h2>Évolution par saison <span class="sub">heatmap des 19 saisons</span></h2>
