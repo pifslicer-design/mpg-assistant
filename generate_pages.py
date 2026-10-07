@@ -1439,13 +1439,19 @@ def generate_bump() -> None:
 # ── registre des pages ─────────────────────────────────────────────────────────
 
 def generate_bestteam() -> None:
-    """Page statique bestteam.html — marque pour copie vers docs/."""
-    path = BASE_DIR / "bestteam.html"
-    if path.exists():
-        _modified.add(path)
-        print("  ✓ bestteam.html  (page statique)")
-    else:
-        print("  ⚠ bestteam.html introuvable — fichier ignoré")
+    """bestteam.html — compo optimale de chaque manager, calculée en local (bestteam_engine).
+
+    Plus aucun appel Supabase : les notes L1 viennent de mercato_cache/ (refetch incrémental
+    via l'API MPG si le token est valide), le commentaire de Claude Haiku si ANTHROPIC_API_KEY.
+    """
+    import os
+    from bestteam_engine import build_bestteam_data
+    fetch = not os.environ.get("BESTTEAM_NO_FETCH")   # BESTTEAM_NO_FETCH=1 : cache local, pas d'appel API MPG
+    with get_conn() as conn:
+        data = build_bestteam_data(conn, fetch=fetch)
+    inject_const(BASE_DIR / "bestteam.html", "BESTTEAM", data)
+    print(f"  ✓ bestteam.html  ({data['label']}, {len(data['managers'])} managers, "
+          f"notes L1 {data['l1']['season']} J{data['l1']['n_gw']})")
 
 
 # ── Chatte (buts IRL) ──────────────────────────────────────────────────────────

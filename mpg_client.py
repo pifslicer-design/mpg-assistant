@@ -12,6 +12,7 @@ import yaml
 from mpg_db import (
     init_db, get_conn, get_last_fetched_game_week, get_league_current_game_week,
     mark_finalized_up_to, get_manifest, set_manifest, refresh_divisions_metadata,
+    get_current_division,
 )
 from mpg_fetchers import fetch_league, fetch_teams, fetch_matches
 from mpg_people import DEFAULT_MAPPING_PATH
@@ -104,13 +105,47 @@ class CurlClient:
         pass
 
 
-def build_client() -> tuple[CurlClient, str, str]:
-    """Retourne (client curl authentifié, league_id, division_id)."""
+def build_client() -> tuple[CurlClient, str, str | None]:
+    """Retourne (client curl authentifié, league_id, DIVISION_ID du .env ou None).
+
+    DIVISION_ID est optionnel : absent, la division par défaut est dérivée de
+    l'API ligue (voir _resolve_default_division).
+    """
     token = _get_env("MPG_TOKEN")
     league_id = _get_env("LEAGUE_ID")
-    division_id = _get_env("DIVISION_ID")
+    division_id = os.getenv("DIVISION_ID") or None
     client = CurlClient(base_url=BASE_URL, token=token)
     return client, league_id, division_id
+
+
+def _derive_current_division(client: CurlClient, league_id: str, refresh: bool) -> tuple[str, str]:
+    """Division courante dérivée de l'API ligue (league.divisionsIds), repli sur la constante.
+
+    refresh=True rafraîchit d'abord la table league (un appel /league/{id}) pour ne pas
+    rester sur la saison précédente juste après une bascule MPG.
+    """
+    if refresh:
+        try:
+            fetch_league(client, league_id)
+        except Exception as exc:
+            print(f"[WARN] Rafraîchissement ligue impossible ({exc}) — division lue depuis la DB")
+    return get_current_division()
+
+
+def _resolve_default_division(
+    client: CurlClient, league_id: str, env_division_id: str | None, refresh: bool,
+) -> tuple[str, str]:
+    """Division par défaut (hors --division) : DIVISION_ID du .env si présent, sinon dérivée.
+
+    Retourne (division_id, source) avec source ∈ {"env", "league", "constante"}.
+    """
+    derived, derived_src = _derive_current_division(client, league_id, refresh)
+    if env_division_id:
+        if env_division_id != derived:
+            print(f"[WARN] DIVISION_ID={env_division_id} (.env) ≠ division courante {derived} "
+                  f"(source={derived_src}) — le .env l'emporte ; le retirer pour suivre l'API")
+        return env_division_id, "env"
+    return derived, derived_src
 
 
 def _resolve_current_gw(last_db: int) -> tuple[int, str]:
@@ -410,12 +445,23 @@ def _run_batch(
     args,
     client: httpx.Client,
     league_id: str,
-    default_division_id: str,
 ) -> None:
-    """Boucle --force sur toutes les divisions du fichier texte."""
+    """Boucle --force sur toutes les divisions du fichier texte.
+
+    La division courante (dérivée de l'API ligue) est ajoutée en tête si elle
+    manque dans le fichier, pour qu'une nouvelle saison soit synchronisée sans
+    bascule manuelle.
+    """
     from pathlib import Path as _P
     lines = _P(args.divisions_file).read_text(encoding="utf-8").strip().splitlines()
     divisions = [l.strip() for l in lines if l.strip() and not l.startswith("#")]
+
+    current_div, current_src = _derive_current_division(client, league_id, refresh=True)
+    print(f"[CTX] division courante={current_div} (source={current_src})")
+    if current_div not in divisions:
+        print(f"[WARN] {current_div} absente de {args.divisions_file} — ajoutée en tête du batch. "
+              f"Penser à l'ajouter dans le fichier.")
+        divisions.insert(0, current_div)
 
     batch_label = args.league_batch_name or args.divisions_file
     print(f"\n[BATCH] {batch_label} — {len(divisions)} division(s)")
@@ -492,16 +538,22 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     init_db()
-    client, league_id, default_division_id = build_client()
+    client, league_id, env_division_id = build_client()
 
     # ── Résolution division(s) ──────────────────────────────────────────────
     if args.sync_divisions and args.divisions_file:
         with client:
-            _run_batch(args, client, league_id, default_division_id)
+            _run_batch(args, client, league_id)
         sys.exit(0)
 
-    division_id_effective = args.division or default_division_id
-    source = "cli" if args.division else "default"
+    # Priorité : --division > DIVISION_ID (.env) > league.divisionsIds > constante
+    if args.division:
+        division_id_effective, source = args.division, "cli"
+    else:
+        with client:
+            division_id_effective, source = _resolve_default_division(
+                client, league_id, env_division_id, refresh=not args.no_fetch,
+            )
     print(f"[CTX] division_id={division_id_effective} (source={source})")
 
     # ── Fetch (sauf --no-fetch) ─────────────────────────────────────────────

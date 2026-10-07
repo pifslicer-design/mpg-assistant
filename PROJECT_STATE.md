@@ -7,10 +7,10 @@
 
 Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, depuis 2016).
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmarès / séries / %chatte / recap post-journée) → pages HTML statiques dans `docs/` → GitHub Pages.
-Branche annexe « Best Team » : sync des données Ligue 1 vers Supabase + edge function, affichée par `bestteam.html`.
+Branche annexe « Best Team » : compo optimale par manager, calculée en local par `bestteam_engine.py` (notes Ligue 1 en cache local) et injectée dans `bestteam.html` — plus de Supabase depuis octobre 2026 (projet mort).
 
 **État actuel** (lecture de `mpg.db` le 2026-10-07, dernier sync le 2026-05-10) : 20 divisions importées (2016-2025), 1 084 matchs en DB dont 1 076 finalisés, **15 pages HTML** dans `docs/`, 13 + 8 tests (non relancés lors de cette mise à jour).
-**Division en cours** : `_18_1` (S18) — dernière journée finalisée en DB : J12 sur 14. Clôture S18 et bascule S19 pas encore faites au moment de cette mise à jour (voir « Constantes à mettre à jour chaque saison »).
+**Division en cours** : `_19_1` (S19, bascule faite le 2026-10-07, mercato en cours) — dérivée automatiquement de l'API ligue (`league.divisionsIds`), plus aucune constante MPG à changer (voir « Division courante : dérivée de l'API »).
 **Site** : https://pifslicer-design.github.io/mpg-assistant/ (déclencheur : push sur `docs/`).
 **Sync 100 % manuel** : aucun cron MPG n'est configuré dans WSL (le commentaire « Cron : lundi 7h » en tête de `sync_and_publish.sh` est obsolète).
 
@@ -22,11 +22,11 @@ Branche annexe « Best Team » : sync des données Ligue 1 vers Supabase + edge 
 mpg-assistant/
 │  ── Cœur données ──
 ├── mpg_client.py          # CLI entry point (argparse), orchestration ; CurlClient (transport API MPG, headers navigateur)
-├── mpg_db.py              # SQLite schema, migrations, UPSERT, exclusion filters, CURRENT_DIVISION / COVID_DIVISIONS
+├── mpg_db.py              # SQLite schema, migrations, UPSERT, exclusion filters, get_current_division() / COVID_DIVISIONS
 ├── mpg_fetchers.py        # HTTP thin layer : league / teams / matches (boucle GW, 404)
 ├── mpg_people.py          # Team name normalization + person_id resolution
 ├── people_mapping.yaml    # 8 players → aliases (team names per season) + display names
-├── divisions.txt          # 20 division_ids à synchroniser (sync-divisions)
+├── divisions.txt          # division_ids à synchroniser (sync-divisions) ; la courante est ajoutée en tête automatiquement si absente
 ├── mpg.db                 # SQLite WAL database (source of truth, non versionnée)
 │
 │  ── Analytics ──
@@ -44,17 +44,21 @@ mpg-assistant/
 ├── summary_writer.py      # Événements → résumé sarcastique : Claude Sonnet si ANTHROPIC_API_KEY, sinon templates
 ├── backfill_recaps.py     # Génère rétroactivement les recaps de journées passées (J1-J11 par défaut, --force)
 │
-│  ── Best Team (Supabase) ──
-├── sync_l1_to_supabase.py # Sync Ligue 1 (joueurs, notes, rosters, calendrier) MPG → Supabase ; L1_SEASONS ; état dans sync_manifest.db
-├── supabase/
-│   ├── migrations/lot1_bestteam_tables.sql   # 5 tables : l1_players, l1_player_ratings, mpg_rosters, l1_next_matches, mpg_schedule
-│   └── functions/best-team/index.ts          # Edge function (Deno) : composition optimale + commentaire IA
-├── run_lot1_migration.sh  # Applique la migration via le MCP Supabase (nécessite SUPABASE_ACCESS_TOKEN)
-├── BESTTEAM_PROMPTS.md    # Prompts des sessions qui ont construit la feature Best Team
+│  ── Best Team (statique, local) ──
+├── bestteam_engine.py     # Effectifs (teams.raw_json.squad) + notes L1 (mercato_cache/ratings_<saison>.json, refetch
+│                          #   incrémental via l'API MPG) → score (decay 0.85, bonus buts/passes/domicile), formation,
+│                          #   capitaine, commentaire Claude Haiku (cache mercato_cache/bestteam_commentary.json) ; L1_SEASON
+├── mercato_cache/         # Cache local non versionné (créé par l'outil mercato privé, lu/rafraîchi par bestteam_engine)
+│   ├── ratings_2026.json  #   notes L1 match par match ; index.json / pool.json / clubs.json : identités, cotes, clubs
+│   └── l1_fixtures.json   #   affiche de la prochaine journée L1 (bonus domicile)
+├── sync_l1_to_supabase.py # OBSOLÈTE (Supabase mort) — conservé pour référence, plus appelé
+├── supabase/              # OBSOLÈTE — migration SQL + Edge Function TS (logique portée dans bestteam_engine.py)
+├── run_lot1_migration.sh  # OBSOLÈTE
+├── BESTTEAM_PROMPTS.md    # Prompts des sessions qui ont construit la première version (Supabase) de Best Team
 │
 │  ── Publication ──
 ├── generate_pages.py      # Régénère les pages HTML (injection de `const X = <json>` dans les gabarits), nav, miroir vers docs/
-├── sync_and_publish.sh    # Pipeline manuel : .env → sync MPG → sync Supabase (si SUPABASE_URL) → pages → git push docs/ → notif Gmail
+├── sync_and_publish.sh    # Pipeline manuel : .env → sync MPG → pages (dont Best Team) → git push docs/ → notif Gmail
 ├── notify.py              # Envoi Gmail via smtplib (credentials dans .env)
 ├── sync.log               # Log des exécutions (rotatif 500 lignes, non versionné)
 │
@@ -79,7 +83,7 @@ mpg-assistant/
     ├── bonus_impact.html               # IMPACT / SORTED_BONUSES encore statiques (voir roadmap)
     ├── joueurs.html                    # stats joueurs de foot IRL + changements décisifs
     ├── bump.html                       # évolution des classements saison par saison
-    ├── bestteam.html                   # page statique, lit Supabase (REST + edge function best-team)
+    ├── bestteam.html                   # compo optimale par manager (const BESTTEAM injectée, toggles indispo en JS)
     └── chatte.html                     # %chatte (méthode François) sur les buts IRL
 ```
 
@@ -110,7 +114,7 @@ divisions_metadata (
     division_id TEXT PK, season INT,
     is_covid INT DEFAULT 0,       -- 1 = division COVID (hardcodée)
     is_incomplete INT DEFAULT 0,  -- 1 = n_matches < expected_matches (56)
-    is_current INT DEFAULT 0,     -- 1 = saison en cours (hardcodée via CURRENT_DIVISION)
+    is_current INT DEFAULT 0,     -- 1 = saison en cours (dérivée de league.divisionsIds, repli CURRENT_DIVISION)
     expected_matches INT DEFAULT 56,
     n_matches INT, gw_min INT, gw_max INT, notes TEXT
 )
@@ -132,8 +136,8 @@ idx_matches_season ON matches(season, division_id, game_week)
 idx_matches_div_gw ON matches(division_id, game_week)
 ```
 
-`sync_manifest.db` (base séparée, ignorée par git) : état d'avancement du sync Ligue 1 → Supabase.
-Côté Supabase : 5 tables créées par `supabase/migrations/lot1_bestteam_tables.sql` (lecture publique, écriture `service_role`).
+`sync_manifest.db` (base séparée, ignorée par git) : ancien état du sync Ligue 1 → Supabase (obsolète).
+Best Team ne dépend plus d'aucune base distante : notes L1 dans `mercato_cache/ratings_<saison>.json` (format de l'outil mercato), effectifs dans `teams.raw_json.squad`.
 
 ---
 
@@ -184,25 +188,17 @@ else: outcome = 2  # draw
 
 `event_detector.detect_all_events()` → liste d'événements → `summary_writer.write_summary()` (Claude, repli sur templates) → mis en cache dans `journee_recap` → injecté dans `index.html` / `recaps.html` par `generate_index()`. `python3 generate_pages.py --regen-recap` force la régénération ; `backfill_recaps.py` rattrape les journées passées.
 
-### Constantes à mettre à jour chaque saison
+### Division courante : dérivée de l'API (plus de bascule manuelle)
 
-Quatre endroits, à changer ensemble au passage à la saison suivante :
+Depuis octobre 2026, la division MPG en cours n'est plus codée en dur. Source de vérité : la réponse `/league/{LEAGUE_ID}` (table `league`, `raw_json`), champ `divisionsIds` — son dernier élément est la division courante (`mpg_db.get_current_division()` → `(division_id, source)`).
 
-```python
-# 1. mpg_db.py
-COVID_DIVISIONS = frozenset({"mpg_division_QU0SUZ6HQPB_6_1"})  # immuable
-CURRENT_DIVISION = "mpg_division_QU0SUZ6HQPB_18_1"              # ← À CHANGER
-# (refresh_divisions_metadata en déduit is_current en DB)
+- `refresh_divisions_metadata()` pose `is_current=1` sur cette division. Repli sur la constante `CURRENT_DIVISION` uniquement si la table `league` est vide (DB neuve). Une division courante sans aucun match (intersaison) n'apparaît pas dans `divisions_metadata` : `event_detector.recap_division()` se rabat alors sur la dernière division jouée (comportement conservé).
+- `mpg_client.py` : `DIVISION_ID` dans `.env` est **optionnel**. Priorité : `--division` > `DIVISION_ID` (.env, avec `[WARN]` s'il diffère de l'API) > `league.divisionsIds` > constante. Le `[CTX]` affiche la source retenue (`cli` / `env` / `league` / `constante`).
+- `--sync-divisions` rafraîchit la ligue en premier, puis ajoute la division courante en tête du batch si elle manque dans `divisions.txt` (avec `[WARN]`).
 
-# 2. .env  →  DIVISION_ID=mpg_division_QU0SUZ6HQPB_18_1          # ← À CHANGER
-#    JAMAIS avec un outil d'édition (le token JWT se corrompt) : patcher via Python WSL.
-#    (.env.example porte la même valeur à titre indicatif.)
+**Seule étape manuelle restante (facultative)** au passage à la saison MPG suivante : ajouter la nouvelle `division_id` en tête de `divisions.txt` pour faire taire le `[WARN]`.
 
-# 3. divisions.txt  →  ajouter la nouvelle division_id en tête de liste (sync-divisions)
-
-# 4. sync_l1_to_supabase.py
-L1_SEASONS = [2024, 2025]   # ← ajouter la nouvelle saison L1 pour le sync Best Team
-```
+Constantes indépendantes de la bascule MPG : `COVID_DIVISIONS` (immuable) ; `L1_SEASON` dans `bestteam_engine.py` (saison Ligue 1 des notes Best Team, change une fois par an en août — voir la section Best Team).
 
 ---
 
@@ -279,9 +275,9 @@ Outcome dérivé de `home_score`/`away_score` (identique à `mpg_legacy_engine.p
 
 Filtres `is_finalized` / `divisions` corrigés dans `generate_pages.py` et GW13/14 marquées finalisées sur les divisions historiques. Ne pas re-toucher sans comprendre.
 
-### 🟡 RISQUE — Constantes saisonnières hardcodées
+### ✅ RÉSOLU — Constantes saisonnières hardcodées (oct. 2026)
 
-Quatre endroits à changer à la main à chaque saison (voir section 3). Pas de validation que `CURRENT_DIVISION` correspond à une division en DB, ni que les quatre valeurs sont cohérentes entre elles.
+La division courante est dérivée de `league.divisionsIds` (voir section 3, « Division courante : dérivée de l'API »). `DIVISION_ID` est optionnel et un `[WARN]` signale toute divergence avec l'API. Reste `divisions.txt`, complété automatiquement par le batch.
 
 ### 🟡 RISQUE — Token MPG expire ~24 h
 
@@ -316,6 +312,7 @@ Aucun cron MPG dans WSL : si personne ne lance `bash sync_and_publish.sh`, le si
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 - [x] Fix `fetch_matches` : `is_finalized=1` par défaut (scores 0-0 fictifs) ✅
 - [x] Hygiène dépôt : `site/` supprimé, `.mcp.json` ignoré, fichiers orphelins Best Team versionnés ✅
+- [x] Division courante dérivée de l'API ligue (`get_current_division`) — plus de constante saisonnière MPG à changer ✅
 
 ### Niveau 2 — Analyse avancée
 
@@ -332,7 +329,7 @@ Aucun cron MPG dans WSL : si personne ne lance `bash sync_and_publish.sh`, le si
 
 ### Niveau 3 — Avantage stratégique
 
-- [x] Best Team : sync Ligue 1 → Supabase + edge function + `bestteam.html` ✅
+- [x] Best Team : v1 Supabase (edge function) ✅ → v2 statique locale `bestteam_engine.py` (oct. 2026, Supabase mort) ✅
 - [x] Conseil bonus pour la prochaine journée (`--bonus-advice`, catalogue `bonus_catalog.py`, risque Miroir) ✅
 - [ ] Prédicteur de match (ELO + H2H + forme)
 - [ ] Optimiseur d'enchères
@@ -388,10 +385,11 @@ python3 generate_pages.py podiums hall_of_fame   # pages spécifiques
 python3 generate_pages.py --regen-recap          # force la régénération du résumé post-journée
 python3 backfill_recaps.py                       # recaps rétroactifs (J1-J11 de la division courante)
 
-# Sync Supabase (Best Team)
-set -a && source .env && set +a && python sync_l1_to_supabase.py
+# Best Team seule (notes L1 rafraîchies via l'API MPG si token valide ; BESTTEAM_NO_FETCH=1 pour rester hors ligne)
+python3 generate_pages.py bestteam
+python3 bestteam_engine.py --no-fetch --no-ai    # debug terminal
 
-# Pipeline complet MANUEL (aucun cron) : .env → sync → Supabase (si SUPABASE_URL) → pages → push docs/ → notif Gmail
+# Pipeline complet MANUEL (aucun cron) : .env → sync → pages → push docs/ → notif Gmail
 bash sync_and_publish.sh
 ```
 

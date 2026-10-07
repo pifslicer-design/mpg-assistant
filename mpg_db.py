@@ -312,8 +312,31 @@ COVID_DIVISIONS: frozenset[str] = frozenset({
 })
 
 # Saison en cours — exclue des stats historiques (palmarès, chapeaux, podiums).
-# À mettre à jour manuellement à chaque nouvelle saison.
+# Dérivée de l'API ligue par get_current_division() (league.divisionsIds) ;
+# cette constante n'est qu'un repli quand la table league est vide (DB neuve).
 CURRENT_DIVISION: str = "mpg_division_QU0SUZ6HQPB_19_1"
+
+
+def get_current_division() -> tuple[str, str]:
+    """Division en cours et sa source : ("<division_id>", "league" | "constante").
+
+    Source de vérité : dernier élément de divisionsIds dans la réponse
+    /league/{LEAGUE_ID} (table league, raw_json), mise à jour par fetch_league.
+    Repli sur CURRENT_DIVISION si la table est vide ou sans divisionsIds.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT raw_json FROM league ORDER BY fetched_at DESC LIMIT 1"
+        ).fetchone()
+    ids: list = []
+    if row and row["raw_json"]:
+        try:
+            ids = json.loads(row["raw_json"]).get("divisionsIds") or []
+        except (ValueError, AttributeError):
+            ids = []
+    if ids:
+        return ids[-1], "league"
+    return CURRENT_DIVISION, "constante"
 
 
 def refresh_divisions_metadata(
@@ -325,12 +348,12 @@ def refresh_divisions_metadata(
 
     - is_incomplete=1 si n_matches < expected_matches
     - is_covid=1 si division_id dans covid_divisions (liste explicite)
-    - is_current=1 si division_id == current_division
+    - is_current=1 si division_id == current_division (défaut : get_current_division())
     """
     if covid_divisions is None:
         covid_divisions = COVID_DIVISIONS
     if current_division is None:
-        current_division = CURRENT_DIVISION
+        current_division, _ = get_current_division()
 
     with get_conn() as conn:
         rows = conn.execute("""

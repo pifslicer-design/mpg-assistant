@@ -48,26 +48,22 @@ main{max-width:860px;margin:-20px auto 40px;padding:0 20px;position:relative;z-i
 .pos-A{background:#FFF4E0;color:#C08A00;}
 .pos-count{font-size:12px;color:var(--muted);font-weight:700;}
 
-.player-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg);}
+.player-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg);gap:10px;}
 .player-row:last-child{border-bottom:none;}
+.player-row.off .player-name,.player-row.off .player-club{text-decoration:line-through;opacity:.55;}
 .player-info{display:flex;align-items:center;gap:10px;min-width:0;}
 .player-name{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .player-club{font-size:11px;color:var(--muted);font-weight:600;}
 .player-cote{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;}
+.score-pill{font-size:11px;font-weight:800;padding:3px 8px;border-radius:12px;background:var(--bg);color:var(--text);white-space:nowrap;}
+.score-pill.warn{background:#FFF4E0;color:#C08A00;}
+.score-pill.zero{background:#FDECEA;color:var(--red);}
+.player-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 
 .toggle-btn{border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;transition:all .15s;white-space:nowrap;}
 .toggle-btn.dispo{background:var(--bg);color:var(--muted);}
-.toggle-btn.dispo:hover{border:1px solid var(--muted);}
+.toggle-btn.dispo:hover{color:var(--text);}
 .toggle-btn.indispo{background:#FDECEA;color:var(--red);}
-
-/* GENERATE BUTTON */
-.btn-generate{width:100%;padding:16px;background:var(--grad);color:#fff;border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px;}
-.btn-generate:hover:not(:disabled){opacity:.9;}
-.btn-generate:disabled{opacity:.55;cursor:not-allowed;}
-
-/* SPINNER */
-.spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
-@keyframes spin{to{transform:rotate(360deg)}}
 
 /* RESULT */
 .result-hidden{display:none;}
@@ -98,13 +94,15 @@ main{max-width:860px;margin:-20px auto 40px;padding:0 20px;position:relative;z-i
 .ai-icon{font-size:22px;line-height:1;}
 .ai-title{font-size:13px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.5px;}
 .ai-text{font-size:14px;font-weight:600;line-height:1.65;color:var(--text);}
+.ai-note{margin-top:10px;font-size:11px;color:var(--muted);font-weight:700;font-style:italic;}
 
 /* META */
 .meta-row{display:flex;gap:16px;flex-wrap:wrap;}
 .meta-item{font-size:11px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:4px;}
 
-/* ERROR */
+/* ERROR / EMPTY */
 .error-card{background:#FDECEA;border:1px solid #f5c6c6;border-radius:12px;padding:16px 20px;color:var(--red);font-weight:700;font-size:14px;margin-bottom:20px;}
+.empty{color:var(--muted);font-size:13px;font-weight:600;padding:8px 0;}
 
 footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
 footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;}
@@ -196,7 +194,7 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
 <header>
   <div class="hbadge">IA · Ligue privée · 8 équipes</div>
   <h1>Best Team</h1>
-  <p>Génère ta compo optimale pour la prochaine journée</p>
+  <p id="header-sub">Compo optimale pour la prochaine journée, calculée sur les notes Ligue 1</p>
 </header>
 
 <main>
@@ -209,12 +207,7 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
     <select id="team-select" class="team-select">
       <option value="">— Choisir une équipe —</option>
     </select>
-    <div id="match-info" style="display:none;" class="match-info">
-      <div>
-        <div class="match-vs" id="match-vs"></div>
-        <div class="match-gw" id="match-gw"></div>
-      </div>
-    </div>
+    <div id="match-info" style="display:none;" class="match-info"></div>
   </div>
 
   <!-- ROSTER -->
@@ -238,11 +231,6 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
     </select>
   </div>
 
-  <!-- GENERATE -->
-  <button id="btn-generate" class="btn-generate" style="display:none;" disabled>
-    <span id="btn-label">Générer mon équipe</span>
-  </button>
-
   <!-- RESULT -->
   <div id="result-zone" class="result-hidden">
 
@@ -260,6 +248,7 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
         <div class="ai-title">Analyse IA</div>
       </div>
       <div class="ai-text" id="ai-text"></div>
+      <div class="ai-note" id="ai-note" style="display:none;"></div>
     </div>
 
     <div class="card">
@@ -271,300 +260,288 @@ footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fil
 </main>
 
 <footer>
-  Données L1 · Supabase + Claude Haiku · <span>MPG Assistant</span>
+  Données L1 · calcul local + Claude Haiku · <span>MPG Assistant</span>
 </footer>
 
 <script>
-const SUPABASE_URL = 'https://rnqvttsqeonemxrapoiz.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJucXZ0dHNxZW9uZW14cmFwb2l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0ODE1NjUsImV4cCI6MjA5MDA1NzU2NX0.Cd0tvMEgXsNvSYvve54Hgb_WYLhY9K1zf0sOFwALOV8';
+// Données injectées par generate_pages.py (bestteam_engine.py) — aucun appel réseau.
+const BESTTEAM={"generated_at":"2026-10-07T22:52:59.396623+00:00","division_id":"mpg_division_QU0SUZ6HQPB_18_1","label":"S18","season_finished":true,"window":10,"l1":{"season":2026,"n_gw":5,"next_gw":6,"n_fixtures":18},"managers":[{"person_id":"damien","display":"Damien","team_name":"Stade Malherbe Milan","budget":10.0,"next_match":null,"players":[{"id":"mpg_championship_player_102836","name":"Brice Samba","last":"Samba","pos":"G","club":"REN","club_id":"mpg_championship_club_150","cote":15,"price":16,"score":5.58,"raw_score":5.58,"avg":5.5,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[4,7,5.5,5.5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_705930","name":"Mathys Silistre","last":"Silistre","pos":"G","club":"REN","club_id":"mpg_championship_club_150","cote":null,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_624764","name":"Panos Katseris","last":"Katseris","pos":"D","club":"FCL","club_id":"mpg_championship_club_694","cote":13,"price":3,"score":6.06,"raw_score":6.06,"avg":5.8,"n":5,"flag":"données limitées","goals":0,"assists":2,"form":[5,7,7,5,5],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_492373","name":"Charlie Cresswell","last":"Cresswell","pos":"D","club":"REN","club_id":"mpg_championship_club_150","cote":11,"price":29,"score":4.84,"raw_score":4.84,"avg":4.8,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[3,6,5,5,5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_210494","name":"Nayef Aguerd","last":"Aguerd","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":9,"price":32,"score":4.5,"raw_score":4.5,"avg":4.6,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4,4.5,4,5.5,5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_503543","name":"Samson Baidoo","last":"Baidoo","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":1,"price":30,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_189781","name":"Clinton Mata","last":"Clinton Mata","pos":"D","club":"OL","club_id":"mpg_championship_club_143","cote":10,"price":19,"score":0.0,"raw_score":6.5,"avg":6.5,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[6.5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_501735","name":"Ruben Kluivert","last":"Kluivert","pos":"D","club":"OL","club_id":"mpg_championship_club_143","cote":7,"price":15,"score":0.0,"raw_score":5.0,"avg":5.0,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_204727","name":"Malang Sarr","last":"Sarr","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":null,"price":22,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_477580","name":"Illia Zabarnyi","last":"Zabarnyi","pos":"D","club":"PSG","club_id":"mpg_championship_club_149","cote":5,"price":15,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_465954","name":"Pavel Sulc","last":"Sulc","pos":"M","club":"OL","club_id":"mpg_championship_club_143","cote":20,"price":51,"score":6.01,"raw_score":6.01,"avg":5.8,"n":5,"flag":"données limitées","goals":0,"assists":3,"form":[7,5.5,6,5,5.5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_484842","name":"Hákon Haraldsson","last":"Haraldsson","pos":"M","club":"LIL","club_id":"mpg_championship_club_429","cote":20,"price":44,"score":5.98,"raw_score":5.98,"avg":5.9,"n":5,"flag":"données limitées","goals":1,"assists":0,"form":[5,5.5,6,7,6],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_201379","name":"Fabián Ruiz","last":"Ruiz","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":14,"price":18,"score":5.65,"raw_score":5.65,"avg":5.6,"n":5,"flag":"données limitées","goals":0,"assists":2,"form":[5.5,4.5,5,5.5,7.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_460267","name":"Sofiane Diop","last":"Diop","pos":"M","club":"NIC","club_id":"mpg_championship_club_1395","cote":12,"price":36,"score":5.23,"raw_score":5.23,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[5,4.5,6,4,6],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_534317","name":"Beraldo","last":"Beraldo","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":8,"price":12,"score":5.13,"raw_score":5.13,"avg":5.0,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[5,4.5,5.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_555894","name":"Maghnes Akliouche","last":"Akliouche","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":16,"price":34,"score":5.03,"raw_score":5.03,"avg":4.9,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,5.5,4.5,5,5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_499448","name":"Senny Mayulu","last":"Mayulu","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":5,"price":15,"score":0.0,"raw_score":4.65,"avg":4.5,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_513545","name":"Mamadou Sangaré","last":"Sangaré","pos":"M","club":"RCL","club_id":"mpg_championship_club_142","cote":null,"price":17,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_209049","name":"Danny Namaso","last":"Namaso","pos":"A","club":"AJA","club_id":"mpg_championship_club_138","cote":15,"price":13,"score":5.73,"raw_score":5.73,"avg":5.5,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[6.5,6,6,3.5,5.5],"next_home":false,"next_opp":"REN"},{"id":"mpg_championship_player_535818","name":"Simon Adingra","last":"Adingra","pos":"A","club":"ASM","club_id":"mpg_championship_club_146","cote":null,"price":9,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_531004","name":"Bamba Dieng","last":"Dieng","pos":"A","club":"FCL","club_id":"mpg_championship_club_694","cote":null,"price":15,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_58926","name":"Youssef El-Arabi","last":"El-Arabi","pos":"A","club":"NAN","club_id":"mpg_championship_club_430","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":null,"next_opp":null},{"id":"mpg_championship_player_543968","name":"Emersonn","last":"Emersonn","pos":"A","club":"TFC","club_id":"mpg_championship_club_427","cote":null,"price":12,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_573062","name":"Martial Godo","last":"Godo","pos":"A","club":"STR","club_id":"mpg_championship_club_153","cote":10,"price":15,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"}],"formation":"4-5-1","starters":["mpg_championship_player_102836","mpg_championship_player_624764","mpg_championship_player_492373","mpg_championship_player_210494","mpg_championship_player_503543","mpg_championship_player_465954","mpg_championship_player_484842","mpg_championship_player_201379","mpg_championship_player_460267","mpg_championship_player_534317","mpg_championship_player_209049"],"captain":"mpg_championship_player_624764","captain_reason":"Meilleur score (6.06) — solide et régulier","commentary":"Ouais les gars, j'assume complètement cette compo 4-5-1 de fou ! J'ai misé sur Katseris en capitaine parce qu'avec un défenseur qui assume les responsabilités, soit il te sort un clean sheet de malade, soit il prend des cartons hilarants — dans les deux cas, c'est du spectacle. Danny Namaso en pointe, c'est mon pari fou pour que l'adversaire se prenne une claquée : si mon attaquant pète le feu, les autres n'auront qu'à bien se tenir. Et puis franchement, entre Baidoo qui part de zéro et Samba qui radie déjà en défense, au moins j'ai pas caché le jeu — c'est de la transparence MPG, tu sais ! 💪","commentary_ai":true},{"person_id":"francois","display":"François","team_name":"Chien Chaud","budget":0.0,"next_match":null,"players":[{"id":"mpg_championship_player_212873","name":"Dominik Greif","last":"Greif","pos":"G","club":"OL","club_id":"mpg_championship_club_143","cote":19,"price":22,"score":6.26,"raw_score":6.26,"avg":6.12,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[7,7,5,5.5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_213199","name":"Rémy Descamps","last":"Descamps","pos":"G","club":"OL","club_id":"mpg_championship_club_143","cote":7,"price":7,"score":0.0,"raw_score":6.0,"avg":6.0,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[6],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_103116","name":"Donovan Léon","last":"Léon","pos":"G","club":"AJA","club_id":"mpg_championship_club_138","cote":null,"price":18,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"REN"},{"id":"mpg_championship_player_538078","name":"Nathan Ngoy","last":"Ngoy","pos":"D","club":"LIL","club_id":"mpg_championship_club_429","cote":15,"price":7,"score":5.34,"raw_score":5.34,"avg":5.3,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[3.5,6,6.5,5,5.5],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_634871","name":"Kyllian Antonio","last":"Antonio","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":7,"price":4,"score":4.82,"raw_score":4.82,"avg":4.67,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,5,4.5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_245485","name":"Ali Abdi","last":"Abdi","pos":"D","club":"NIC","club_id":"mpg_championship_club_1395","cote":9,"price":15,"score":4.79,"raw_score":4.79,"avg":4.67,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,4.5,5],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_622758","name":"Aaron Anselmino","last":"Anselmino","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_543158","name":"Valentín Barco","last":"Barco","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":21,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_606702","name":"Jérémy Jacquet","last":"Jacquet","pos":"D","club":"REN","club_id":"mpg_championship_club_150","cote":null,"price":9,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_86813","name":"Aïssa Mandi","last":"Mandi","pos":"D","club":"LIL","club_id":"mpg_championship_club_429","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_465206","name":"Nuno Mendes","last":"Nuno Mendes","pos":"D","club":"PSG","club_id":"mpg_championship_club_149","cote":17,"price":31,"score":0.0,"raw_score":5.69,"avg":5.5,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[6,5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_585597","name":"Lamine Camara","last":"Camara","pos":"M","club":"ASM","club_id":"mpg_championship_club_146","cote":20,"price":11,"score":6.41,"raw_score":6.41,"avg":6.4,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,6.5,5.5,7,7.5],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_161950","name":"Aleksandr Golovin","last":"Golovin","pos":"M","club":"ASM","club_id":"mpg_championship_club_146","cote":16,"price":12,"score":6.05,"raw_score":6.05,"avg":5.9,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[6,5.5,5.5,6.5,6],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_462609","name":"Himad Abdelli","last":"Abdelli","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":10,"price":20,"score":5.21,"raw_score":5.21,"avg":5.3,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,5,5,6.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_441240","name":"Romain Faivre","last":"Faivre","pos":"M","club":"AJA","club_id":"mpg_championship_club_138","cote":10,"price":11,"score":5.11,"raw_score":5.11,"avg":5.0,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,5.5,5,5,4],"next_home":false,"next_opp":"REN"},{"id":"mpg_championship_player_220560","name":"Gaëtan Perrin","last":"Perrin","pos":"M","club":"LIL","club_id":"mpg_championship_club_429","cote":8,"price":14,"score":4.65,"raw_score":4.65,"avg":4.5,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,4.5,4.5],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_170137","name":"Allan Saint-Maximin","last":"Saint-Maximin","pos":"M","club":"RCL","club_id":"mpg_championship_club_142","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_102760","name":"Bouna Sarr","last":"Sarr","pos":"M","club":"MET","club_id":"mpg_championship_club_145","cote":null,"price":4,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":null,"next_opp":null},{"id":"mpg_championship_player_424044","name":"Hamed Traoré","last":"Traoré","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":18,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_477724","name":"Elye Wahi","last":"Wahi","pos":"A","club":"NIC","club_id":"mpg_championship_club_1395","cote":18,"price":35,"score":5.31,"raw_score":5.31,"avg":5.12,"n":4,"flag":"données limitées","goals":1,"assists":0,"form":[5,4.5,6,5],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_235050","name":"Arnaud Nordin","last":"Nordin","pos":"A","club":"REN","club_id":"mpg_championship_club_150","cote":6,"price":11,"score":4.46,"raw_score":4.46,"avg":4.33,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[4,4.5,4.5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_482616","name":"Bradley Barcola","last":"Barcola","pos":"A","club":"PSG","club_id":"mpg_championship_club_149","cote":null,"price":80,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_520295","name":"David Datro David Datro Fofana","last":"David Datro Fofana","pos":"A","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_503037","name":"Emmanuel Emegha","last":"Emegha","pos":"A","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":12,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_577107","name":"Endrick","last":"Endrick","pos":"A","club":"OL","club_id":"mpg_championship_club_143","cote":null,"price":90,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_613221","name":"Matias Fernandez-Pardo","last":"Fernandez-Pardo","pos":"A","club":"LIL","club_id":"mpg_championship_club_429","cote":null,"price":12,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"HAC"}],"formation":"3-5-2","starters":["mpg_championship_player_212873","mpg_championship_player_538078","mpg_championship_player_634871","mpg_championship_player_245485","mpg_championship_player_585597","mpg_championship_player_161950","mpg_championship_player_462609","mpg_championship_player_441240","mpg_championship_player_220560","mpg_championship_player_477724","mpg_championship_player_235050"],"captain":"mpg_championship_player_585597","captain_reason":"Meilleur score (6.41) — milieu offensif, bon upside","commentary":"Franchement, j'assume grave cette compo — c'est du lourd en 3-5-2, j'ai construit une vraie forteresse au milieu avec Camara en capitaine qui va cartonner les stats. Ouais bon, je sais que tout le monde a des données limitées donc c'est un pari, mais c'est ça qui rend le truc beau : pendant que l'adversaire va tâtonner, moi j'aurai déjà trois buts d'avance sur le papier. Et puis Wahi en pointe, c'est pas du bling-bling, c'est du pragmatisme — il faut juste qu'il soit chaud dimanche et c'est bouclé. À vous de vous inquiéter, moi je dors bien 😎","commentary_ai":true},{"person_id":"greg","display":"Greg","team_name":"Cup","budget":10.0,"next_match":null,"players":[{"id":"mpg_championship_player_52482","name":"Kevin Trapp","last":"Trapp","pos":"G","club":"PFC","club_id":"mpg_championship_club_2338","cote":16,"price":13,"score":5.72,"raw_score":5.72,"avg":5.8,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,6,5.5,6.5,6],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_502436","name":"Obed Nkambadio","last":"Nkambadio","pos":"G","club":"PFC","club_id":"mpg_championship_club_2338","cote":7,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_549939","name":"Mike Penders","last":"Penders","pos":"G","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":16,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_199170","name":"Moussa Niakhaté","last":"Niakhaté","pos":"D","club":"OL","club_id":"mpg_championship_club_143","cote":16,"price":25,"score":5.67,"raw_score":5.67,"avg":5.62,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[6,5.5,6,5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_448102","name":"Willian Pacho","last":"Pacho","pos":"D","club":"PSG","club_id":"mpg_championship_club_149","cote":14,"price":24,"score":5.31,"raw_score":5.31,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,6,4,4.5,5.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_223760","name":"Achraf Hakimi","last":"Hakimi","pos":"D","club":"PSG","club_id":"mpg_championship_club_149","cote":13,"price":17,"score":4.44,"raw_score":4.44,"avg":4.25,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,3.5,4.5,4],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_446682","name":"Leonardo Balerdi","last":"Balerdi","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":18,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_162316","name":"Brendan Chardonnet","last":"Chardonnet","pos":"D","club":"BRE","club_id":"mpg_championship_club_862","cote":5,"price":14,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_154043","name":"Ainsley Maitland-Niles","last":"Maitland-Niles","pos":"D","club":"OL","club_id":"mpg_championship_club_143","cote":null,"price":24,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_213965","name":"Maxime Lopez","last":"Lopez","pos":"M","club":"PFC","club_id":"mpg_championship_club_2338","cote":16,"price":14,"score":6.21,"raw_score":6.21,"avg":6.0,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[7.5,6.5,4.5,6.5,5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_570810","name":"Désiré Doué","last":"Doué","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":19,"price":41,"score":5.69,"raw_score":5.69,"avg":5.4,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[7,4.5,5.5,4,6],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_551150","name":"João Neves","last":"João Neves","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":13,"price":39,"score":5.58,"raw_score":5.58,"avg":5.38,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[6,5.5,4.5,5.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_132015","name":"Pierre-Emile Højbjerg","last":"Højbjerg","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":17,"price":24,"score":5.53,"raw_score":5.53,"avg":5.6,"n":5,"flag":"données limitées","goals":1,"assists":0,"form":[5.5,5,5,5,7.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_451358","name":"Lee Kang-In","last":"Lee Kang-In","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":null,"price":17,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_450063","name":"Quinten Timber","last":"Timber","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":17,"score":0.0,"raw_score":4.5,"avg":4.5,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_168539","name":"Ludovic Ajorque","last":"Ajorque","pos":"A","club":"BRE","club_id":"mpg_championship_club_862","cote":23,"price":41,"score":5.39,"raw_score":5.39,"avg":5.3,"n":5,"flag":"données limitées","goals":1,"assists":0,"form":[4.5,4.5,6,6.5,5],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_426342","name":"Mousa Al Tamari","last":"Mousa Al Tamari","pos":"A","club":"REN","club_id":"mpg_championship_club_150","cote":15,"price":11,"score":5.31,"raw_score":5.31,"avg":5.2,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,5,6.5,5,5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_440668","name":"Khvicha Kvaratskhelia","last":"Kvaratskhelia","pos":"A","club":"PSG","club_id":"mpg_championship_club_149","cote":19,"price":26,"score":5.29,"raw_score":5.29,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[5,5,6,4.5,5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_495382","name":"Issa Soumaré","last":"Soumaré","pos":"A","club":"REN","club_id":"mpg_championship_club_150","cote":9,"price":11,"score":5.25,"raw_score":5.25,"avg":5.12,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,5,5.5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_483320","name":"Igor Paixão","last":"Igor Paixão","pos":"A","club":"OM","club_id":"mpg_championship_club_144","cote":15,"price":25,"score":5.0,"raw_score":5.0,"avg":5.12,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,4.5,5,6.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_219438","name":"Ousmane Dembélé","last":"Dembélé","pos":"A","club":"PSG","club_id":"mpg_championship_club_149","cote":31,"price":58,"score":4.48,"raw_score":4.48,"avg":4.38,"n":4,"flag":"données limitées","goals":0,"assists":1,"form":[2.5,6,5,4],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_551191","name":"Afonso Moreira","last":"Afonso Moreira","pos":"A","club":"OL","club_id":"mpg_championship_club_143","cote":null,"price":18,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"RCL"}],"formation":"3-4-3","starters":["mpg_championship_player_52482","mpg_championship_player_199170","mpg_championship_player_448102","mpg_championship_player_223760","mpg_championship_player_213965","mpg_championship_player_570810","mpg_championship_player_551150","mpg_championship_player_132015","mpg_championship_player_168539","mpg_championship_player_426342","mpg_championship_player_440668"],"captain":"mpg_championship_player_213965","captain_reason":"Meilleur score (6.21) — milieu offensif, bon upside","commentary":"Allez les gars, je vous la pose là 🔥 J'ai aligné du lourd en 3-4-3 avec Maxime Lopez en capitaine parce qu'il faut bien quelqu'un de solide au milieu pour cadrer les débats, et Lopez c'est monsieur fiabilité en ce moment. Devant j'ai Ajorque, Al Tamari et Kvara qui vont faire du sale, même si j'avoue que les données sont un peu juste partout — mais c'est comme ça qu'on gagne, faut avoir des couilles 💪 Défense massive avec trois poids lourds, Trapp verrouille les buts, et on vient péter la gueule à l'adversaire ce week-end. C'est du vrai football ça, pas du positionnement de maternelle!","commentary_ai":true},{"person_id":"manu","display":"Manu","team_name":"PIMPAMRAMI","budget":0.0,"next_match":null,"players":[{"id":"mpg_championship_player_431426","name":"Grégoire Coudert","last":"Coudert","pos":"G","club":"BRE","club_id":"mpg_championship_club_862","cote":null,"price":22,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_228539","name":"Radoslaw Majecki","last":"Majecki","pos":"G","club":"BRE","club_id":"mpg_championship_club_862","cote":null,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_92527","name":"Kenny Lala","last":"Lala","pos":"D","club":"BRE","club_id":"mpg_championship_club_862","cote":9,"price":12,"score":4.75,"raw_score":4.75,"avg":4.7,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[3.5,5,5,5,5],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_230971","name":"Caio Henrique","last":"Caio Henrique","pos":"D","club":"ASM","club_id":"mpg_championship_club_146","cote":null,"price":9,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_218218","name":"Wout Faes","last":"Faes","pos":"D","club":"ASM","club_id":"mpg_championship_club_146","cote":null,"price":17,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_149736","name":"Chancel Mbemba","last":"Mbemba","pos":"D","club":"LIL","club_id":"mpg_championship_club_429","cote":null,"price":14,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_544099","name":"Bamo Meïté","last":"Meïté","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":1,"price":15,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_491011","name":"Diego Moreira","last":"Moreira","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":19,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_608237","name":"Kojo Peprah Oppong","last":"Peprah Oppong","pos":"D","club":"NIC","club_id":"mpg_championship_club_1395","cote":null,"price":10,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_601946","name":"Pape Diop","last":"Diop","pos":"M","club":"STR","club_id":"mpg_championship_club_153","cote":14,"price":29,"score":5.84,"raw_score":5.84,"avg":5.9,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5.5,7,7,5],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_199666","name":"Jean-Victor Makengo","last":"Makengo","pos":"M","club":"FCL","club_id":"mpg_championship_club_694","cote":17,"price":34,"score":5.74,"raw_score":5.74,"avg":5.6,"n":5,"flag":"données limitées","goals":1,"assists":0,"form":[4.5,6,6.5,5.5,5.5],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_232182","name":"Gauthier Hein","last":"Hein","pos":"M","club":"NIC","club_id":"mpg_championship_club_1395","cote":14,"price":45,"score":5.41,"raw_score":5.41,"avg":5.0,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[7,5,5,3.5,4.5],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_215473","name":"Timothy Weah","last":"Weah","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":10,"price":28,"score":4.42,"raw_score":4.42,"avg":4.5,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[3.5,5,4.5,4.5,5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_546178","name":"Bilal Nadir","last":"Nadir","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_499175","name":"Ethan Nwaneri","last":"Nwaneri","pos":"M","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":46,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_247400","name":"Amine Gouiri","last":"Gouiri","pos":"A","club":"OM","club_id":"mpg_championship_club_144","cote":32,"price":63,"score":5.95,"raw_score":5.95,"avg":5.8,"n":5,"flag":"données limitées","goals":4,"assists":1,"form":[5.5,5,7,4,7.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_487702","name":"Luca Koleosho","last":"Koleosho","pos":"A","club":"PFC","club_id":"mpg_championship_club_2338","cote":8,"price":9,"score":4.88,"raw_score":4.88,"avg":4.88,"n":4,"flag":"données limitées","goals":0,"assists":1,"form":[5,4,5.5,5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_232223","name":"Folarin Balogun","last":"Balogun","pos":"A","club":"ASM","club_id":"mpg_championship_club_146","cote":15,"price":24,"score":0.0,"raw_score":4.65,"avg":4.5,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4.5],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_490884","name":"Mohamed-Ali Cho","last":"Cho","pos":"A","club":"NIC","club_id":"mpg_championship_club_1395","cote":null,"price":47,"score":0.0,"raw_score":4.15,"avg":4.0,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_465607","name":"Ansu Fati","last":"Fati","pos":"A","club":"ASM","club_id":"mpg_championship_club_146","cote":7,"price":39,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"TFC"}],"formation":"4-4-2","starters":["mpg_championship_player_431426","mpg_championship_player_92527","mpg_championship_player_230971","mpg_championship_player_218218","mpg_championship_player_149736","mpg_championship_player_601946","mpg_championship_player_199666","mpg_championship_player_232182","mpg_championship_player_215473","mpg_championship_player_247400","mpg_championship_player_487702"],"captain":"mpg_championship_player_247400","captain_reason":"Meilleur score (5.95) — attaquant, gros upside bonus","commentary":"Voilà, je vous l'annonce, j'ai sorti la compo de dingue pour cette journée 🔥 Gouiri en capitaine parce que franchement c'est lui qui va faire la différence, les autres vont bien galérer en défense mais on s'en fout puisqu'on va scorer des buts. Lala en latéral droit c'est du solide même si les données disent rien, et derrière j'ai aligné une muraille avec Faes, Mbemba et Henrique — oui ok c'est trois inédits mais c'est une question de confiance mec. Coudert dans les cages c'est un pari calculé, et franchement l'adversaire va souffrir contre ce dispositif 4-4-2 classique où tout le monde a sa feuille de route, point barre 💪","commentary_ai":true},{"person_id":"marc","display":"Marc","team_name":"FC Miller","budget":0.0,"next_match":null,"players":[{"id":"mpg_championship_player_228345","name":"Hervé Koffi","last":"Koffi","pos":"G","club":"SCO","club_id":"mpg_championship_club_2128","cote":null,"price":16,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_476882","name":"Melvin Zinga","last":"Zinga","pos":"G","club":"SCO","club_id":"mpg_championship_club_2128","cote":7,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_512126","name":"Ousmane Camara","last":"Camara","pos":"D","club":"SCO","club_id":"mpg_championship_club_2128","cote":17,"price":15,"score":5.74,"raw_score":5.74,"avg":5.7,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[6,6,4,7.5,5],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_141109","name":"Gautier Lloris","last":"Lloris","pos":"D","club":"BRE","club_id":"mpg_championship_club_862","cote":12,"price":12,"score":5.57,"raw_score":5.57,"avg":5.38,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,5.5,6,4.5],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_475344","name":"Abner Vinícius","last":"Abner Vinícius","pos":"D","club":"OL","club_id":"mpg_championship_club_143","cote":15,"price":14,"score":5.47,"raw_score":5.47,"avg":5.38,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[6.5,5,5,5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_102747","name":"Djibril Sidibé","last":"Sidibé","pos":"D","club":"LEM","club_id":"mpg_championship_club_920","cote":10,"price":16,"score":4.58,"raw_score":4.58,"avg":4.5,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,3.5],"next_home":false,"next_opp":"PSG"},{"id":"mpg_championship_player_177020","name":"Igor Silva","last":"Igor Silva","pos":"D","club":"FCL","club_id":"mpg_championship_club_694","cote":null,"price":14,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_202675","name":"Benjamin Pavard","last":"Pavard","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":10,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_437858","name":"Vitinha","last":"Vitinha","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":24,"price":62,"score":6.48,"raw_score":6.48,"avg":6.2,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[6,7,5.5,8,4.5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_55948","name":"Benjamin André","last":"André","pos":"M","club":"LIL","club_id":"mpg_championship_club_429","cote":12,"price":13,"score":5.32,"raw_score":5.32,"avg":5.25,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,5,6,5.5],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_440148","name":"Tyler Morton","last":"Morton","pos":"M","club":"OL","club_id":"mpg_championship_club_143","cote":13,"price":17,"score":5.28,"raw_score":5.28,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[7,5,4.5,4,5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_578610","name":"Noah Nartey","last":"Nartey","pos":"M","club":"OL","club_id":"mpg_championship_club_143","cote":10,"price":16,"score":5.17,"raw_score":5.17,"avg":5.25,"n":4,"flag":"données limitées","goals":1,"assists":0,"form":[4.5,5,4.5,7],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_181441","name":"Moses Simon","last":"Simon","pos":"M","club":"PFC","club_id":"mpg_championship_club_2338","cote":12,"price":13,"score":5.13,"raw_score":5.13,"avg":5.12,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,5.5,5,5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_550840","name":"Warren Zaïre-Emery","last":"Zaïre-Emery","pos":"M","club":"PSG","club_id":"mpg_championship_club_149","cote":13,"price":26,"score":4.87,"raw_score":4.87,"avg":4.7,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,4,4.5,5],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_449991","name":"Félix Correia","last":"Félix Correia","pos":"M","club":"LIL","club_id":"mpg_championship_club_429","cote":null,"price":26,"score":0.0,"raw_score":5.46,"avg":5.25,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[6,4.5],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_445970","name":"Lassine Sinayoko","last":"Sinayoko","pos":"A","club":"PFC","club_id":"mpg_championship_club_2338","cote":31,"price":46,"score":6.67,"raw_score":6.67,"avg":6.3,"n":5,"flag":"données limitées","goals":4,"assists":1,"form":[7,5.5,8,6,5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_503726","name":"Matthis Abline","last":"Abline","pos":"A","club":"ASM","club_id":"mpg_championship_club_146","cote":16,"price":61,"score":5.19,"raw_score":5.19,"avg":4.88,"n":4,"flag":"données limitées","goals":0,"assists":1,"form":[6,5,4,4.5],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_181007","name":"Breel Embolo","last":"Embolo","pos":"A","club":"REN","club_id":"mpg_championship_club_150","cote":null,"price":46,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_161034","name":"Wesley Saïd","last":"Saïd","pos":"A","club":"RCL","club_id":"mpg_championship_club_142","cote":null,"price":70,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"}],"formation":"4-4-2","starters":["mpg_championship_player_228345","mpg_championship_player_512126","mpg_championship_player_141109","mpg_championship_player_475344","mpg_championship_player_102747","mpg_championship_player_437858","mpg_championship_player_55948","mpg_championship_player_440148","mpg_championship_player_578610","mpg_championship_player_445970","mpg_championship_player_503726"],"captain":"mpg_championship_player_445970","captain_reason":"Meilleur score (6.67) — attaquant, gros upside bonus","commentary":"Allez les gars, je vous la pose là sans trembler 🔥 J'ai construit un 4-4-2 de malade où tout le monde a des données limitées donc techniquement personne peut me reprocher quoi que ce soit — c'est la stratégie du génie. Lassine en capitaine c'est logique, le mec score 6.67 donc s'il pète les plombs ce week-end c'est lui qui double les points, et si ça flanche bah au moins j'aurais misé sur le plus chaud de ma compo. L'adversaire va se prendre une claque avec cette défense blindée et ces milieux qui vont étouffer le jeu, faut juste que Matthis Abline sorte du coma parce qu'avec lui et Lassine devant, si on crèche pas des buts ça serait vraiment dommage.","commentary_ai":true},{"person_id":"nico","display":"Nico","team_name":"Puntagliera","budget":10.0,"next_match":null,"players":[{"id":"mpg_championship_player_216272","name":"Jeffrey de Lange","last":"de Lange","pos":"G","club":"OM","club_id":"mpg_championship_club_144","cote":15,"price":7,"score":5.86,"raw_score":5.86,"avg":5.7,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[7,6.5,5,4,6],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_106921","name":"Gerónimo Rulli","last":"Rulli","pos":"G","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":14,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_520403","name":"Vanderson","last":"Vanderson","pos":"D","club":"ASM","club_id":"mpg_championship_club_146","cote":11,"price":10,"score":5.71,"raw_score":5.71,"avg":5.6,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,5.5,5,6,6],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_549737","name":"Théo Le Bris","last":"Le Bris","pos":"D","club":"FCL","club_id":"mpg_championship_club_694","cote":10,"price":14,"score":5.29,"raw_score":5.29,"avg":5.2,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,5,5,6],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_140040","name":"Przemyslaw Frankowski","last":"Frankowski","pos":"D","club":"REN","club_id":"mpg_championship_club_150","cote":10,"price":10,"score":5.03,"raw_score":5.03,"avg":4.9,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[3.5,5,6.5,4.5,5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_109533","name":"Emerson","last":"Emerson","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":9,"price":18,"score":4.52,"raw_score":4.52,"avg":4.6,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4,5,4,4.5,5.5],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_224868","name":"Facundo Medina","last":"Medina","pos":"D","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":17,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_638411","name":"Dayann Methalie","last":"Methalie","pos":"D","club":"TFC","club_id":"mpg_championship_club_427","cote":null,"price":8,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_73955","name":"Loïc Négo","last":"Négo","pos":"D","club":"HAC","club_id":"mpg_championship_club_141","cote":null,"price":12,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"LIL"},{"id":"mpg_championship_player_511182","name":"Ilan Kebbal","last":"Kebbal","pos":"M","club":"PFC","club_id":"mpg_championship_club_2338","cote":21,"price":40,"score":6.52,"raw_score":6.52,"avg":6.4,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[7,5.5,6.5,7,6],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_95434","name":"Florian Thauvin","last":"Thauvin","pos":"M","club":"RCL","club_id":"mpg_championship_club_142","cote":34,"price":91,"score":6.45,"raw_score":6.45,"avg":6.3,"n":5,"flag":"données limitées","goals":3,"assists":2,"form":[5.5,5.5,5.5,7,8],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_604124","name":"Mamadou Coulibaly","last":"Coulibaly","pos":"M","club":"ASM","club_id":"mpg_championship_club_146","cote":11,"price":12,"score":5.84,"raw_score":5.84,"avg":5.67,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,6.5,5],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_606701","name":"Djaoui Cissé","last":"Cissé","pos":"M","club":"REN","club_id":"mpg_championship_club_150","cote":1,"price":10,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_199672","name":"Jonathan Ikoné","last":"Ikoné","pos":"M","club":"PFC","club_id":"mpg_championship_club_2338","cote":7,"price":19,"score":0.0,"raw_score":4.0,"avg":4.0,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4,4],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_572584","name":"Abdoul Ouattara","last":"Ouattara","pos":"M","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_54694","name":"Pierre-Emerick Aubameyang","last":"Aubameyang","pos":"A","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":53,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_220688","name":"Mason Greenwood","last":"Greenwood","pos":"A","club":"OM","club_id":"mpg_championship_club_144","cote":null,"price":96,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"TRO"},{"id":"mpg_championship_player_59046","name":"Ciro Immobile","last":"Immobile","pos":"A","club":"PFC","club_id":"mpg_championship_club_2338","cote":null,"price":8,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_564579","name":"Frank Magri","last":"Magri","pos":"A","club":"TFC","club_id":"mpg_championship_club_427","cote":null,"price":35,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_532104","name":"Sambou Soumano","last":"Soumano","pos":"A","club":"FCL","club_id":"mpg_championship_club_694","cote":null,"price":15,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"PFC"}],"formation":"5-3-2","starters":["mpg_championship_player_216272","mpg_championship_player_520403","mpg_championship_player_549737","mpg_championship_player_140040","mpg_championship_player_109533","mpg_championship_player_224868","mpg_championship_player_511182","mpg_championship_player_95434","mpg_championship_player_604124","mpg_championship_player_54694","mpg_championship_player_220688"],"captain":"mpg_championship_player_511182","captain_reason":"Meilleur score (6.52) — milieu offensif, bon upside","commentary":"Voilà, j'ai construit ma muraille avec 5 défenseurs parce que franchement, quand on voit les données qu'on a, autant miser sur la solidité derrière — et puis mes attaquants, ils vont se réveiller à un moment ou un autre, c'est comme des superhéros en phase d'adaptation. J'ai mis Kebbal en capitaine parce que le mec il est clairement le seul qui sait ce qu'il fait en ce moment, alors autant lui donner les clés et le laisser nous porter sur son petit nuage à 6.52. Ma formation elle fait peur à l'adversaire, vous allez voir — il va arriver avec ses petits schémas habituels et se retrouver face à une équipe qui défend comme une forteresse pendant que mes trois milieux lui cuisinent des cauchemars.","commentary_ai":true},{"person_id":"pierre","display":"Pierre","team_name":"Lulu FC","budget":5.0,"next_match":null,"players":[{"id":"mpg_championship_player_584845","name":"Robin Risser","last":"Risser","pos":"G","club":"RCL","club_id":"mpg_championship_club_142","cote":16,"price":21,"score":5.7,"raw_score":5.7,"avg":5.5,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[6,5.5,5,6,5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_59956","name":"Mathieu Gorgelin","last":"Gorgelin","pos":"G","club":"RCL","club_id":"mpg_championship_club_142","cote":7,"price":7,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_596121","name":"Ismaëlo Ganiou","last":"Ganiou","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":14,"price":18,"score":5.97,"raw_score":5.97,"avg":5.83,"n":3,"flag":"données limitées","goals":1,"assists":0,"form":[5.5,4.5,7.5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_221095","name":"Jonathan Clauss","last":"Clauss","pos":"D","club":"NIC","club_id":"mpg_championship_club_1395","cote":13,"price":20,"score":5.32,"raw_score":5.32,"avg":5.2,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5.5,5,4.5,6],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_511975","name":"Ismaël Doukouré","last":"Doukouré","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":11,"price":12,"score":5.28,"raw_score":5.28,"avg":5.33,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,6],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_244560","name":"Romain Perraud","last":"Perraud","pos":"D","club":"LIL","club_id":"mpg_championship_club_429","cote":13,"price":16,"score":5.2,"raw_score":5.2,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,5,4,6.5],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_651819","name":"Arsène Kouassi","last":"Kouassi","pos":"D","club":"FCL","club_id":"mpg_championship_club_694","cote":11,"price":18,"score":5.11,"raw_score":5.11,"avg":4.9,"n":5,"flag":"données limitées","goals":0,"assists":1,"form":[5,5,5,4.5,5],"next_home":true,"next_opp":"PFC"},{"id":"mpg_championship_player_619501","name":"Abdelhamid Aït Boudlal","last":"Aït Boudlal","pos":"D","club":"REN","club_id":"mpg_championship_club_150","cote":9,"price":12,"score":4.68,"raw_score":4.68,"avg":4.67,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[3,5.5,5.5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_503720","name":"Guéla Doué","last":"Doué","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":17,"score":0.0,"raw_score":2.5,"avg":2.5,"n":1,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[2.5],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_212701","name":"Denis Zakaria","last":"Zakaria","pos":"M","club":"ASM","club_id":"mpg_championship_club_146","cote":16,"price":9,"score":5.77,"raw_score":5.77,"avg":5.7,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,5.5,6,6,6],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_490330","name":"Rassoul Ndiaye","last":"Ndiaye","pos":"M","club":"HAC","club_id":"mpg_championship_club_141","cote":15,"price":21,"score":5.59,"raw_score":5.59,"avg":5.62,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,6,6,5.5],"next_home":false,"next_opp":"LIL"},{"id":"mpg_championship_player_624926","name":"Adama Camara","last":"Camara","pos":"M","club":"PFC","club_id":"mpg_championship_club_2338","cote":8,"price":13,"score":5.1,"raw_score":5.1,"avg":5.2,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,5,5,6,5.5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_107258","name":"Laurent Abergel","last":"Abergel","pos":"M","club":"NIC","club_id":"mpg_championship_club_1395","cote":1,"price":16,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_247417","name":"Aron Dønnum","last":"Dønnum","pos":"M","club":"TFC","club_id":"mpg_championship_club_427","cote":7,"price":21,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_474120","name":"Julio Enciso","last":"Enciso","pos":"M","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":20,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_242893","name":"Yann Gboho","last":"Gboho","pos":"M","club":"TFC","club_id":"mpg_championship_club_427","cote":null,"price":52,"score":0.0,"raw_score":5.43,"avg":5.25,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":1,"form":[6.5,4],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_551976","name":"Pablo Pagis","last":"Pagis","pos":"A","club":"PFC","club_id":"mpg_championship_club_2338","cote":25,"price":23,"score":6.07,"raw_score":6.07,"avg":5.9,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[6.5,5,7,6,5],"next_home":false,"next_opp":"FCL"},{"id":"mpg_championship_player_468658","name":"Estéban Lepaul","last":"Lepaul","pos":"A","club":"REN","club_id":"mpg_championship_club_150","cote":35,"price":75,"score":5.63,"raw_score":5.63,"avg":5.5,"n":5,"flag":"données limitées","goals":3,"assists":0,"form":[4.5,5,5,7,6],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_199670","name":"Odsonne Édouard","last":"Édouard","pos":"A","club":"RCL","club_id":"mpg_championship_club_142","cote":21,"price":33,"score":4.92,"raw_score":4.92,"avg":4.75,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,5,4,5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_219873","name":"Romain Del Castillo","last":"Del Castillo","pos":"A","club":"BRE","club_id":"mpg_championship_club_862","cote":null,"price":69,"score":0.0,"raw_score":6.21,"avg":6.0,"n":2,"flag":"⚠️ données limitées","goals":1,"assists":0,"form":[5,7],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_549940","name":"Malick Fofana","last":"Fofana","pos":"A","club":"OL","club_id":"mpg_championship_club_143","cote":null,"price":7,"score":0.0,"raw_score":5.6,"avg":5.5,"n":2,"flag":"⚠️ données limitées","goals":1,"assists":0,"form":[5,6],"next_home":false,"next_opp":"RCL"}],"formation":"5-3-2","starters":["mpg_championship_player_584845","mpg_championship_player_596121","mpg_championship_player_221095","mpg_championship_player_511975","mpg_championship_player_244560","mpg_championship_player_651819","mpg_championship_player_212701","mpg_championship_player_490330","mpg_championship_player_624926","mpg_championship_player_551976","mpg_championship_player_468658"],"captain":"mpg_championship_player_551976","captain_reason":"Meilleur score (6.07) — attaquant, gros upside bonus","commentary":"Les gars, j'assume FULL cette compo 5-3-2 de ouf avec mon mur de 5 défenseurs — on va étouffer l'adversaire comme une couette en juillet, c'est tactique niveau Mourinho en mode \"nous on défend, vous vous regardez\" 😤 Pablo en capitaine, c'est évident, le mec a le score le plus chaud et faut bien que quelqu'un sorte les buts quand la défense fait le job. Après ouais, y a un truc « données limitées » un peu partout, mais franchement c'est ça qui rend ça beau — personne sait rien, tout le monde va surprendre, et moi j'ai juste misé sur les mecs qui montent en puissance 🔥 Prêt à vous pourrir dimanche, les autres vont pleurer sur leur attaque!","commentary_ai":true},{"person_id":"raph","display":"Raph","team_name":"San Chapo FC","budget":10.0,"next_match":null,"players":[{"id":"mpg_championship_player_231875","name":"Yéhvann Diouf","last":"Diouf","pos":"G","club":"NIC","club_id":"mpg_championship_club_1395","cote":16,"price":10,"score":6.04,"raw_score":6.04,"avg":5.7,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[7.5,6,5.5,3.5,6],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_242194","name":"Matvey Safonov","last":"Safonov","pos":"G","club":"PSG","club_id":"mpg_championship_club_149","cote":15,"price":10,"score":5.42,"raw_score":5.42,"avg":5.1,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[5,8,4,4.5,4],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_485335","name":"Lucas Chevalier","last":"Chevalier","pos":"G","club":"PSG","club_id":"mpg_championship_club_149","cote":7,"price":10,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_221987","name":"Matthieu Udol","last":"Udol","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":18,"price":20,"score":5.37,"raw_score":5.37,"avg":5.1,"n":5,"flag":"données limitées","goals":1,"assists":0,"form":[6,4,5.5,5,5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_228955","name":"Rasmus Nicolaisen","last":"Nicolaisen","pos":"D","club":"TFC","club_id":"mpg_championship_club_427","cote":11,"price":15,"score":5.08,"raw_score":5.08,"avg":5.0,"n":3,"flag":"données limitées","goals":0,"assists":0,"form":[5.5,5.5,4],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_228289","name":"Jordan Lefort","last":"Lefort","pos":"D","club":"SCO","club_id":"mpg_championship_club_2128","cote":13,"price":14,"score":4.98,"raw_score":4.98,"avg":4.9,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[6,5,3,6,4.5],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_115327","name":"Ruben Aguilar","last":"Aguilar","pos":"D","club":"RCL","club_id":"mpg_championship_club_142","cote":9,"price":17,"score":4.9,"raw_score":4.9,"avg":4.75,"n":4,"flag":"données limitées","goals":0,"assists":1,"form":[4,5.5,4.5,5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_437497","name":"Melvin Bard","last":"Bard","pos":"D","club":"NIC","club_id":"mpg_championship_club_1395","cote":null,"price":10,"score":0.0,"raw_score":5.34,"avg":5.25,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4.5,6],"next_home":true,"next_opp":"STR"},{"id":"mpg_championship_player_214245","name":"Fabien Centonze","last":"Centonze","pos":"D","club":"NAN","club_id":"mpg_championship_club_430","cote":null,"price":11,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":null,"next_opp":null},{"id":"mpg_championship_player_172850","name":"Ben Chilwell","last":"Chilwell","pos":"D","club":"STR","club_id":"mpg_championship_club_153","cote":null,"price":12,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"},{"id":"mpg_championship_player_512759","name":"Fodé Doucouré","last":"Doucouré","pos":"D","club":"HAC","club_id":"mpg_championship_club_141","cote":null,"price":11,"score":0.0,"raw_score":4.89,"avg":4.75,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":1,"form":[5.5,4],"next_home":false,"next_opp":"LIL"},{"id":"mpg_championship_player_446090","name":"Cristian Cásseres","last":"Cásseres","pos":"M","club":"TFC","club_id":"mpg_championship_club_427","cote":18,"price":17,"score":6.92,"raw_score":6.92,"avg":6.8,"n":5,"flag":"données limitées","goals":0,"assists":3,"form":[6,8,7,7.5,5.5],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_168568","name":"Corentin Tolisso","last":"Tolisso","pos":"M","club":"OL","club_id":"mpg_championship_club_143","cote":31,"price":22,"score":6.62,"raw_score":6.62,"avg":6.3,"n":5,"flag":"données limitées","goals":1,"assists":2,"form":[8.5,6,5.5,5,6.5],"next_home":false,"next_opp":"RCL"},{"id":"mpg_championship_player_559827","name":"Kamory Doumbia","last":"Doumbia","pos":"M","club":"BRE","club_id":"mpg_championship_club_862","cote":23,"price":17,"score":6.51,"raw_score":6.51,"avg":6.4,"n":5,"flag":"données limitées","goals":4,"assists":1,"form":[4.5,5,8,7,7.5],"next_home":true,"next_opp":"SCO"},{"id":"mpg_championship_player_174969","name":"Branco van den Boomen","last":"van den Boomen","pos":"M","club":"SCO","club_id":"mpg_championship_club_2128","cote":16,"price":13,"score":5.42,"raw_score":5.42,"avg":5.3,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[5.5,5,5.5,6.5,4],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_115961","name":"Adrien Thomasson","last":"Thomasson","pos":"M","club":"REN","club_id":"mpg_championship_club_150","cote":17,"price":37,"score":5.23,"raw_score":5.23,"avg":5.1,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[3,7,4.5,6,5],"next_home":true,"next_opp":"AJA"},{"id":"mpg_championship_player_218244","name":"Amadou Haidara","last":"Haidara","pos":"M","club":"RCL","club_id":"mpg_championship_club_142","cote":8,"price":8,"score":5.06,"raw_score":5.06,"avg":4.88,"n":4,"flag":"données limitées","goals":0,"assists":0,"form":[5,5.5,4,5],"next_home":true,"next_opp":"OL"},{"id":"mpg_championship_player_66957","name":"Rémy Cabella","last":"Cabella","pos":"M","club":"NAN","club_id":"mpg_championship_club_430","cote":null,"price":13,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":null,"next_opp":null},{"id":"mpg_championship_player_532112","name":"Amine Sbaï","last":"Sbaï","pos":"A","club":"SCO","club_id":"mpg_championship_club_2128","cote":15,"price":13,"score":6.41,"raw_score":6.41,"avg":6.2,"n":5,"flag":"données limitées","goals":1,"assists":1,"form":[8,5.5,5,5.5,7],"next_home":false,"next_opp":"BRE"},{"id":"mpg_championship_player_214254","name":"Habib Diallo","last":"Diallo","pos":"A","club":"LEM","club_id":"mpg_championship_club_920","cote":9,"price":13,"score":5.25,"raw_score":5.25,"avg":5.0,"n":3,"flag":"données limitées","goals":1,"assists":0,"form":[6.5,4.5,4],"next_home":false,"next_opp":"PSG"},{"id":"mpg_championship_player_44346","name":"Olivier Giroud","last":"Giroud","pos":"A","club":"LIL","club_id":"mpg_championship_club_429","cote":17,"price":13,"score":5.18,"raw_score":5.18,"avg":5.1,"n":5,"flag":"données limitées","goals":1,"assists":2,"form":[4.5,4,5,6,6],"next_home":true,"next_opp":"HAC"},{"id":"mpg_championship_player_575453","name":"Santiago Hidalgo","last":"Hidalgo","pos":"A","club":"TFC","club_id":"mpg_championship_club_427","cote":9,"price":16,"score":4.5,"raw_score":4.5,"avg":4.5,"n":5,"flag":"données limitées","goals":0,"assists":0,"form":[4.5,4.5,4.5,4.5,4.5],"next_home":false,"next_opp":"ASM"},{"id":"mpg_championship_player_444880","name":"Mika Biereth","last":"Biereth","pos":"A","club":"ASM","club_id":"mpg_championship_club_146","cote":9,"price":76,"score":0.0,"raw_score":4.65,"avg":4.5,"n":2,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[4.5,4.5],"next_home":true,"next_opp":"TFC"},{"id":"mpg_championship_player_449980","name":"Gonçalo Ramos","last":"Gonçalo Ramos","pos":"A","club":"PSG","club_id":"mpg_championship_club_149","cote":null,"price":26,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":true,"next_opp":"LEM"},{"id":"mpg_championship_player_175794","name":"Giorgi Kvilitaia","last":"Kvilitaia","pos":"A","club":"MET","club_id":"mpg_championship_club_145","cote":null,"price":5,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":null,"next_opp":null},{"id":"mpg_championship_player_596761","name":"Joaquín Panichelli","last":"Panichelli","pos":"A","club":"STR","club_id":"mpg_championship_club_153","cote":3,"price":71,"score":0.0,"raw_score":0.0,"avg":null,"n":0,"flag":"⚠️ données limitées","goals":0,"assists":0,"form":[],"next_home":false,"next_opp":"NIC"}],"formation":"4-4-2","starters":["mpg_championship_player_231875","mpg_championship_player_221987","mpg_championship_player_228955","mpg_championship_player_228289","mpg_championship_player_115327","mpg_championship_player_446090","mpg_championship_player_168568","mpg_championship_player_559827","mpg_championship_player_174969","mpg_championship_player_532112","mpg_championship_player_214254"],"captain":"mpg_championship_player_446090","captain_reason":"Meilleur score (6.92) — milieu offensif, bon upside","commentary":"Ouais voilà, je vous ai monté une belle 4-4-2 bien équilibrée pour enfoncer l'adversaire ce week-end ! J'ai cap' Cásseres parce que le mec il a la niaque et les données limités c'est exactement quand faut montrer qu'on a les couilles, donc lui il va me sortir un match de malade. Côté attaque j'ai jeté Sbaï et Diallo ensemble, vu que j'ai qu'eux deux faut vraiment qu'ils chauffent sinon je vous les revends à la brocante ! Diouf en goal il va nous sortir des miracles, j'ai confiance, donc venez pas me dire \"ouais mais les données\"—j'assume tout ça, c'est mon équipe et elle va faire mal.","commentary_ai":true}]};
 
-const SB_HEADERS = {
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+const FORMATIONS = {
+  "3-4-3": { G: 1, D: 3, M: 4, A: 3 },
+  "3-5-2": { G: 1, D: 3, M: 5, A: 2 },
+  "4-3-3": { G: 1, D: 4, M: 3, A: 3 },
+  "4-4-2": { G: 1, D: 4, M: 4, A: 2 },
+  "4-5-1": { G: 1, D: 4, M: 5, A: 1 },
+  "5-3-2": { G: 1, D: 5, M: 3, A: 2 },
+  "5-4-1": { G: 1, D: 5, M: 4, A: 1 },
 };
+const POS_ORDER = { G: 0, D: 1, M: 2, A: 3 };
+const CAP_PREF  = { A: 0, M: 1, D: 2, G: 3 };
 
-let schedule = [];
-let unavailable = new Set();
-let clubsMap = {};
+let current = null;
+const unavailable = new Set();
 
-const teamSelect  = document.getElementById('team-select');
-const matchInfo   = document.getElementById('match-info');
-const matchVsEl   = document.getElementById('match-vs');
-const matchGwEl   = document.getElementById('match-gw');
-const rosterCard  = document.getElementById('roster-card');
-const rosterEl    = document.getElementById('roster-content');
-const btnGen      = document.getElementById('btn-generate');
-const btnLabel    = document.getElementById('btn-label');
-const resultZone  = document.getElementById('result-zone');
-const errorZone   = document.getElementById('error-zone');
+const teamSelect      = document.getElementById('team-select');
+const formationSelect = document.getElementById('formation-select');
+const matchInfo       = document.getElementById('match-info');
+const rosterCard      = document.getElementById('roster-card');
+const rosterEl        = document.getElementById('roster-content');
+const formationCard   = document.getElementById('formation-card');
+const resultZone      = document.getElementById('result-zone');
+const errorZone       = document.getElementById('error-zone');
 
-// ── Init : charge les équipes + clubs ──
-async function init() {
-  try {
-    const [schedRes, clubsRes] = await Promise.all([
-      fetch(
-        `${SUPABASE_URL}/rest/v1/mpg_schedule?select=person_id,team_name,opponent_name,game_week,season_finished&order=team_name`,
-        { headers: SB_HEADERS }
-      ),
-      fetch(
-        `${SUPABASE_URL}/rest/v1/l1_clubs?select=id,name,short_name`,
-        { headers: SB_HEADERS }
-      ),
-    ]);
-    if (!schedRes.ok) throw new Error('Impossible de charger les équipes');
-    schedule = await schedRes.json();
-    schedule.forEach(t => {
-      const opt = document.createElement('option');
-      opt.value = t.person_id;
-      opt.textContent = t.team_name;
-      teamSelect.appendChild(opt);
-    });
-    if (clubsRes.ok) {
-      const clubs = await clubsRes.json();
-      clubs.forEach(c => { clubsMap[c.id] = c.short_name || c.name || c.id; });
-    }
-  } catch (e) {
-    showError(e.message);
-  }
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// ── Sélection d'équipe ──
-teamSelect.addEventListener('change', async () => {
-  const personId = teamSelect.value;
-  unavailable.clear();
-  resultZone.classList.add('result-hidden');
-  hideError();
+// ── Port de bestteam_engine.best_formation / pick_captain ──
+function bestFormation(players, forced) {
+  const byPos = { G: [], D: [], M: [], A: [] };
+  players.forEach(p => { if (byPos[p.pos]) byPos[p.pos].push(p); });
+  Object.values(byPos).forEach(a => a.sort((x, y) => y.score - x.score));
+  const toTest = forced && FORMATIONS[forced] ? { [forced]: FORMATIONS[forced] } : FORMATIONS;
+  let best = null, bestScore = -Infinity, bestStarters = [];
+  for (const [name, slots] of Object.entries(toTest)) {
+    let valid = true, starters = [], total = 0;
+    for (const [pos, count] of Object.entries(slots)) {
+      if (byPos[pos].length < count) { valid = false; break; }
+      const picked = byPos[pos].slice(0, count);
+      starters = starters.concat(picked);
+      total += picked.reduce((s, p) => s + p.score, 0);
+    }
+    if (!valid) continue;
+    const d = slots.D || 0;                       // bonus défense MPG
+    if (d >= 5) total += d * 1.0; else if (d === 4) total += d * 0.5;
+    if (total > bestScore) { bestScore = total; best = name; bestStarters = starters; }
+  }
+  const ids = new Set(bestStarters.map(p => p.id));
+  const subs = players.filter(p => !ids.has(p.id)).sort((a, b) => b.score - a.score);
+  return { formation: best, starters: bestStarters, subs };
+}
 
-  if (!personId) {
-    matchInfo.style.display = 'none';
-    rosterCard.style.display = 'none';
-    document.getElementById('formation-card').style.display = 'none';
-    btnGen.style.display = 'none';
+function pickCaptain(starters) {
+  let c = starters.filter(p => (p.avg ?? 0) > 6);
+  if (!c.length) c = [...starters];
+  c.sort((a, b) => (b.score - a.score) || ((CAP_PREF[a.pos] ?? 9) - (CAP_PREF[b.pos] ?? 9)));
+  return c[0] || null;
+}
+
+// ── Init ──
+function init() {
+  const managers = BESTTEAM.managers || [];
+  if (!managers.length) {
+    showError('Aucune donnée Best Team : lance `python3 generate_pages.py bestteam`.');
     return;
   }
-
-  // Affiche le prochain match
-  const team = schedule.find(t => t.person_id === personId);
-  if (team) {
-    if (team.season_finished) {
-      matchInfo.innerHTML = `<div class="match-fin">Saison terminée — rendez-vous à la prochaine !</div>`;
-    } else {
-      matchVsEl.textContent = `vs ${team.opponent_name}`;
-      matchGwEl.textContent = `Journée ${team.game_week}`;
-      matchInfo.innerHTML = '';
-      matchInfo.append(
-        Object.assign(document.createElement('div'), {
-          innerHTML: `<div class="match-vs">vs ${team.opponent_name}</div><div class="match-gw">Journée ${team.game_week}</div>`
-        })
-      );
-    }
-    matchInfo.style.display = 'flex';
-  }
-
-  // Charge le roster
-  rosterCard.style.display = 'block';
-  document.getElementById('formation-card').style.display = 'block';
-  document.getElementById('formation-select').value = '';
-  rosterEl.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Chargement du roster…</div>';
-  btnGen.style.display = 'flex';
-  btnGen.disabled = true;
-
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/mpg_rosters?select=player_id,price,l1_players(first_name,last_name,position,quotation,quotation_trend,club_id)&person_id=eq.${encodeURIComponent(personId)}&order=player_id`,
-      { headers: SB_HEADERS }
-    );
-    if (!res.ok) throw new Error('Impossible de charger le roster');
-    const players = await res.json();
-    renderRoster(players);
-    btnGen.disabled = false;
-  } catch (e) {
-    rosterEl.innerHTML = `<div class="error-card">${e.message}</div>`;
-  }
-});
-
-// ── Affichage du roster groupé par position ──
-function renderRoster(players) {
-  const POS_ORDER = ['G', 'D', 'M', 'A'];
-  const byPos = { G: [], D: [], M: [], A: [] };
-  players.forEach(p => {
-    const pos = p.l1_players?.position || 'M';
-    (byPos[pos] || byPos['M']).push(p);
+  managers.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.person_id;
+    opt.textContent = `${m.team_name} (${m.display})`;
+    teamSelect.appendChild(opt);
   });
+  const sub = document.getElementById('header-sub');
+  const l1 = BESTTEAM.l1 || {};
+  sub.textContent = `${BESTTEAM.label || ''} · notes Ligue 1 ${l1.season || ''} jusqu'à la J${l1.n_gw ?? '?'}` +
+    (l1.next_gw ? ` · prochaine journée L1 : J${l1.next_gw}` : '');
 
+  selectFromHash();
+}
+
+// Lien partageable : bestteam.html#raph
+function selectFromHash() {
+  const wanted = decodeURIComponent((location.hash || '').slice(1));
+  if (wanted && wanted !== teamSelect.value && (BESTTEAM.managers || []).some(m => m.person_id === wanted)) {
+    teamSelect.value = wanted;
+    selectTeam();
+  }
+}
+window.addEventListener('hashchange', selectFromHash);
+
+teamSelect.addEventListener('change', selectTeam);
+formationSelect.addEventListener('change', renderResult);
+
+function selectTeam() {
+  const pid = teamSelect.value;
+  unavailable.clear();
+  formationSelect.value = '';
+  hideError();
+  current = (BESTTEAM.managers || []).find(m => m.person_id === pid) || null;
+  if (!current) {
+    matchInfo.style.display = 'none';
+    rosterCard.style.display = 'none';
+    formationCard.style.display = 'none';
+    resultZone.classList.add('result-hidden');
+    history.replaceState(null, '', location.pathname);
+    return;
+  }
+  history.replaceState(null, '', `#${pid}`);
+
+  const nm = current.next_match;
+  if (BESTTEAM.season_finished) {
+    matchInfo.innerHTML = `<div class="match-fin">Saison terminée — compo indicative, rendez-vous à la prochaine !</div>`;
+  } else if (nm) {
+    matchInfo.innerHTML = `<div><div class="match-vs">vs ${esc(nm.opponent)}</div><div class="match-gw">Journée ${esc(nm.game_week)}${nm.home ? ' · domicile' : ' · extérieur'}</div></div>`;
+  } else {
+    matchInfo.innerHTML = `<div class="match-fin">Prochaine journée — adversaire pas encore synchronisé</div>`;
+  }
+  matchInfo.style.display = 'flex';
+
+  rosterCard.style.display = 'block';
+  formationCard.style.display = 'block';
+  renderRoster();
+  renderResult();
+}
+
+// ── Roster groupé par poste ──
+function renderRoster() {
   rosterEl.innerHTML = '';
-  POS_ORDER.forEach(pos => {
+  const byPos = { G: [], D: [], M: [], A: [] };
+  current.players.forEach(p => (byPos[p.pos] || byPos.M).push(p));
+  ['G', 'D', 'M', 'A'].forEach(pos => {
     const grp = byPos[pos];
     if (!grp.length) return;
     const sec = document.createElement('div');
     sec.className = 'pos-section';
-
-    const header = document.createElement('div');
-    header.className = 'pos-header';
-    header.innerHTML = `<span class="pos-badge pos-${pos}">${pos}</span><span class="pos-count">${grp.length} joueur${grp.length > 1 ? 's' : ''}</span>`;
-    sec.appendChild(header);
-
+    sec.innerHTML = `<div class="pos-header"><span class="pos-badge pos-${pos}">${pos}</span><span class="pos-count">${grp.length} joueur${grp.length > 1 ? 's' : ''}</span></div>`;
     grp.forEach(p => {
-      const lp = p.l1_players || {};
-      const name = `${lp.first_name || ''} ${lp.last_name || ''}`.trim() || p.player_id;
-      const cote = lp.quotation ? `${lp.quotation}M` : '—';
-      const trend = lp.quotation_trend === 'up' ? ' ↑' : lp.quotation_trend === 'down' ? ' ↓' : '';
-
       const row = document.createElement('div');
       row.className = 'player-row';
+      row.dataset.id = p.id;
+      const cote = p.cote != null ? `${p.cote}M` : '—';
+      const pillCls = p.n < 3 ? 'zero' : (p.n <= 5 ? 'warn' : '');
+      const form = (p.form || []).length ? ` · forme ${(p.form || []).join(' ')}` : '';
+      const next = p.next_opp ? ` · prochain : ${p.next_home ? 'vs' : '@'} ${p.next_opp}` : '';
       row.innerHTML = `
         <div class="player-info">
           <div>
-            <div class="player-name">${name}</div>
-            <div class="player-club">${lp.club_id ? (clubsMap[lp.club_id] || lp.club_id) : ''}</div>
+            <div class="player-name">${esc(p.name)}</div>
+            <div class="player-club">${esc(p.club || '')}${next}</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <span class="player-cote">${cote}${trend}</span>
-          <button class="toggle-btn dispo" data-id="${p.player_id}">Dispo</button>
+        <div class="player-right">
+          <span class="score-pill ${pillCls}" title="${p.n} match${p.n > 1 ? 's' : ''} noté${p.n > 1 ? 's' : ''}${form}">${p.score.toFixed(2)} · ${p.n}m</span>
+          <span class="player-cote">${cote}</span>
+          <button class="toggle-btn dispo" type="button">Dispo</button>
         </div>`;
-      row.querySelector('button').addEventListener('click', function() {
-        togglePlayer(this, p.player_id);
-      });
+      row.querySelector('button').addEventListener('click', function () { togglePlayer(this, row, p.id); });
       sec.appendChild(row);
     });
     rosterEl.appendChild(sec);
   });
 }
 
-// ── Toggle indisponibilité ──
-function togglePlayer(btn, playerId) {
-  if (unavailable.has(playerId)) {
-    unavailable.delete(playerId);
+function togglePlayer(btn, row, id) {
+  if (unavailable.has(id)) {
+    unavailable.delete(id);
     btn.textContent = 'Dispo';
     btn.className = 'toggle-btn dispo';
+    row.classList.remove('off');
   } else {
-    unavailable.add(playerId);
+    unavailable.add(id);
     btn.textContent = 'Indispo';
     btn.className = 'toggle-btn indispo';
+    row.classList.add('off');
   }
+  renderResult();
 }
 
-// ── Appel Edge Function ──
-btnGen.addEventListener('click', async () => {
-  const personId = teamSelect.value;
-  if (!personId) return;
-
-  btnGen.disabled = true;
-  btnLabel.textContent = 'Génération en cours…';
-  const spinner = document.createElement('div');
-  spinner.className = 'spinner';
-  btnGen.insertBefore(spinner, btnLabel);
-  resultZone.classList.add('result-hidden');
+// ── Résultat (recalculé en local) ──
+function renderResult() {
+  if (!current) return;
   hideError();
-
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/best-team`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ person_id: personId, unavailable: [...unavailable], window: 10, formation: document.getElementById('formation-select').value || undefined }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-    renderResult(data);
-  } catch (e) {
-    showError(e.message);
-  } finally {
-    btnGen.disabled = false;
-    btnLabel.textContent = 'Générer mon équipe';
-    spinner.remove();
+  const forced = formationSelect.value || null;
+  const avail = current.players.filter(p => !unavailable.has(p.id));
+  const { formation, starters, subs } = bestFormation(avail, forced);
+  if (!formation) {
+    resultZone.classList.add('result-hidden');
+    showError(forced ? `Pas assez de joueurs disponibles pour la formation ${forced}.` : 'Pas assez de joueurs disponibles pour aligner une équipe complète.');
+    return;
   }
-});
+  const captain = pickCaptain(starters);
 
-// ── Rendu du résultat ──
-function renderResult(data) {
-  const formation = data.formation || '—';
   document.getElementById('formation-big').textContent = formation;
+  const nm = current.next_match;
+  const when = nm ? `J${nm.game_week} · vs ${nm.opponent}` : (BESTTEAM.season_finished ? 'saison terminée' : 'prochaine journée');
+  document.getElementById('formation-label').textContent = `${current.team_name} — ${when}`;
 
-  const team = data.team_name || '';
-  const gw = data.next_match?.game_week ? `J${data.next_match.game_week}` : '';
-  const opp = data.next_match?.opponent || '';
-  document.getElementById('formation-label').textContent =
-    [team, gw && opp ? `${gw} · vs ${opp}` : (gw || opp)].filter(Boolean).join(' — ');
+  renderPitch(starters, captain);
+  renderBench(subs);
 
-  renderPitch(formation, data.starters || []);
-  renderBench(data.substitutes || []);
-
-  if (data.commentary) {
-    document.getElementById('ai-text').textContent = data.commentary;
-    document.getElementById('ai-card').style.display = 'block';
+  const aiCard = document.getElementById('ai-card');
+  if (current.commentary) {
+    document.getElementById('ai-text').textContent = current.commentary;
+    const note = document.getElementById('ai-note');
+    const customised = unavailable.size > 0 || !!forced;
+    const sameTeam = formation === current.formation && captain && captain.id === current.captain;
+    if (customised && !sameTeam) {
+      note.textContent = `Analyse générée pour la compo de référence (${current.formation}, capitaine ${nameOf(current.captain)}).`;
+      note.style.display = 'block';
+    } else {
+      note.style.display = 'none';
+    }
+    aiCard.style.display = 'block';
   } else {
-    document.getElementById('ai-card').style.display = 'none';
+    aiCard.style.display = 'none';
   }
 
-  const meta = data.meta || {};
-  const items = [];
-  if (meta.window) items.push(`Fenêtre ${meta.window} matchs`);
-  if (meta.data_freshness) items.push(`Données ${new Date(meta.data_freshness).toLocaleDateString('fr-FR')}`);
-  if (meta.generated_at) items.push(`Généré ${new Date(meta.generated_at).toLocaleString('fr-FR', {dateStyle:'short',timeStyle:'short'})}`);
-  document.getElementById('meta-row').innerHTML = items.map(s => `<span class="meta-item">📋 ${s}</span>`).join('');
+  const l1 = BESTTEAM.l1 || {};
+  const items = [`Fenêtre ${BESTTEAM.window || 10} matchs`, `Notes L1 ${l1.season || ''} : J${l1.n_gw ?? '?'}`];
+  if (l1.next_gw) items.push(`Bonus domicile sur la J${l1.next_gw} L1`);
+  if (BESTTEAM.generated_at) items.push(`Généré ${new Date(BESTTEAM.generated_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}`);
+  if (unavailable.size) items.push(`${unavailable.size} indispo`);
+  document.getElementById('meta-row').innerHTML = items.map(s => `<span class="meta-item">📋 ${esc(s)}</span>`).join('');
 
   resultZone.classList.remove('result-hidden');
-  setTimeout(() => resultZone.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
-// ── Terrain CSS ──
-function renderPitch(formation, starters) {
+function nameOf(id) {
+  const p = (current?.players || []).find(x => x.id === id);
+  return p ? p.last : '?';
+}
+
+function renderPitch(starters, captain) {
   const pitch = document.getElementById('pitch');
   pitch.innerHTML = '';
-  if (!starters.length) return;
-
-  // Grouper par position
   const byPos = { G: [], D: [], M: [], A: [] };
-  starters.forEach(p => { (byPos[p.position] || byPos['M']).push(p); });
-
-  // Construire les rangées top→bottom : ATT, MID, DEF, GK
-  const rows = [byPos.A, byPos.M, byPos.D, byPos.G].filter(r => r.length > 0);
-
-  rows.forEach(rowPlayers => {
+  starters.forEach(p => (byPos[p.pos] || byPos.M).push(p));
+  [byPos.A, byPos.M, byPos.D, byPos.G].filter(r => r.length).forEach(rowPlayers => {
     const rowEl = document.createElement('div');
     rowEl.className = 'pitch-row';
     rowPlayers.forEach(p => {
-      const lastName = (p.name || '').split(' ').slice(-1)[0] || '?';
       const el = document.createElement('div');
       el.className = 'pitch-player';
+      el.title = `${p.name} (${p.club || '?'}) — score ${p.score.toFixed(2)}, ${p.n} match${p.n > 1 ? 's' : ''}${p.flag ? ' — ' + p.flag : ''}`;
       el.innerHTML =
-        (p.captain ? '<div class="cap-badge">C</div>' : '') +
-        (p.data_flag ? '<div class="data-flag">⚠️</div>' : '') +
-        `<div class="pitch-player-name">${lastName}</div>` +
-        (p.score != null ? `<div class="pitch-player-score">${(+p.score).toFixed(1)}</div>` : '');
+        (captain && p.id === captain.id ? '<div class="cap-badge">C</div>' : '') +
+        (p.flag ? '<div class="data-flag">⚠️</div>' : '') +
+        `<div class="pitch-player-name">${esc(p.last)}</div>` +
+        `<div class="pitch-player-score">${p.score.toFixed(1)}</div>`;
       rowEl.appendChild(el);
     });
     pitch.appendChild(rowEl);
   });
 }
 
-// ── Banc ──
 function renderBench(subs) {
   const bench = document.getElementById('bench');
   bench.innerHTML = '';
-  const posOrder = { G: 0, D: 1, M: 2, A: 3 };
-  subs.sort((a, b) => (posOrder[a.position] ?? 9) - (posOrder[b.position] ?? 9) || (b.score ?? 0) - (a.score ?? 0));
+  subs.sort((a, b) => (POS_ORDER[a.pos] ?? 9) - (POS_ORDER[b.pos] ?? 9) || b.score - a.score);
   subs.forEach(p => {
-    const lastName = (p.name || '').split(' ').slice(-1)[0] || '?';
     const div = document.createElement('div');
     div.className = 'bench-player';
+    div.title = `${p.name} (${p.club || '?'}) — ${p.n} match${p.n > 1 ? 's' : ''}`;
     div.innerHTML =
-      `<span class="pos-badge pos-${p.position || 'M'}">${p.position || '?'}</span>` +
-      `<div><div class="bench-name">${lastName}</div>` +
-      `<div class="bench-score">${p.score != null ? (+p.score).toFixed(1) : '—'}</div></div>` +
-      (p.data_flag ? '<span title="Données limitées" style="margin-left:auto;">⚠️</span>' : '');
+      `<span class="pos-badge pos-${p.pos}">${p.pos}</span>` +
+      `<div><div class="bench-name">${esc(p.last)}</div><div class="bench-score">${p.score.toFixed(1)}</div></div>` +
+      (p.flag ? '<span title="Données limitées" style="margin-left:auto;">⚠️</span>' : '');
     bench.appendChild(div);
   });
+  if (!subs.length) bench.innerHTML = '<div class="empty">Aucun remplaçant disponible.</div>';
 }
 
-// ── Erreurs ──
-function showError(msg) {
-  errorZone.innerHTML = `<div class="error-card">❌ ${msg}</div>`;
-}
-function hideError() {
-  errorZone.innerHTML = '';
-}
+function showError(msg) { errorZone.innerHTML = `<div class="error-card">❌ ${esc(msg)}</div>`; }
+function hideError() { errorZone.innerHTML = ''; }
 
 init();
 </script>

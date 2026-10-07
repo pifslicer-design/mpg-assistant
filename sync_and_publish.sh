@@ -1,6 +1,6 @@
 #!/bin/bash
 # sync_and_publish.sh — Sync MPG + régénération pages + publication GitHub Pages
-# Cron : 0 7 * * 1  (lundi 7h00)
+# Lancement manuel (aucun cron) : bash sync_and_publish.sh
 
 set -euo pipefail
 
@@ -38,7 +38,7 @@ $log_tail" || true
 }
 trap 'on_error $LINENO' ERR
 
-# 0. Charger .env (SUPABASE_URL, ANTHROPIC_API_KEY, etc.)
+# 0. Charger .env (MPG_TOKEN, ANTHROPIC_API_KEY, etc.)
 if [[ -f .env ]]; then
     set -a
     # shellcheck disable=SC1091
@@ -47,23 +47,15 @@ if [[ -f .env ]]; then
 fi
 
 # 1. Sync données
-echo "[1/5] Sync divisions..."
+echo "[1/4] Sync divisions..."
 "$PYTHON" mpg_client.py --divisions-file divisions.txt --sync-divisions
 
-# 2. Sync Supabase (optionnel — nécessite SUPABASE_URL dans l'environnement)
-if [[ -n "${SUPABASE_URL:-}" ]]; then
-    echo "[2/5] Sync Supabase L1..."
-    "$PYTHON" sync_l1_to_supabase.py
-else
-    echo "[2/5] Sync Supabase ignoré (SUPABASE_URL non défini)"
-fi
-
-# 3. Régénération pages HTML
-echo "[3/5] Régénération pages..."
+# 2. Régénération pages HTML (bestteam : notes L1 rafraîchies via l'API MPG + commentaire Haiku)
+echo "[2/4] Régénération pages..."
 "$PYTHON" generate_pages.py
 
-# 4. Commit + push si changements
-echo "[4/5] Publication GitHub Pages..."
+# 3. Commit + push si changements
+echo "[3/4] Publication GitHub Pages..."
 git add docs/
 if git diff --staged --quiet; then
     echo "Aucun changement détecté dans docs/ — pas de commit."
@@ -74,8 +66,8 @@ else
     PUBLISHED=true
 fi
 
-# 5. Notification succès
-echo "[5/5] Envoi notification..."
+# 4. Notification succès
+echo "[4/4] Envoi notification..."
 if [[ "$PUBLISHED" == "true" ]]; then
     "$PYTHON" notify.py \
         "✅ MPG sync OK — $TIMESTAMP" \

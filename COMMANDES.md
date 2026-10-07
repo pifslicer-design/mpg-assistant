@@ -14,16 +14,13 @@
 ```bash
 bash sync_and_publish.sh
 ```
-Charge `.env`, récupère les données des 2 dernières journées, synchronise Supabase (bestteam), régénère les 15 pages HTML, pousse `docs/` sur GitHub Pages, envoie une notif Gmail.
+Charge `.env`, récupère les données des 2 dernières journées, régénère les 15 pages HTML (dont Best Team, calculée en local), pousse `docs/` sur GitHub Pages, envoie une notif Gmail.
 
 ⚠️ Nécessite un token MPG valide dans `.env`. Si erreur 401, renouveler le token (voir plus bas).
 
-Le sync Supabase est **automatique** : le script charge `.env` à l'étape 0 (depuis mai 2026) et lance `sync_l1_to_supabase.py` dès que `SUPABASE_URL` y est défini. Pour le relancer seul :
-```bash
-set -a && source .env && set +a && python sync_l1_to_supabase.py
-```
+ℹ️ Aucun cron MPG n'est configuré dans WSL : le sync est 100 % manuel.
 
-ℹ️ Aucun cron MPG n'est configuré dans WSL : le sync est 100 % manuel (le commentaire « Cron : lundi 7h » en tête du script est obsolète).
+ℹ️ Supabase n'est plus utilisé (projet mort, octobre 2026) : Best Team est désormais statique, voir plus bas.
 
 ---
 
@@ -49,7 +46,23 @@ Fetche les 2 dernières journées de la division en cours uniquement.
 ```bash
 python mpg_client.py --divisions-file divisions.txt --sync-divisions
 ```
-Fetche les 2 dernières journées pour chacune des 20 divisions. Utile après un renouvellement de token.
+Fetche les 2 dernières journées pour chacune des divisions du fichier. Utile après un renouvellement de token.
+La division courante (lue dans l'API ligue) est ajoutée en tête automatiquement si elle manque dans `divisions.txt`.
+
+---
+
+### Nouvelle saison MPG (septembre / février)
+Rien à changer dans le code : la division courante est dérivée de l'API ligue (`league.divisionsIds`).
+```bash
+python mpg_client.py --divisions-file divisions.txt --sync-divisions
+```
+Le `[CTX] division courante=… (source=league)` confirme la bascule. Seule étape manuelle, facultative : ajouter la nouvelle `division_id` en tête de `divisions.txt` pour faire taire le `[WARN]`.
+
+Vérifier la division retenue sans appel réseau :
+```bash
+python -c "from mpg_db import get_current_division; print(get_current_division())"
+```
+`DIVISION_ID` dans `.env` est optionnel ; s'il est présent et diffère de l'API, un `[WARN]` le signale (le `.env` l'emporte).
 
 ---
 
@@ -128,6 +141,20 @@ Régénère uniquement les pages spécifiées.
 
 ---
 
+### Best Team (compo optimale par manager, statique)
+```bash
+python3 generate_pages.py bestteam
+```
+`bestteam_engine.py` lit les effectifs dans `mpg.db` (`teams.raw_json.squad`, division courante), les notes L1 dans `mercato_cache/ratings_2026.json` (rafraîchies via l'API MPG si le token est valide, sinon cache tel quel), calcule score / formation / capitaine (même logique que l'ancienne Edge Function) et injecte le tout dans `bestteam.html`. Commentaire Claude Haiku si `ANTHROPIC_API_KEY` est dans `.env` (cache `mercato_cache/bestteam_commentary.json`), gabarit local sinon.
+
+```bash
+BESTTEAM_NO_FETCH=1 python3 generate_pages.py bestteam   # sans appel à l'API MPG (cache local)
+python3 bestteam_engine.py --no-fetch --no-ai            # debug : affiche les 8 compos dans le terminal
+```
+Les toggles « Indispo » et le choix de formation sont recalculés dans le navigateur, sans réseau.
+
+---
+
 ### Publier manuellement sur GitHub Pages
 ```bash
 git add docs/ && git commit -m "chore: sync $(date +%Y-%m-%d)" && git push
@@ -164,10 +191,11 @@ python3 test_export.py export.json
 
 | Situation | Commande |
 |---|---|
-| Journée terminée, token OK | `bash sync_and_publish.sh` (sync Supabase inclus si `SUPABASE_URL` dans `.env`) |
-| Relancer seulement le sync Supabase (bestteam) | `set -a && source .env && set +a && python sync_l1_to_supabase.py` |
+| Journée terminée, token OK | `bash sync_and_publish.sh` |
+| Régénérer seulement Best Team | `python3 generate_pages.py bestteam` |
 | Automatisation | Aucun cron MPG dans WSL — tout est lancé à la main |
 | Token expiré (401) | Renouveler dans `.env`, puis `bash sync_and_publish.sh` |
 | Données partielles à mettre à jour | `bash sync_and_publish.sh` — l'upsert met à jour automatiquement |
 | Retard de 3+ journées | `python mpg_client.py --divisions-file divisions.txt --sync-divisions --force` |
+| Nouvelle saison MPG | Rien à coder — `bash sync_and_publish.sh` ; ajouter la division dans `divisions.txt` pour faire taire le `[WARN]` |
 | Conseil bonus prochaine journée | `python mpg_client.py --bonus-advice --no-fetch` |
