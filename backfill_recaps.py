@@ -19,11 +19,10 @@ from summary_writer import write_summary
 def backfill(start_gw: int = 1, end_gw: int = 11, force: bool = False) -> None:
     with get_conn() as conn:
         _ensure_recap_table(conn)
-        cur_div_row = conn.execute(
-            "SELECT division_id, season FROM divisions_metadata WHERE is_current=1 LIMIT 1"
-        ).fetchone()
+        from event_detector import recap_division
+        cur_div_row = recap_division(conn)
         if not cur_div_row:
-            print("Pas de division courante — abandon.")
+            print("Pas de division courante ni de division récente — abandon.")
             return
         div_id = cur_div_row["division_id"]
         season = cur_div_row["season"]

@@ -313,7 +313,7 @@ COVID_DIVISIONS: frozenset[str] = frozenset({
 
 # Saison en cours — exclue des stats historiques (palmarès, chapeaux, podiums).
 # À mettre à jour manuellement à chaque nouvelle saison.
-CURRENT_DIVISION: str = "mpg_division_QU0SUZ6HQPB_18_1"
+CURRENT_DIVISION: str = "mpg_division_QU0SUZ6HQPB_19_1"
 
 
 def refresh_divisions_metadata(

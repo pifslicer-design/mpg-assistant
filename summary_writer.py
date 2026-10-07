@@ -70,9 +70,19 @@ def _format_event_for_llm(ev: dict) -> str:
     """Sérialise un événement en ligne lisible pour le contexte LLM."""
     t = ev["type"]
     if t == "champion_sealed":
-        return f"CHAMPION SCELLÉ : {ev['name']} mathématiquement sacré champion à J{ev['gw']} {ev['slabel']} ({ev['pts']} pts)."
+        if ev.get("final_gw"):
+            return (f"CHAMPION : {ev['name']} sacré champion de la saison {ev['slabel']} à la dernière journée "
+                    f"(J{ev['gw']}, {ev['pts']} pts). La saison est terminée, c'est le bilan final, rien ne reste à jouer.")
+        left = ev.get("gw_left")
+        reste = f", il reste {left} journée(s) à jouer" if left is not None else ""
+        return f"CHAMPION SCELLÉ : {ev['name']} mathématiquement sacré champion à J{ev['gw']} {ev['slabel']} ({ev['pts']} pts{reste})."
     if t == "chapeau_sealed":
-        return f"CHAPEAU SCELLÉ : {ev['name']} condamné à finir dernier à J{ev['gw']} {ev['slabel']} ({ev['pts']} pts)."
+        if ev.get("final_gw"):
+            return (f"CHAPEAU : {ev['name']} finit dernier de la saison {ev['slabel']} (J{ev['gw']}, dernière journée, "
+                    f"{ev['pts']} pts). Saison terminée, classement final.")
+        left = ev.get("gw_left")
+        reste = f", il reste {left} journée(s) à jouer" if left is not None else ""
+        return f"CHAPEAU SCELLÉ : {ev['name']} condamné à finir dernier à J{ev['gw']} {ev['slabel']} ({ev['pts']} pts{reste})."
     if t == "record_alltime_gap":
         return (f"RECORD ALL-TIME ÉCART : {ev['winner']['name']} bat {ev['loser']['name']} "
                 f"{ev['score']} (écart {ev['gap']} buts, ancien record {ev['old_gap']}).")

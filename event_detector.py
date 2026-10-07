@@ -40,12 +40,28 @@ MAX_PTS_PER_MATCH = 5  # 3 (victoire) + 2 (bonus mass goals max)
 # Identification de la dernière journée terminée
 # ──────────────────────────────────────────────────────────────────────────────
 
-def find_last_finalized_gw(conn) -> Optional[dict]:
-    """Retourne {season, division_id, game_week, slabel} de la dernière journée
-    entièrement finalisée dans la division en cours, ou None si aucune."""
+def recap_division(conn):
+    """Division dont on raconte la dernière journée : la division en cours si elle a des
+    matchs finalisés, sinon (intersaison) la division la plus récente ayant des matchs."""
     row = conn.execute(
         "SELECT division_id, season FROM divisions_metadata WHERE is_current=1 LIMIT 1"
     ).fetchone()
+    if row:
+        n = conn.execute(
+            "SELECT COUNT(*) FROM matches WHERE division_id=? AND is_finalized=1", (row["division_id"],)
+        ).fetchone()[0]
+        if n:
+            return row
+    return conn.execute(
+        "SELECT division_id, season FROM divisions_metadata WHERE is_covid=0 AND n_matches > 0 "
+        "ORDER BY season DESC, division_id DESC LIMIT 1"
+    ).fetchone()
+
+
+def find_last_finalized_gw(conn) -> Optional[dict]:
+    """Retourne {season, division_id, game_week, slabel} de la dernière journée
+    entièrement finalisée dans la division en cours, ou None si aucune."""
+    row = recap_division(conn)
     if not row:
         return None
     div_id = row["division_id"]
@@ -198,6 +214,8 @@ def detect_season_status(conn, gw_info: dict, total_gw: int = 14) -> list[dict]:
             **_player_card(champion_now, display),
             "pts": next(r["pts"] for r in standings_now if r["pid"] == champion_now),
             "gw": gw,
+            "gw_left": total_gw - gw,
+            "final_gw": gw >= total_gw,
             "slabel": gw_info["slabel"],
         })
 
@@ -210,6 +228,8 @@ def detect_season_status(conn, gw_info: dict, total_gw: int = 14) -> list[dict]:
             **_player_card(chapeau_now, display),
             "pts": next(r["pts"] for r in standings_now if r["pid"] == chapeau_now),
             "gw": gw,
+            "gw_left": total_gw - gw,
+            "final_gw": gw >= total_gw,
             "slabel": gw_info["slabel"],
         })
 

@@ -38,3 +38,6 @@ mercato_cache/
 !index.html
 Infos.txt
 sync.log
+
+# Outil mercato privé (strategie d enchères, jamais sur le dépôt public)
+mercato.py
