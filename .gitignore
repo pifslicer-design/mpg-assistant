@@ -5,6 +5,9 @@ __pycache__/
 venv/
 .env
 
+# Config MCP locale (contient un token Supabase personnel en clair)
+.mcp.json
+
 # Databases / large artifacts
 *.db
 *.sqlite
@@ -18,13 +21,12 @@ data/
 exports/
 logs/
 
+# Caches locaux
+mercato_cache/
+
 # OS/IDE
 .DS_Store
 .vscode/
-
-# Publish folder (commit these)
-!site/
-!site/*.html
 
 # Publish folder (commit these)
 !docs/

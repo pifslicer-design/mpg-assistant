@@ -14,15 +14,16 @@
 ```bash
 bash sync_and_publish.sh
 ```
-Récupère les données des 2 dernières journées, régénère les 12 pages HTML, pousse sur GitHub Pages, envoie une notif Gmail.
+Charge `.env`, récupère les données des 2 dernières journées, synchronise Supabase (bestteam), régénère les 15 pages HTML, pousse `docs/` sur GitHub Pages, envoie une notif Gmail.
 
 ⚠️ Nécessite un token MPG valide dans `.env`. Si erreur 401, renouveler le token (voir plus bas).
 
-Puis lancer le sync Supabase (nécessaire pour le bestteam) :
+Le sync Supabase est **automatique** : le script charge `.env` à l'étape 0 (depuis mai 2026) et lance `sync_l1_to_supabase.py` dès que `SUPABASE_URL` y est défini. Pour le relancer seul :
 ```bash
 set -a && source .env && set +a && python sync_l1_to_supabase.py
 ```
-⚠️ `sync_and_publish.sh` ne charge pas `.env` dans le shell — ce step est toujours sauté automatiquement, il faut le lancer manuellement.
+
+ℹ️ Aucun cron MPG n'est configuré dans WSL : le sync est 100 % manuel (le commentaire « Cron : lundi 7h » en tête du script est obsolète).
 
 ---
 
@@ -118,7 +119,7 @@ Meilleures séries de victoires/nuls/défaites par joueur.
 ```bash
 python3 generate_pages.py
 ```
-Régénère les 11 pages depuis la DB et les copie dans `docs/`.
+Régénère les 15 pages depuis la DB et les copie dans `docs/`.
 
 ```bash
 python3 generate_pages.py podiums hall_of_fame
@@ -163,8 +164,9 @@ python3 test_export.py export.json
 
 | Situation | Commande |
 |---|---|
-| Journée terminée, token OK | `bash sync_and_publish.sh` puis sync Supabase |
-| Sync Supabase (bestteam) | `set -a && source .env && set +a && python sync_l1_to_supabase.py` |
+| Journée terminée, token OK | `bash sync_and_publish.sh` (sync Supabase inclus si `SUPABASE_URL` dans `.env`) |
+| Relancer seulement le sync Supabase (bestteam) | `set -a && source .env && set +a && python sync_l1_to_supabase.py` |
+| Automatisation | Aucun cron MPG dans WSL — tout est lancé à la main |
 | Token expiré (401) | Renouveler dans `.env`, puis `bash sync_and_publish.sh` |
 | Données partielles à mettre à jour | `bash sync_and_publish.sh` — l'upsert met à jour automatiquement |
 | Retard de 3+ journées | `python mpg_client.py --divisions-file divisions.txt --sync-divisions --force` |
