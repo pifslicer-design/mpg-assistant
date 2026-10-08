@@ -1988,6 +1988,161 @@ def generate_index() -> None:
               f"{len(events)} événements, {'cache' if cached else 'nouveau'})")
 
 
+
+# ── Sous-titres dynamiques (éléments data-meta="…" des gabarits) ─────────────
+
+def _fr_list(names: list[str]) -> str:
+    if not names:
+        return ""
+    if len(names) == 1:
+        return names[0]
+    return ", ".join(names[:-1]) + " et " + names[-1]
+
+
+def build_site_meta(conn) -> dict[str, str]:
+    """Phrases de sous-titre calculées depuis la base (remplacent les textes figés des gabarits)."""
+    from datetime import date
+    hof, hos, n_seasons = _build_hall_data(conn)
+    cum, rat = build_classement_raw(conn)
+    rec = build_records_data(conn)
+
+    # Période couverte : première saison IRL → année courante si une division est ouverte
+    row = conn.execute("SELECT MIN(season) AS a, MAX(season) AS b FROM divisions_metadata WHERE is_covid=0").fetchone()
+    year_min = int(row["a"] or 2016)
+    year_max = int(row["b"] or date.today().year)
+    try:
+        from mpg_db import get_current_division
+        cur_div = get_current_division()[0]
+        closed = conn.execute(
+            "SELECT 1 FROM divisions_metadata WHERE division_id=? AND is_current=0 AND is_incomplete=0", (cur_div,)
+        ).fetchone()
+        if not closed:
+            year_max = max(year_max, date.today().year)
+    except Exception:
+        pass
+    period = f"{year_min}–{year_max}"
+
+    # Hall of fame : leader, dauphin, champion en titre
+    lead = hof[0]
+    second = hof[1] if len(hof) > 1 else None
+    champ_entry, champ = None, None
+    for r in hof:
+        for t in r["titres_list"]:
+            if champ_entry is None or t["snum"] > champ_entry["snum"]:
+                champ_entry, champ = t, r
+    if second and second["titres"] == lead["titres"]:
+        hof_txt = f"{lead['display']} et {second['display']} à égalité avec {lead['titres']} titres sur {n_seasons} saisons"
+    else:
+        hof_txt = f"{lead['display']} domine avec {lead['titres']} titres sur {n_seasons} saisons"
+        if second:
+            plural = "s" if second["titres"] > 1 else ""
+            hof_txt += f" · {second['display']} suit avec {second['titres']} couronne{plural}"
+    if champ and champ_entry:
+        hof_txt += f" · {champ['display']} est le champion en titre ({champ_entry['label']})"
+
+    # Hall of shame : recordman des chapeaux + ceux qui n'en ont jamais eu
+    top = hos[0]
+    if top["chapeaux"]:
+        every = max(1, round(n_seasons / top["chapeaux"]))
+        hos_txt = f"{top['display']} termine dernier 1 saison sur {every} avec {top['chapeaux']} chapeaux"
+    else:
+        hos_txt = "Personne n'a encore de chapeau"
+    zeros = [r["display"] for r in hos if r["chapeaux"] == 0]
+    if len(zeros) == 1:
+        hos_txt += f" · {zeros[0]} est le seul à n'en avoir jamais eu"
+    elif zeros:
+        hos_txt += f" · {_fr_list(zeros)} sont les seuls à n'en avoir jamais eu"
+
+    # Classements : cumul (leader, écart 1er-8e) et moyenne (leader, % de victoires all-time)
+    n_div = len(cum["seasons"])
+    finals = sorted(((p["data"][-1] if p["data"] else 0, p["name"]) for p in cum["players"]), reverse=True)
+    lead_pts, lead_name = finals[0]
+    gap = lead_pts - finals[-1][0]
+    cumul_txt = (f"{n_div} saisons hors COVID · {lead_name} 1er avec {lead_pts} pts, "
+                 f"seulement {gap} pts séparent le 1er du 8e")
+    avgs = sorted(((p["data"][-1] if p["data"] else 0, p["id"], p["name"]) for p in rat["players"]), reverse=True)
+    _, lead_id, lead_avg_name = avgs[0]
+    divisions = list_included_divisions(conn, include_covid=False, include_incomplete=True, include_current=True)
+    wins = mp = 0
+    for m in fetch_matches(conn, divisions):
+        hp, ap, fr = m["home_person_id"], m["away_person_id"], m["final_result"]
+        if lead_id == hp:
+            mp += 1
+            wins += 1 if fr == 1 else 0
+        elif lead_id == ap:
+            mp += 1
+            wins += 1 if fr not in (1, 2) else 0
+    pct = f"{(100 * wins / mp):.1f}".replace(".", ",") if mp else "0"
+    moy_txt = f"{n_div} saisons hors COVID · {lead_avg_name} mène avec {pct}% de victoires all-time"
+
+    # Podiums : nb de champions différents, part des titres des deux leaders
+    n_champions = len([r for r in hof if r["titres"] > 0])
+    top2 = hof[:2]
+    share = sum(r["titres"] for r in top2)
+    podiums_txt = (f"{len(hof)} joueurs, {n_champions} champions différents · "
+                   f"{_fr_list([r['display'] for r in top2])} se partagent {share} des {n_seasons} titres")
+
+    return {
+        "podiums_headline": podiums_txt,
+        "index_badge":   f"Ligue privée · 8 joueurs · {period}",
+        "bonus_meta":    f"Simulation avec moteur de buts virtuels MPG · Précision 100% · {period}",
+        "seasons_done":  f"{n_seasons} saisons terminées · hors COVID · hors saison en cours",
+        "hof_headline":  hof_txt,
+        "hos_headline":  hos_txt,
+        "records_sub":   f"{n_seasons} saisons terminées · {len(rec['all_perf'])} performances individuelles",
+        "records_dist":  f"Distribution des points par classement final — {n_seasons} saisons",
+        "streaks_badge": f"{n_seasons} saisons · cross-divisions",
+        "cumul_sub":     cumul_txt,
+        "moyenne_sub":   moy_txt,
+    }
+
+
+META_TARGETS: dict[str, list[str]] = {   # clé data-meta → gabarits qui la portent
+    "index_badge":   ["index.html"],
+    "bonus_meta":    ["bonus_impact.html"],
+    "seasons_done":  ["podiums.html", "hall_of_shame.html"],
+    "podiums_headline": ["podiums.html"],
+    "hof_headline":  ["hall_of_fame.html"],
+    "hos_headline":  ["hall_of_shame.html"],
+    "records_sub":   ["records.html"],
+    "records_dist":  ["records.html"],
+    "streaks_badge": ["streaks.html"],
+    "cumul_sub":     ["classement_cumul.html"],
+    "moyenne_sub":   ["classement_chronologique.html"],
+}
+
+
+def inject_meta_text(html_path: Path, key: str, text: str) -> bool:
+    """Remplace le texte de l'élément portant data-meta="key" (texte simple, sans balise imbriquée)."""
+    content = html_path.read_text(encoding="utf-8")
+    pattern = re.compile(r'(<[a-zA-Z][^>]*\bdata-meta="' + re.escape(key) + r'"[^>]*>)(.*?)(</[a-zA-Z0-9]+>)', re.S)
+    m = pattern.search(content)
+    if not m:
+        return False
+    if m.group(2) != text:
+        html_path.write_text(content[:m.start(2)] + text + content[m.end(2):], encoding="utf-8")
+        _modified.add(html_path)
+    return True
+
+
+def generate_meta() -> None:
+    """Injecte les sous-titres calculés dans tous les gabarits (appelé à chaque run)."""
+    with get_conn() as conn:
+        meta = build_site_meta(conn)
+    n = 0
+    for key, files in META_TARGETS.items():
+        for f in files:
+            path = BASE_DIR / f
+            if not path.exists():
+                print(f"  ⚠ meta {key} : {f} introuvable")
+                continue
+            if inject_meta_text(path, key, meta[key]):
+                n += 1
+            else:
+                print(f"  ⚠ meta {key} : data-meta absent dans {f}")
+    print(f"  ✓ sous-titres dynamiques ({n} injections) — {meta['hof_headline']}")
+
+
 PAGES: dict[str, callable] = {
     "classement_cumul":         generate_classements,
     "classement_chronologique": generate_classements,
@@ -2034,6 +2189,15 @@ def main() -> None:
                 print(f"  ✗ {t} : {exc}")
                 traceback.print_exc()
                 errors += 1
+
+    # Sous-titres dynamiques : à chaque run, pour ne jamais laisser un chiffre figé
+    try:
+        generate_meta()
+    except Exception as exc:
+        import traceback
+        print(f"  ✗ sous-titres : {exc}")
+        traceback.print_exc()
+        errors += 1
 
     # Injecter la nav sur toutes les pages HTML (idempotent)
     for html_path in sorted(BASE_DIR.glob("*.html")):

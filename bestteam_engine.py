@@ -148,8 +148,47 @@ def _has_teams(conn, div: str) -> bool:
     ).fetchone() is not None
 
 
+MIN_SQUAD_FOR_BESTTEAM = 11   # une compo complète exige 11 joueurs par équipe
+
+
+def _squads_complete(conn, div: str) -> bool:
+    """Vrai si chaque équipe (avec person_id) de la division a au moins 11 joueurs (mercato terminé)."""
+    rows = conn.execute(
+        "SELECT raw_json FROM teams WHERE division_id=? AND person_id IS NOT NULL", (div,)
+    ).fetchall()
+    if not rows:
+        return False
+    for r in rows:
+        try:
+            squad = (json.loads(r[0] or "{}") or {}).get("squad") or {}
+        except (TypeError, ValueError):
+            squad = {}
+        if len(squad) < MIN_SQUAD_FOR_BESTTEAM:
+            return False
+    return True
+
+
+def _latest_complete_division(conn) -> str | None:
+    """Division la plus récente dont tous les effectifs sont complets (ordre numérique du suffixe)."""
+    rows = conn.execute(
+        "SELECT DISTINCT division_id FROM teams WHERE person_id IS NOT NULL"
+    ).fetchall()
+    def key(div):
+        parts = div.split("_")
+        try:
+            return (parts[-3] != "PWN77AILXZQ", int(parts[-2]), int(parts[-1]))
+        except (ValueError, IndexError):
+            return (True, 0, 0)
+    for div in sorted((r[0] for r in rows), key=key, reverse=True):
+        if _squads_complete(conn, div):
+            return div
+    return None
+
+
 def pick_division(conn, override: str | None = None) -> str:
-    """Division à traiter : override CLI → CURRENT_DIVISION (si équipes en base) → is_current=1 → dernière synchro."""
+    """Division à traiter : override CLI → division courante si ses effectifs sont complets (mercato
+    terminé) → sinon la dernière division aux effectifs complets (pendant un mercato, Best Team reste
+    sur la saison précédente) → dernière synchro."""
     if override:
         return override
     current = None
@@ -162,8 +201,13 @@ def pick_division(conn, override: str | None = None) -> str:
             current = CURRENT_DIVISION
         except Exception:
             current = None
-    if current and _has_teams(conn, current):
+    if current and _squads_complete(conn, current):
         return current
+    latest = _latest_complete_division(conn)
+    if latest:
+        if current and _has_teams(conn, current):
+            print(f"  ℹ Best Team : effectifs de {current} incomplets (mercato en cours), page calculée sur {latest}")
+        return latest
     row = conn.execute("SELECT division_id FROM divisions_metadata WHERE is_current=1 LIMIT 1").fetchone()
     if row and _has_teams(conn, row[0]):
         return row[0]

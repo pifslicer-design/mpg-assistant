@@ -140,9 +140,9 @@ td{padding:12px 16px;vertical-align:middle;font-size:.83rem;}td.c{text-align:cen
 })();</script>
 <!-- NAV_END -->
 <div class="hero"><div class="hero-badge">🪣 Hall of Shame</div><h1>Hall of Shame</h1>
-  <p class="sub">18 saisons terminées · hors COVID · hors saison en cours</p>
+  <p class="sub" data-meta="seasons_done">19 saisons terminées · hors COVID · hors saison en cours</p>
   <div class="hero-stats" id="hs"></div>
-  <p style="margin-top:14px;font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;">Marc termine dernier 1 saison sur 3 avec 6 chapeaux · Nico et Damien sont les seuls à n'en avoir jamais eu</p>
+  <p style="margin-top:14px;font-size:13px;color:rgba(255,255,255,0.75);font-weight:600;" data-meta="hos_headline">Marc termine dernier 1 saison sur 3 avec 6 chapeaux · Nico et Damien sont les seuls à n'en avoir jamais eu</p>
 </div>
 <div class="main">
   <div class="section-label">Podium de la honte</div>
@@ -160,7 +160,7 @@ const DATA=[{"pid":"marc","name":"FC Miller","display":"Marc","initials":"FM","c
 document.getElementById('hs').innerHTML=`
   <div class="hs"><div class="num">${DATA[0].display}</div><div class="lbl">Plus honteux</div></div>
   <div class="hs"><div class="num">${DATA[0].chapeaux}</div><div class="lbl">Record chapeaux</div></div>
-  <div class="hs"><div class="num">2</div><div class="lbl">Sans chapeau 🎉</div></div>`;
+  <div class="hs"><div class="num">${DATA.filter(p=>p.chapeaux===0).length}</div><div class="lbl">Sans chapeau 🎉</div></div>`;
 const pF=[DATA[1],DATA[0],DATA[2]].filter(Boolean),pC=['p2','p1','p3'],pL=['2ème','1er','3ème'];
 document.getElementById('podium').innerHTML=pF.map((p,i)=>`
   <div class="pod ${pC[i]}">
