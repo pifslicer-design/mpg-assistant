@@ -1892,11 +1892,45 @@ def _build_recaps_history(conn, limit: int = 30) -> list[dict]:
             "division_id":  r["division_id"],
             "slabel":       slabel(r["division_id"]),
             "game_week":    r["game_week"],
+            "label":        _recap_label(r["game_week"], slabel(r["division_id"])),
             "title":        summary.get("title", ""),
             "summary_html": _md_to_html(summary.get("summary_md", "")),
             "generated_at": r["generated_at"],
         })
     return out
+
+
+MERCATO_GW_BASE = 100   # entrées mercato dans journee_recap : game_week = 100 + tour (voir mercato_news.py)
+
+
+def _recap_label(gw: int, sl: str) -> str:
+    if gw and gw >= MERCATO_GW_BASE:
+        return f"Mercato T{gw - MERCATO_GW_BASE} {sl}"
+    return f"J{gw} {sl}"
+
+
+def _latest_mercato_news(conn) -> dict | None:
+    """Dernière news mercato enregistrée (toutes divisions), ou None."""
+    r = conn.execute(
+        "SELECT season, division_id, game_week, summary_json, generated_at FROM journee_recap "
+        "WHERE game_week >= ? ORDER BY generated_at DESC LIMIT 1", (MERCATO_GW_BASE,)
+    ).fetchone()
+    if not r:
+        return None
+    try:
+        summary = json.loads(r["summary_json"])
+    except (json.JSONDecodeError, TypeError):
+        return None
+    return {
+        "available":    True,
+        "season":       r["season"],
+        "slabel":       slabel(r["division_id"]),
+        "game_week":    r["game_week"],
+        "label":        _recap_label(r["game_week"], slabel(r["division_id"])),
+        "title":        summary.get("title", ""),
+        "summary_html": _md_to_html(summary.get("summary_md", "")),
+        "generated_at": r["generated_at"],
+    }
 
 
 def generate_index() -> None:
@@ -1909,10 +1943,11 @@ def generate_index() -> None:
         detection = detect_all_events(conn)
 
         if not detection:
-            payload = {"available": False}
+            payload = _latest_mercato_news(conn) or {"available": False}
             inject_const(BASE_DIR / "index.html", "RECAP", payload)
-            inject_const(BASE_DIR / "recaps.html", "RECAPS", [])
-            print("  ✓ index.html / recaps.html  (pas de journée terminée)")
+            inject_const(BASE_DIR / "recaps.html", "RECAPS", _build_recaps_history(conn))
+            print("  ✓ index.html / recaps.html  (pas de journée terminée"
+                  + (f", news {payload['label']}" if payload.get("available") else "") + ")")
             return
 
         season = detection["season"]
@@ -1933,9 +1968,18 @@ def generate_index() -> None:
             "season":       season,
             "slabel":       detection["slabel"],
             "game_week":    gw,
+            "label":        _recap_label(gw, detection["slabel"]),
             "title":        summary.get("title", ""),
             "summary_html": _md_to_html(summary.get("summary_md", "")),
         }
+        # Une news mercato plus récente que le résumé de journée prend la tête de l'accueil
+        jr = conn.execute(
+            "SELECT generated_at FROM journee_recap WHERE season=? AND division_id=? AND game_week=?",
+            (season, div_id, gw),
+        ).fetchone()
+        news = _latest_mercato_news(conn)
+        if news and (not jr or (news["generated_at"] or "") > (jr["generated_at"] or "")):
+            payload = news
         inject_const(BASE_DIR / "index.html", "RECAP", payload)
 
         history = _build_recaps_history(conn)
