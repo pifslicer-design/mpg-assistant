@@ -18,7 +18,7 @@ Charge `.env`, récupère les données des 2 dernières journées, régénère l
 
 ⚠️ Nécessite un token MPG valide dans `.env`. Si erreur 401, renouveler le token (voir plus bas).
 
-ℹ️ Aucun cron MPG n'est configuré dans WSL : le sync est 100 % manuel.
+ℹ️ Les syncs sont planifiés par `plan_sync.py` d'après le calendrier L1 (un cron par journée, le lendemain du dernier match à 7h30, en mode léger). Voir « Syncs planifiés » plus bas.
 
 ℹ️ Supabase n'est plus utilisé (projet mort, octobre 2026) : Best Team est désormais statique, voir plus bas.
 
@@ -155,6 +155,23 @@ Les toggles « Indispo » et le choix de formation sont recalculés dans le navi
 
 ---
 
+### Syncs planifiés (calendrier L1)
+```bash
+python plan_sync.py --dry-run      # affiche les dates sans toucher au crontab
+python plan_sync.py                # écrit/réécrit le bloc cron (le lendemain du dernier match de chaque journée, 7h30)
+python plan_sync.py --remove       # retire le bloc
+```
+Lit les dates des matchs L1 via l'API et écrit une ligne cron par journée à venir entre deux marqueurs
+(le reste du crontab est conservé). Chaque ligne lance `bash sync_and_publish.sh --light` : sync de la
+division en cours seulement, régénération des pages, commit + push si changement, mail uniquement en cas
+de publication ou d'erreur. À relancer quand une journée est décalée. Le token doit être valide (~30 jours) :
+un 401 déclenche un mail d'erreur, renouveler le token puis relancer `bash sync_and_publish.sh`.
+
+Une journée MPG est marquée finalisée dès que tous ses matchs ont le statut « terminé » dans l'API
+(plus de journée de décalage) : le sync du lendemain publie classement et résumé en une fois.
+
+---
+
 ### Publier manuellement sur GitHub Pages
 ```bash
 git add docs/ && git commit -m "chore: sync $(date +%Y-%m-%d)" && git push
@@ -193,7 +210,7 @@ python3 test_export.py export.json
 |---|---|
 | Journée terminée, token OK | `bash sync_and_publish.sh` |
 | Régénérer seulement Best Team | `python3 generate_pages.py bestteam` |
-| Automatisation | Aucun cron MPG dans WSL — tout est lancé à la main |
+| Automatisation | `python plan_sync.py` planifie un sync léger par journée L1 (cron WSL) |
 | Token expiré (401) | Renouveler dans `.env`, puis `bash sync_and_publish.sh` |
 | Données partielles à mettre à jour | `bash sync_and_publish.sh` — l'upsert met à jour automatiquement |
 | Retard de 3+ journées | `python mpg_client.py --divisions-file divisions.txt --sync-divisions --force` |

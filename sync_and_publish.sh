@@ -1,6 +1,7 @@
 #!/bin/bash
 # sync_and_publish.sh — Sync MPG + régénération pages + publication GitHub Pages
-# Lancement manuel (aucun cron) : bash sync_and_publish.sh
+# Lancement manuel : bash sync_and_publish.sh
+# Syncs planifiés (cron écrit par plan_sync.py d'après le calendrier L1) : bash sync_and_publish.sh --light
 
 set -euo pipefail
 
@@ -8,6 +9,7 @@ PROJECT_DIR="/home/rapha/mes-projets/mpg-assistant"
 LOG_FILE="$PROJECT_DIR/sync.log"
 PYTHON="$PROJECT_DIR/.venv/bin/python3"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M')
+MODE="${1:-full}"   # --light : division en cours seulement, mail uniquement si publication ou erreur
 
 cd "$PROJECT_DIR"
 
@@ -47,8 +49,13 @@ if [[ -f .env ]]; then
 fi
 
 # 1. Sync données
-echo "[1/4] Sync divisions..."
-"$PYTHON" mpg_client.py --divisions-file divisions.txt --sync-divisions
+if [[ "$MODE" == "--light" ]]; then
+    echo "[1/4] Sync division en cours (mode léger)..."
+    "$PYTHON" mpg_client.py
+else
+    echo "[1/4] Sync divisions..."
+    "$PYTHON" mpg_client.py --divisions-file divisions.txt --sync-divisions
+fi
 
 # 2. Régénération pages HTML (bestteam : notes L1 rafraîchies via l'API MPG + commentaire Haiku)
 echo "[2/4] Régénération pages..."
@@ -72,6 +79,8 @@ if [[ "$PUBLISHED" == "true" ]]; then
     "$PYTHON" notify.py \
         "✅ MPG sync OK — $TIMESTAMP" \
         "Sync et publication réussis. Le site a été mis à jour."
+elif [[ "$MODE" == "--light" ]]; then
+    echo "Aucun changement — pas de mail en mode léger."
 else
     "$PYTHON" notify.py \
         "✅ MPG sync OK — $TIMESTAMP (aucun changement)" \

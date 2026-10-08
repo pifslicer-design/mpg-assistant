@@ -149,6 +149,19 @@ def _load_display_names() -> dict[str, str]:
     }
 
 
+def _read_const(html_path: Path, var_name: str):
+    """Lit la valeur JSON actuelle de `const VAR_NAME = …;` dans un gabarit (None si absente)."""
+    try:
+        content = html_path.read_text(encoding="utf-8")
+        m = re.search(rf"const {re.escape(var_name)}\s*=\s*", content)
+        if not m:
+            return None
+        value, _ = json.JSONDecoder().raw_decode(content, m.end())
+        return value
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def inject_const(html_path: Path, var_name: str, data) -> None:
     """Remplace `const VAR_NAME = <json>;` dans le fichier HTML.
 
@@ -1452,7 +1465,13 @@ def generate_bestteam() -> None:
     fetch = not os.environ.get("BESTTEAM_NO_FETCH")   # BESTTEAM_NO_FETCH=1 : cache local, pas d'appel API MPG
     with get_conn() as conn:
         data = build_bestteam_data(conn, fetch=fetch)
-    inject_const(BASE_DIR / "bestteam.html", "BESTTEAM", data)
+    html = BASE_DIR / "bestteam.html"
+    previous = _read_const(html, "BESTTEAM")
+    strip = lambda d: {k: v for k, v in (d or {}).items() if k != "generated_at"}
+    if previous and strip(previous) == strip(data):
+        print(f"  ✓ bestteam.html  ({data['label']}, inchangé — page non réécrite)")
+        return
+    inject_const(html, "BESTTEAM", data)
     print(f"  ✓ bestteam.html  ({data['label']}, {len(data['managers'])} managers, "
           f"notes L1 {data['l1']['season']} J{data['l1']['n_gw']})")
 

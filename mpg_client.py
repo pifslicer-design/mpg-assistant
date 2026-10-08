@@ -239,6 +239,35 @@ def _run_doctor() -> None:
         print()
 
 
+def _last_finished_gw(division_id: str) -> int | None:
+    """Dernière journée dont TOUS les matchs portent le statut MPG « terminé » (status 2 et
+    finalResult), sans trou depuis la J1. None si les données ne portent pas de statut."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT game_week, raw_json FROM matches WHERE division_id=? ORDER BY game_week",
+            (division_id,),
+        ).fetchall()
+    by_gw: dict[int, list[bool]] = defaultdict(list)
+    seen_status = False
+    for r in rows:
+        try:
+            d = json.loads(r["raw_json"] or "{}")
+        except ValueError:
+            d = {}
+        st = d.get("status")
+        if st is not None:
+            seen_status = True
+        by_gw[r["game_week"]].append(st == 2 and bool(d.get("finalResult", True)))
+    if not seen_status:
+        return None
+    last = 0
+    for gw in sorted(by_gw):
+        if gw != last + 1 or not all(by_gw[gw]):
+            break
+        last = gw
+    return last
+
+
 def _sync_division(
     client: httpx.Client,
     league_id: str,
@@ -268,8 +297,12 @@ def _sync_division(
         is_current = row["is_current"] if row else 0
 
     if is_current:
-        current_gw, _ = _resolve_current_gw(last_db)
-        finalized_up_to = current_gw - 2
+        finalized_up_to = _last_finished_gw(division_id)
+        if finalized_up_to is None:   # données sans statut : ancienne règle (journée courante - 2)
+            current_gw, _ = _resolve_current_gw(last_db)
+            finalized_up_to = current_gw - 2
+        else:
+            print(f"[FINAL] journées terminées d'après le statut API : J1→J{finalized_up_to}")
     else:
         finalized_up_to = last_db
 
