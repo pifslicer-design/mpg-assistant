@@ -17,7 +17,7 @@ from pathlib import Path
 
 import yaml
 
-from mpg_db import get_conn
+from mpg_db import division_sort_key, get_conn
 from mpg_legacy_engine import (
     list_included_divisions, fetch_matches, compute_mpg_season_standings,
     compute_streaks,
@@ -191,8 +191,9 @@ def _snum_map(conn) -> tuple[dict[str, int], dict[str, int]]:
     ph = ",".join("?" * len(divs))
     rows = conn.execute(
         f"SELECT division_id, season FROM divisions_metadata "
-        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divs
+        f"WHERE division_id IN ({ph})", divs
     ).fetchall()
+    rows.sort(key=lambda r: division_sort_key(r["division_id"]))  # S9 avant S10
     snum_map = {r["division_id"]: i + 1 for i, r in enumerate(rows)}
     year_map = {r["division_id"]: r["season"] for r in rows}
     return snum_map, year_map
@@ -208,10 +209,10 @@ def _latest_team_names(conn) -> dict[str, str]:
         f"""SELECT t.person_id, t.name, dm.season, dm.division_id
             FROM teams t
             JOIN divisions_metadata dm ON t.division_id = dm.division_id
-            WHERE t.division_id IN ({ph}) AND t.person_id IS NOT NULL
-            ORDER BY dm.season DESC, dm.division_id DESC""",
+            WHERE t.division_id IN ({ph}) AND t.person_id IS NOT NULL""",
         divs,
     ).fetchall()
+    rows.sort(key=lambda r: division_sort_key(r["division_id"]), reverse=True)
     seen: dict[str, str] = {}
     for r in rows:
         if r["person_id"] not in seen:
@@ -231,8 +232,9 @@ def build_classement_raw(conn) -> tuple[dict, dict]:
     ph = ",".join("?" * len(divisions))
     meta_rows = conn.execute(
         f"SELECT division_id, season FROM divisions_metadata "
-        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divisions,
+        f"WHERE division_id IN ({ph})", divisions,
     ).fetchall()
+    meta_rows.sort(key=lambda r: division_sort_key(r["division_id"]))  # S9 avant S10
     ordered_divs = [r["division_id"] for r in meta_rows]
     div_season   = {r["division_id"]: r["season"] for r in meta_rows}
 
@@ -555,8 +557,9 @@ def _snum_map_extended(conn) -> dict[str, int]:
     ph = ",".join("?" * len(divs))
     rows = conn.execute(
         f"SELECT division_id FROM divisions_metadata "
-        f"WHERE division_id IN ({ph}) ORDER BY season, division_id", divs
+        f"WHERE division_id IN ({ph})", divs
     ).fetchall()
+    rows.sort(key=lambda r: division_sort_key(r["division_id"]))  # S9 avant S10
     return {r["division_id"]: i + 1 for i, r in enumerate(rows)}
 
 
@@ -1545,11 +1548,8 @@ def build_chatte_data(conn) -> dict:
     current_divs = _current_division_ids(conn)
     display = _load_display_names()
 
-    # Ordonnancement : par (année, numéro de saison parsé du div_id) pour éviter
-    # le tri lexico qui mettrait S10 avant S9.
-    def _sort_key(div_id: str) -> tuple[int, int]:
-        return (year_map.get(div_id, 0), int(div_id.split("_")[-2]))
-    ordered = sorted(snum_map.items(), key=lambda x: _sort_key(x[0]))
+    # Ordre chronologique = ordre des snum (_snum_map trie via division_sort_key).
+    ordered = sorted(snum_map.items(), key=lambda x: x[1])
     cur_extra: list[tuple[str, int]] = []
     if current_divs:
         next_s = (max(snum_map.values()) + 1) if snum_map else 1
@@ -1877,10 +1877,11 @@ def _build_recaps_history(conn, limit: int = 30) -> list[dict]:
     """Retourne la liste des recaps cachés, du plus récent au plus ancien."""
     rows = conn.execute(
         "SELECT season, division_id, game_week, summary_json, generated_at "
-        "FROM journee_recap ORDER BY season DESC, division_id DESC, game_week DESC "
-        "LIMIT ?",
-        (limit,),
+        "FROM journee_recap"
     ).fetchall()
+    # Du plus récent au plus ancien, en Python (le tri SQL de division_id est textuel).
+    rows.sort(key=lambda r: (division_sort_key(r["division_id"]), r["game_week"]), reverse=True)
+    rows = rows[:limit]
     out: list[dict] = []
     for r in rows:
         try:

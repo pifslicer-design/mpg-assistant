@@ -12,7 +12,7 @@ import yaml
 from mpg_db import (
     init_db, get_conn, get_last_fetched_game_week, get_league_current_game_week,
     mark_finalized_up_to, get_manifest, set_manifest, refresh_divisions_metadata,
-    get_current_division,
+    get_current_division, division_sort_key,
 )
 from mpg_fetchers import fetch_league, fetch_teams, fetch_matches
 from mpg_people import DEFAULT_MAPPING_PATH
@@ -213,8 +213,8 @@ def _run_doctor() -> None:
         meta_rows = conn.execute("""
             SELECT division_id, season, is_covid, is_incomplete, n_matches, gw_min, gw_max
             FROM divisions_metadata
-            ORDER BY season, division_id
         """).fetchall()
+        meta_rows.sort(key=lambda r: division_sort_key(r["division_id"]))  # S9 avant S10
         if meta_rows:
             print("\nDivisions metadata :")
             print(f"  {'division_id':<40} {'saison':>6} {'matchs':>6} {'GW':>8}  flags")
@@ -233,7 +233,7 @@ def _run_doctor() -> None:
 
         from bonus_catalog import CONSUMABLE_KEYS, format_bonus_name
         print("\nBonus consommables par division :")
-        for div, counts in sorted(by_div.items()):
+        for div, counts in sorted(by_div.items(), key=lambda x: division_sort_key(x[0])):
             consumable = {format_bonus_name(k): v for k, v in counts.items() if k in CONSUMABLE_KEYS}
             print(f"  {div}: {consumable}")
         print()
@@ -429,7 +429,7 @@ def _check_unmapped_teams(
         by_div.setdefault(r["division_id"], []).append(r["name"])
 
     lines = []
-    for div, names in sorted(by_div.items()):
+    for div, names in sorted(by_div.items(), key=lambda x: division_sort_key(x[0])):
         lines.append(f"  {div} → {names}")
     body = "\n".join(lines)
     hint = "  → Corriger people_mapping.yaml ou lancer avec --allow-unmapped."

@@ -20,7 +20,7 @@ import json
 from collections import defaultdict
 from typing import Optional
 
-from mpg_db import get_conn  # noqa: F401  (pour cohérence d'API si besoin)
+from mpg_db import division_sort_key, get_conn  # noqa: F401  (get_conn : cohérence d'API)
 from mpg_legacy_engine import (
     _load_display_names,
     compute_streaks,
@@ -52,10 +52,11 @@ def recap_division(conn):
         ).fetchone()[0]
         if n:
             return row
-    return conn.execute(
-        "SELECT division_id, season FROM divisions_metadata WHERE is_covid=0 AND n_matches > 0 "
-        "ORDER BY season DESC, division_id DESC LIMIT 1"
-    ).fetchone()
+    rows = conn.execute(
+        "SELECT division_id, season FROM divisions_metadata WHERE is_covid=0 AND n_matches > 0"
+    ).fetchall()
+    # La plus récente au sens chronologique (tri numérique du suffixe, pas texte).
+    return max(rows, key=lambda r: division_sort_key(r["division_id"]), default=None)
 
 
 def find_last_finalized_gw(conn) -> Optional[dict]:

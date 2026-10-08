@@ -181,7 +181,7 @@ else: outcome = 2  # draw
 ### ELO
 
 - Base : 1500, K-factor : 20, Zero-sum garanti
-- Ordre déterministe : `season ASC, division_id ASC, game_week ASC, match_id ASC`
+- Ordre déterministe : divisions dans l'ordre chronologique réel (`mpg_db.division_sort_key`, tri numérique du suffixe : S9 avant S10, jamais le tri texte SQL), puis `game_week ASC, match_id ASC`
 - Vérification : avg(ELO) = 1499.99 ≈ 1500 ✓
 
 ### Résumé post-journée

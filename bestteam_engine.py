@@ -31,6 +31,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from mpg_db import division_sort_key
+
 BASE = Path(__file__).parent
 CACHE = BASE / "mercato_cache"
 DB_PATH = BASE / "mpg.db"
@@ -173,13 +175,7 @@ def _latest_complete_division(conn) -> str | None:
     rows = conn.execute(
         "SELECT DISTINCT division_id FROM teams WHERE person_id IS NOT NULL"
     ).fetchall()
-    def key(div):
-        parts = div.split("_")
-        try:
-            return (parts[-3] != "PWN77AILXZQ", int(parts[-2]), int(parts[-1]))
-        except (ValueError, IndexError):
-            return (True, 0, 0)
-    for div in sorted((r[0] for r in rows), key=key, reverse=True):
+    for div in sorted((r[0] for r in rows), key=division_sort_key, reverse=True):
         if _squads_complete(conn, div):
             return div
     return None
@@ -246,9 +242,9 @@ def load_teams(conn, div: str) -> list[dict]:
 
 def names_from_db(conn, div: str) -> dict[str, dict]:
     """Repli identité joueurs depuis les compos MPG stockées (division courante + précédente)."""
-    divs = [r[0] for r in conn.execute(
-        "SELECT division_id FROM divisions_metadata ORDER BY season DESC, division_id DESC"
-    ).fetchall()]
+    divs = sorted((r[0] for r in conn.execute(
+        "SELECT division_id FROM divisions_metadata"
+    ).fetchall()), key=division_sort_key, reverse=True)
     scan = [div] + [d for d in divs if d != div][:1]
     out: dict[str, dict] = {}
     for d in scan:

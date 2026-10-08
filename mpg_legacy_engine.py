@@ -16,7 +16,8 @@ tout l'historique). L'issue réelle est dérivée des scores stockés :
 Algorithme standard K=20, rating initial 1500 :
   expected_A = 1 / (1 + 10^((R_B - R_A) / 400))
   R_A += K * (score_A - expected_A)  avec score ∈ {1.0, 0.5, 0.0}
-Ordre déterministe : season ASC, division_id ASC, game_week ASC, match_id ASC.
+Ordre déterministe : division (ordre chronologique réel, tri numérique du suffixe
+via mpg_db.division_sort_key : S9 avant S10), game_week ASC, match_id ASC.
 Propriété zero-sum : Σ ratings = N × 1500 (invariant).
 """
 
@@ -25,7 +26,7 @@ from collections import defaultdict
 
 import yaml
 
-from mpg_db import get_conn
+from mpg_db import division_sort_key, get_conn
 from mpg_people import DEFAULT_MAPPING_PATH, load_people_mapping, normalize_team_name
 
 
@@ -111,9 +112,11 @@ def list_included_divisions(
         clauses.append("is_current=0")
     where = " AND ".join(clauses)
     rows = conn.execute(
-        f"SELECT division_id FROM divisions_metadata WHERE {where} ORDER BY season, division_id"
+        f"SELECT division_id FROM divisions_metadata WHERE {where}"
     ).fetchall()
-    return [r["division_id"] for r in rows]
+    # Ordre chronologique réel : tri numérique du suffixe (ORDER BY division_id
+    # en SQL est textuel et mettrait S10 avant S9).
+    return sorted((r["division_id"] for r in rows), key=division_sort_key)
 
 
 def fetch_matches(conn, division_ids: list[str], finalized_only: bool = True) -> list[dict]:
@@ -178,6 +181,8 @@ def fetch_matches(conn, division_ids: list[str], finalized_only: bool = True) ->
             "away_person_id": r["away_person_id"],
             "final_result":   outcome,
         })
+    # Ordre chronologique réel garanti ici (le ORDER BY SQL trie division_id en texte).
+    result.sort(key=lambda m: (division_sort_key(m["division_id"]), m["game_week"], m["match_id"]))
     return result
 
 
@@ -229,8 +234,8 @@ def compute_mpg_season_standings(
         _apply_result(div_standings[div][ap], False, m["away_score"], m["home_score"], m["final_result"])
 
     result: dict[str, dict] = {}
-    # Ordre chronologique : season ASC, division_id ASC
-    for div in sorted(divisions, key=lambda d: (div_info.get(d, {}).get("season", 0), d)):
+    # Ordre chronologique réel (tri numérique du suffixe de division_id)
+    for div in sorted(divisions, key=division_sort_key):
         if div not in div_standings:
             continue
         info      = div_info.get(div, {})
@@ -386,7 +391,7 @@ def compute_elo(
     """Ratings ELO all-time par person_id.
 
     ELO standard K=20, rating initial 1500.
-    Traitement chronologique : season ASC, division_id ASC, game_week ASC, match_id ASC.
+    Traitement chronologique : division (ordre réel via division_sort_key), game_week ASC, match_id ASC.
     Propriété zero-sum : Σ ratings = N × 1500 (invariant garanti par la symétrie des updates).
 
     Retourne {person_id: {rating, matches_played, wins, draws, losses}}.
@@ -495,7 +500,7 @@ def compute_streaks(
     Les *_start/*_end sont {season, division_id, game_week} ou None.
     *_ongoing = True si la meilleure série se termine au dernier match connu.
     Les séries enjambent les divisions (continuité chronologique garantie par
-    fetch_matches ORDER BY season, division_id, gw, id).
+    le tri de fetch_matches : division_sort_key, gw, id).
     """
     if division_ids is None:
         division_ids = list_included_divisions(

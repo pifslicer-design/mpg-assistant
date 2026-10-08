@@ -316,6 +316,26 @@ COVID_DIVISIONS: frozenset[str] = frozenset({
 # cette constante n'est qu'un repli quand la table league est vide (DB neuve).
 CURRENT_DIVISION: str = "mpg_division_QU0SUZ6HQPB_19_1"
 
+# Rang des ligues dans l'ordre chronologique : Numanuma (2016) avant Bédouins (2017-).
+_LEAGUE_RANK: dict[str, int] = {"PWN77AILXZQ": 0, "QU0SUZ6HQPB": 1}
+
+
+def division_sort_key(division_id: str) -> tuple[int, int, int, str]:
+    """Clé de tri chronologique d'une division_id.
+
+    mpg_division_<ligue>_<n>_<k> → (rang ligue, n, k, division_id) : l'ancienne
+    ligue PWN77AILXZQ passe avant QU0SUZ6HQPB, puis tri NUMÉRIQUE du numéro de
+    division (monotone dans le temps, la saison IRL est donc superflue).
+    Le tri texte SQL (ORDER BY division_id) met _10_1 avant _9_1, c'est-à-dire
+    S10 avant S9 dans l'année 2021 : ne jamais ordonner des division_id en SQL,
+    toujours trier en Python avec cette clé.
+    """
+    parts = division_id.split("_")
+    try:
+        return (_LEAGUE_RANK.get(parts[-3], 2), int(parts[-2]), int(parts[-1]), division_id)
+    except (ValueError, IndexError):
+        return (9, 0, 0, division_id)
+
 
 def get_current_division() -> tuple[str, str]:
     """Division en cours et sa source : ("<division_id>", "league" | "constante").
