@@ -197,6 +197,8 @@ def build_facts(conn, division_id: str, turn: int | None = None, fetch: bool = T
     pool = _load_cache("pool.json", {})
     r26 = _load_cache("ratings_2026.json", {"players": {}})
     ratings = r26.get("players") or {}
+    r25 = _load_cache("ratings_2025.json", {"players": {}})
+    ratings25 = r25.get("players") or {}
     names = _display_names()
 
     teams = conn.execute(
@@ -206,11 +208,22 @@ def build_facts(conn, division_id: str, turn: int | None = None, fetch: bool = T
         return None
 
     def perf(pid):
+        """Saison en cours + saison passée : un joueur ne se juge pas sur 5 journées."""
         g = [x for x in ratings.get(pid, []) if x.get("rating") is not None]
-        if not g:
+        g25 = [x for x in ratings25.get(pid, []) if x.get("rating") is not None]
+        if not g and not g25:
             return None
-        return {"n": len(g), "note": round(sum(x["rating"] for x in g) / len(g), 2),
-                "buts": sum(x.get("goals") or 0 for x in g), "tit": sum(1 for x in g if not x.get("sub"))}
+        out = {"n": len(g), "note": round(sum(x["rating"] for x in g) / len(g), 2) if g else None,
+               "buts": sum(x.get("goals") or 0 for x in g), "tit": sum(1 for x in g if not x.get("sub"))}
+        if g25:
+            out["n_2025"] = len(g25)
+            out["note_2025"] = round(sum(x["rating"] for x in g25) / len(g25), 2)
+            out["buts_2025"] = sum(x.get("goals") or 0 for x in g25)
+        return out
+
+    def solid_past(pf):
+        """Vrai si la saison passée plaide pour le joueur (≥ 15 matchs et note ≥ 5,6 ou ≥ 8 buts)."""
+        return bool(pf) and (pf.get("n_2025") or 0) >= 15 and ((pf.get("note_2025") or 0) >= 5.6 or (pf.get("buts_2025") or 0) >= 8)
 
     rows = []
     for t in teams:
@@ -256,14 +269,20 @@ def build_facts(conn, division_id: str, turn: int | None = None, fetch: bool = T
         p = r["perf"] or {}
         return {"manager": r["manager"], "name": r["name"], "pos": r["pos"], "club": r["club"], "cote": r["cote"],
                 "price": r["price"], "ratio": round(r["price"] / max(r["cote"], 1), 1),
-                "note_2026": p.get("note"), "buts_2026": p.get("buts"), "titulaire": f"{p.get('tit')}/{p.get('n')}" if p else None}
+                "note_2026": p.get("note"), "buts_2026": p.get("buts"), "titulaire": f"{p.get('tit')}/{p.get('n')}" if p else None,
+                "saison_2025": (f"{p['n_2025']} m, note {p['note_2025']}, {p['buts_2025']} b" if p.get("n_2025") else None)}
 
     top_prices = [brief(r) for r in sorted(t_rows, key=lambda r: -r["price"])[:12]]
     surcotes = [brief(r) for r in sorted([r for r in t_rows if r["cote"] >= 8], key=lambda r: -(r["price"] / r["cote"]))[:6]]
-    bargains = [brief(r) for r in sorted([r for r in t_rows if r["perf"] and r["perf"]["note"] >= 6.0 and r["price"] <= r["cote"] + 2],
+    bargains = [brief(r) for r in sorted([r for r in t_rows if r["perf"] and (r["perf"]["note"] or 0) >= 6.0 and r["price"] <= r["cote"] + 2],
                                          key=lambda r: -r["perf"]["note"])[:6]]
-    dubious = [brief(r) for r in sorted([r for r in t_rows if r["price"] >= 20 and r["perf"] and
-                                         (r["perf"]["note"] < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"])], key=lambda r: -r["price"])[:6]]
+    # Douteux = mauvais cette saison ET rien dans la saison passée pour le défendre
+    dubious = [brief(r) for r in sorted([r for r in t_rows if r["price"] >= 20 and r["perf"] and r["perf"]["n"] and
+                                         ((r["perf"]["note"] or 0) < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"]) and not solid_past(r["perf"])],
+                                        key=lambda r: -r["price"])[:6]]
+    # Paris sur la saison passée : peu ou mal cette saison, mais une vraie saison 2025 derrière
+    bets_on_past = [brief(r) for r in sorted([r for r in t_rows if r["price"] >= 20 and r["perf"] and solid_past(r["perf"]) and
+                                              (r["perf"]["n"] < 3 or (r["perf"]["note"] or 0) < 5.3)], key=lambda r: -r["price"])[:6]]
     no_data = [brief(r) for r in t_rows if r["price"] >= 20 and not r["perf"]]
 
     # Record historique (toutes divisions, achats au T1 et tous tours confondus)
@@ -298,7 +317,8 @@ def build_facts(conn, division_id: str, turn: int | None = None, fetch: bool = T
         "division_id": division_id, "slabel": slabel(division_id), "turn": turn, "n_turns_done": len(turns),
         "n_purchases": len(t_rows), "total_spent": sum(r["price"] for r in t_rows), "budget_pool": BUDGET * len(teams),
         "managers": managers, "silent_managers": silent,
-        "top_prices": top_prices, "surcotes": surcotes, "bargains": bargains, "dubious": dubious, "no_data_buys": no_data,
+        "top_prices": top_prices, "surcotes": surcotes, "bargains": bargains, "dubious": dubious, "bets_on_past_season": bets_on_past,
+        "no_data_buys": no_data,
         "record": {"this_turn_max": top["price"], "player": top["name"], "manager": top["manager"],
                    "historic_t1_max": hist_t1, "historic_all_turns_max": hist_all,
                    "is_t1_record": turn == 1 and top["price"] > hist_t1, "is_all_time_record": top["price"] > hist_all},
@@ -319,6 +339,10 @@ les résumés de journée : potes, sarcastique, charrieur, sans méchanceté gra
 Tu reçois les faits du tour en JSON (achats par manager, prix payés, cote de départ, surcotes, bonnes affaires,
 achats douteux au vu des notes de la saison en cours, record historique, budgets restants, stars encore libres).
 Ne cite que des faits présents dans le JSON. Les prix sont en millions, la "cote" est le prix de départ.
+Chaque joueur porte aussi sa saison passée ("saison_2025" : matchs, note, buts). Ne condamne jamais un joueur sur
+5 journées quand sa saison passée est solide : un achat "douteux" n'est tel que si la saison passée ne le défend pas
+(liste "dubious"), et les achats listés dans "bets_on_past_season" sont des paris raisonnés sur la saison passée,
+à présenter comme tels (ex. un buteur à 10 buts l'an dernier qui démarre doucement).
 
 Le JSON contient aussi "backstage" : les coulisses du mercato, c'est-à-dire TOUTES les enchères, gagnées et
 perdues, de tous les managers (l'appli les montre à tout le monde une fois le tour résolu). C'est la partie la
@@ -408,12 +432,24 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
         return None
     team2who = {t["id"]: (t["person_id"] or t["name"]) for t in teams}
 
+    r25 = _load_cache("ratings_2025.json", {"players": {}})
+    ratings25 = r25.get("players") or {}
+
     def perf(pid):
         g = [x for x in ratings.get(pid, []) if x.get("rating") is not None]
-        if not g:
+        g25 = [x for x in ratings25.get(pid, []) if x.get("rating") is not None]
+        if not g and not g25:
             return None
-        return {"n": len(g), "note": round(sum(x["rating"] for x in g) / len(g), 2),
-                "buts": sum(x.get("goals") or 0 for x in g), "tit": sum(1 for x in g if not x.get("sub"))}
+        out = {"n": len(g), "note": round(sum(x["rating"] for x in g) / len(g), 2) if g else None,
+               "buts": sum(x.get("goals") or 0 for x in g), "tit": sum(1 for x in g if not x.get("sub"))}
+        if g25:
+            out["n_2025"] = len(g25)
+            out["note_2025"] = round(sum(x["rating"] for x in g25) / len(g25), 2)
+            out["buts_2025"] = sum(x.get("goals") or 0 for x in g25)
+        return out
+
+    def solid_past(pf):
+        return bool(pf) and (pf.get("n_2025") or 0) >= 15 and ((pf.get("note_2025") or 0) >= 5.6 or (pf.get("buts_2025") or 0) >= 8)
 
     rows = []
     for t in teams:
@@ -433,7 +469,8 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
         return {"manager": r["manager"], "name": r["name"], "pos": r["pos"], "club": r["club"], "cote": r["cote"],
                 "price": r["price"], "turn": r["turn"], "ratio": round(r["price"] / max(r["cote"], 1), 1),
                 "note_2026": pf.get("note"), "buts_2026": pf.get("buts"),
-                "titulaire": f"{pf.get('tit')}/{pf.get('n')}" if pf else None}
+                "titulaire": f"{pf.get('tit')}/{pf.get('n')}" if pf else None,
+                "saison_2025": (f"{pf['n_2025']} m, note {pf['note_2025']}, {pf['buts_2025']} b" if pf.get("n_2025") else None)}
 
     # Film tour par tour
     film = []
@@ -473,7 +510,7 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
         cnt = defaultdict(int)
         for r in lst:
             cnt[r["pos"]] += 1
-        rated = [r for r in lst if r["perf"] and r["perf"]["n"] >= 3]
+        rated = [r for r in lst if r["perf"] and r["perf"]["n"] >= 3 and r["perf"]["note"] is not None]
         starters = sorted(rated, key=lambda r: -r["perf"]["note"])[:11]
         c = cum.get(mname, {"won": 0, "lost": 0, "near": [], "lost_big": [], "lost_amount": 0})
         total_bids = c["won"] + c["lost"]
@@ -490,8 +527,11 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
             "near_misses": sorted(c["near"], key=lambda x: x["margin"])[:4],
             "biggest_lost_bids": sorted(c["lost_big"], key=lambda x: -(x["bid"] or 0))[:3],
             "lost_bids_total_amount": c["lost_amount"],
-            "bargains": [brief(r) for r in lst if r["perf"] and r["perf"]["note"] >= 6.0 and r["price"] <= r["cote"] + 2][:4],
-            "dubious": [brief(r) for r in lst if r["price"] >= 20 and r["perf"] and (r["perf"]["note"] < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"])][:3],
+            "bargains": [brief(r) for r in lst if r["perf"] and (r["perf"]["note"] or 0) >= 6.0 and r["price"] <= r["cote"] + 2][:4],
+            "dubious": [brief(r) for r in lst if r["price"] >= 20 and r["perf"] and r["perf"]["n"] and
+                        ((r["perf"]["note"] or 0) < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"]) and not solid_past(r["perf"])][:3],
+            "bets_on_past_season": [brief(r) for r in lst if r["price"] >= 20 and r["perf"] and solid_past(r["perf"]) and
+                                    (r["perf"]["n"] < 3 or (r["perf"]["note"] or 0) < 5.3)][:3],
         })
     managers.sort(key=lambda m: -(m["squad_avg_note_top11"] or 0))
 
@@ -511,10 +551,13 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
     clubs_cnt = defaultdict(int)
     for r in rows:
         clubs_cnt[r["club"]] += 1
-    all_bargains = sorted([r for r in rows if r["perf"] and r["perf"]["n"] >= 3 and r["perf"]["note"] >= 6.0 and r["price"] <= r["cote"] + 3],
+    all_bargains = sorted([r for r in rows if r["perf"] and r["perf"]["n"] >= 3 and (r["perf"]["note"] or 0) >= 6.0 and r["price"] <= r["cote"] + 3],
                           key=lambda r: -r["perf"]["note"])[:8]
-    all_dubious = sorted([r for r in rows if r["price"] >= 25 and r["perf"] and (r["perf"]["note"] < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"])],
+    all_dubious = sorted([r for r in rows if r["price"] >= 25 and r["perf"] and r["perf"]["n"] and
+                          ((r["perf"]["note"] or 0) < 5.0 or r["perf"]["tit"] * 2 < r["perf"]["n"]) and not solid_past(r["perf"])],
                          key=lambda r: -r["price"])[:8]
+    all_bets = sorted([r for r in rows if r["price"] >= 25 and r["perf"] and solid_past(r["perf"]) and
+                       (r["perf"]["n"] < 3 or (r["perf"]["note"] or 0) < 5.3)], key=lambda r: -r["price"])[:8]
     return {
         "division_id": division_id, "slabel": slabel(division_id), "n_turns": len(turns),
         "n_purchases": len(rows), "total_spent": sum(r["price"] for r in rows), "budget_pool": BUDGET * len(teams),
@@ -525,6 +568,7 @@ def build_bilan_facts(conn, division_id: str, fetch: bool = True) -> dict | None
         "spend_share_by_pos": {p: round(v / tot, 2) for p, v in by_pos_spend.items()},
         "most_bought_clubs": sorted(clubs_cnt.items(), key=lambda x: -x[1])[:6],
         "bargains": [brief(r) for r in all_bargains], "dubious": [brief(r) for r in all_dubious],
+        "bets_on_past_season": [brief(r) for r in all_bets],
         "duels": [{"loser": l, "winner": w, "times": n} for (l, w), n in sorted(duels.items(), key=lambda x: -x[1])[:8]],
         "min_squad": "2 G / 6 D / 6 M / 4 A (18 joueurs)",
     }
@@ -540,6 +584,10 @@ plus gros achats, meilleurs joueurs à la note, moyenne de note des 11 meilleurs
 loupés de peu, grosses enchères perdues, bonnes affaires, achats douteux), "records", "top10_prices", "bargains",
 "dubious", "duels", clubs les plus pillés, part de la dépense par poste. Ne cite que des faits du JSON.
 Les prix sont en millions, la "cote" est le prix de départ. Les coulisses (enchères perdues) sont publiques.
+Chaque joueur porte aussi sa saison passée ("saison_2025" : matchs, note, buts). Ne condamne jamais un joueur sur
+5 journées quand sa saison passée est solide : un achat "douteux" n'est tel que si la saison passée ne le défend pas
+(liste "dubious"), et les achats listés dans "bets_on_past_season" sont des paris raisonnés sur la saison passée,
+à présenter comme tels (ex. un buteur à 10 buts l'an dernier qui démarre doucement).
 
 Réponds STRICTEMENT en JSON brut :
 {
