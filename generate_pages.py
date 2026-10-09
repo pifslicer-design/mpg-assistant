@@ -1924,6 +1924,8 @@ MERCATO_GW_BASE = 100   # entrées mercato dans journee_recap : game_week = 100 
 
 
 def _recap_label(gw: int, sl: str) -> str:
+    if gw == MERCATO_GW_BASE + 99:
+        return f"Bilan mercato {sl}"
     if gw and gw >= MERCATO_GW_BASE:
         return f"Mercato T{gw - MERCATO_GW_BASE} {sl}"
     return f"J{gw} {sl}"
