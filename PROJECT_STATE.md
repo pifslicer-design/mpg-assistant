@@ -9,7 +9,7 @@ Outil Python + SQLite d'analyse historique d'une ligue privée MPG (8 joueurs, d
 Pipeline : fetch API → SQLite → analytics (standings / ELO / H2H / palmarès / séries / %chatte / recap post-journée) → pages HTML statiques dans `docs/` → GitHub Pages.
 Branche annexe « Best Team » : compo optimale par manager, calculée en local par `bestteam_engine.py` (notes Ligue 1 en cache local) et injectée dans `bestteam.html` — plus de Supabase depuis octobre 2026 (projet mort).
 
-**État actuel** (lecture de `mpg.db` le 2026-10-07, dernier sync le 2026-05-10) : 20 divisions importées (2016-2025), 1 084 matchs en DB dont 1 076 finalisés, **15 pages HTML** dans `docs/`, 13 + 8 tests (non relancés lors de cette mise à jour).
+**État actuel** (lecture de `mpg.db` le 2026-10-07, dernier sync le 2026-05-10) : 20 divisions importées (2016-2025), 1 084 matchs en DB dont 1 076 finalisés, **16 pages HTML** dans `docs/`, 13 + 8 tests (non relancés lors de cette mise à jour).
 **Division en cours** : `_19_1` (S19, bascule faite le 2026-10-07, mercato en cours) — dérivée automatiquement de l'API ligue (`league.divisionsIds`), plus aucune constante MPG à changer (voir « Division courante : dérivée de l'API »).
 **Site** : https://pifslicer-design.github.io/mpg-assistant/ (déclencheur : push sur `docs/`).
 **Sync 100 % manuel** : aucun cron MPG n'est configuré dans WSL (le commentaire « Cron : lundi 7h » en tête de `sync_and_publish.sh` est obsolète).
@@ -36,6 +36,8 @@ mpg-assistant/
 ├── mpg_bonuses.py         # Rejeu de l'historique des bonus, stock restant, --bonus-advice (risque Miroir)
 ├── bonus_catalog.py       # Catalogue bonus : clé API → nom UI, stock par défaut, consommable ou non
 ├── mpg_goal_engine.py     # Reconstruction des buts virtuels MPG (simulation ligne par ligne) ; simulate_without_bonus()
+├── odds_engine.py         # Cotes de la saison : Monte Carlo (notes/buts L1 tirés au sort, compo optimale, moteur de buts,
+│                          #   ajustement ELO plafonné) → P(titre/podium/chapeau), cotes, compos types ; --backtest S18
 │
 │  ── Résumé post-journée (recaps) ──
 ├── event_detector.py      # Détecte les événements marquants de la dernière journée finalisée
@@ -69,7 +71,7 @@ mpg-assistant/
 ├── test_export.py         # Validation format/structure d'un export JSON
 ├── test_legacy_engine.py  # 13 tests analytics (palmarès, ELO, H2H, is_current)
 │
-└── docs/                  # 15 pages publiées sur GitHub Pages (miroir des *.html générés à la racine)
+└── docs/                  # 16 pages publiées sur GitHub Pages (miroir des *.html générés à la racine)
     ├── index.html                      # accueil : tuiles + résumé de la dernière journée
     ├── recaps.html                     # historique des résumés post-journée
     ├── classement_chronologique.html
@@ -84,6 +86,7 @@ mpg-assistant/
     ├── joueurs.html                    # stats joueurs de foot IRL + changements décisifs
     ├── bump.html                       # évolution des classements saison par saison
     ├── bestteam.html                   # compo optimale par manager (const BESTTEAM injectée, toggles indispo en JS)
+    ├── cotes.html                      # cotes champion / chapeau de la saison (const ODDS, graphe d'évolution, compos types)
     └── chatte.html                     # %chatte (méthode François) sur les buts IRL
 ```
 
@@ -124,6 +127,13 @@ journee_recap (
     season INT, division_id TEXT, game_week INT,
     events_json TEXT, summary_json TEXT, generated_at TEXT,
     PRIMARY KEY (season, division_id, game_week)
+)
+
+-- Historique des cotes de la saison (créée par generate_pages._ensure_odds_table, un point par journée finalisée)
+odds_history (
+    season INT, division_id TEXT, game_week INT, person_id TEXT,   -- game_week = nb de journées finalisées (0 = avant J1)
+    p_title REAL, p_podium REAL, p_chapeau REAL, exp_pts REAL, computed_at TEXT,
+    PRIMARY KEY (division_id, game_week, person_id)
 )
 
 manifest (key TEXT PK, value TEXT)  -- tracking last GW fetched par division
@@ -308,7 +318,7 @@ Aucun cron MPG dans WSL : si personne ne lance `bash sync_and_publish.sh`, le si
 
 - [x] Fix `list_included_divisions` : ajouter `include_current=False` ✅
 - [x] Fix `mpg_stats.py` : remplacer `finalResult` par comparaison de scores ✅
-- [x] Script `generate_pages.py` centralisé — 15 pages ✅ + miroir auto vers `docs/`
+- [x] Script `generate_pages.py` centralisé — 16 pages ✅ + miroir auto vers `docs/`
 - [x] Test `is_current` exclusion dans `test_legacy_engine.py` ✅
 - [x] Fix `fetch_matches` : `is_finalized=1` par défaut (scores 0-0 fictifs) ✅
 - [x] Hygiène dépôt : `site/` supprimé, `.mcp.json` ignoré, fichiers orphelins Best Team versionnés ✅

@@ -14,7 +14,7 @@
 ```bash
 bash sync_and_publish.sh
 ```
-Charge `.env`, récupère les données des 2 dernières journées, régénère les 15 pages HTML (dont Best Team, calculée en local), pousse `docs/` sur GitHub Pages, envoie une notif Gmail.
+Charge `.env`, récupère les données des 2 dernières journées, régénère les 16 pages HTML (dont Best Team et les Cotes, calculées en local), pousse `docs/` sur GitHub Pages, envoie une notif Gmail.
 
 ⚠️ Nécessite un token MPG valide dans `.env`. Si erreur 401, renouveler le token (voir plus bas).
 
@@ -132,7 +132,7 @@ Meilleures séries de victoires/nuls/défaites par joueur.
 ```bash
 python3 generate_pages.py
 ```
-Régénère les 15 pages depuis la DB et les copie dans `docs/`.
+Régénère les 16 pages depuis la DB et les copie dans `docs/`.
 
 ```bash
 python3 generate_pages.py podiums hall_of_fame
@@ -152,6 +152,19 @@ BESTTEAM_NO_FETCH=1 python3 generate_pages.py bestteam   # sans appel à l'API M
 python3 bestteam_engine.py --no-fetch --no-ai            # debug : affiche les 8 compos dans le terminal
 ```
 Les toggles « Indispo » et le choix de formation sont recalculés dans le navigateur, sans réseau.
+
+---
+
+### Cotes de la saison (Monte Carlo)
+```bash
+python3 generate_pages.py cotes                          # simule la saison en cours (3000 fois) → cotes.html
+ODDS_N_SIMS=500 python3 generate_pages.py cotes          # run rapide
+python3 odds_engine.py --backtest                        # backtest S18 (notes L1 2025 jusqu'à la J20)
+```
+`odds_engine.compute_odds()` tire au sort notes et buts L1 de chaque joueur, aligne la compo optimale, rejoue les
+matchs restants avec le moteur de buts MPG et renvoie P(titre / podium / chapeau), cotes (1 / p, sans marge) et
+compos types. `generate_cotes()` stocke un point par journée finalisée dans la table `odds_history` (graphe
+d'évolution) et écrit l'intro charrieuse (templates, pas d'IA). Déterministe à données égales (seed dérivée).
 
 ---
 
@@ -210,6 +223,7 @@ python3 test_export.py export.json
 |---|---|
 | Journée terminée, token OK | `bash sync_and_publish.sh` |
 | Régénérer seulement Best Team | `python3 generate_pages.py bestteam` |
+| Recalculer les cotes de la saison | `python3 generate_pages.py cotes` (`ODDS_N_SIMS=500` pour aller vite) |
 | Automatisation | `python plan_sync.py` planifie un sync léger par journée L1 (cron WSL) |
 | Token expiré (401) | Renouveler dans `.env`, puis `bash sync_and_publish.sh` |
 | Données partielles à mettre à jour | `bash sync_and_publish.sh` — l'upsert met à jour automatiquement |

@@ -92,7 +92,8 @@ NAV_HTML = """<!-- NAV_START -->
     </div>
     <div class="snav-group">
       <span class="snav-label">🧠</span>
-      <a href="bestteam.html">Best Team</a>
+      <a href="bestteam.html">Best Team</a><span class="snav-sep">·</span>
+      <a href="cotes.html">Cotes</a>
     </div>
   </div>
 </nav>
@@ -1476,6 +1477,182 @@ def generate_bestteam() -> None:
           f"notes L1 {data['l1']['season']} J{data['l1']['n_gw']})")
 
 
+# ── Cotes de la saison (Monte Carlo, odds_engine) ──────────────────────────────
+# compute_odds (odds_engine.py) simule la saison en cours n fois et renvoie le dict
+# `ODDS` (voir le contrat dans odds_engine). generate_cotes y ajoute `history`
+# (table odds_history, un point par journée finalisée) et `intro` (phrase déterministe).
+
+def _ensure_odds_table(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS odds_history (
+            season      INTEGER,
+            division_id TEXT NOT NULL,
+            game_week   INTEGER NOT NULL,
+            person_id   TEXT NOT NULL,
+            p_title     REAL, p_podium REAL, p_chapeau REAL, exp_pts REAL,
+            computed_at TEXT,
+            PRIMARY KEY (division_id, game_week, person_id)
+        )
+        """
+    )
+    conn.commit()
+
+
+def _save_odds_history(conn, data: dict) -> None:
+    """Upsert d'un point par manager pour (division, nb de journées finalisées)."""
+    rows = [
+        (data["season"], data["division_id"], data["played_gw"], m["pid"],
+         m.get("p_title"), m.get("p_podium"), m.get("p_chapeau"), m.get("exp_pts"),
+         data.get("generated_at"))
+        for m in data.get("managers", [])
+    ]
+    conn.executemany(
+        "INSERT OR REPLACE INTO odds_history "
+        "(season, division_id, game_week, person_id, p_title, p_podium, p_chapeau, exp_pts, computed_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        rows,
+    )
+    conn.commit()
+
+
+def _load_odds_history(conn, division_id: str) -> list[dict]:
+    """Tous les points de la division, triés par journée → liste `history` du contrat ODDS."""
+    rows = conn.execute(
+        "SELECT game_week, person_id, p_title, p_podium, p_chapeau, exp_pts, computed_at "
+        "FROM odds_history WHERE division_id=? ORDER BY game_week, person_id",
+        (division_id,),
+    ).fetchall()
+    by_gw: dict[int, dict] = {}
+    for r in rows:
+        gw = int(r["game_week"])
+        entry = by_gw.setdefault(gw, {
+            "gw": gw,
+            "label": "Avant J1" if gw == 0 else f"Après J{gw}",
+            "computed_at": r["computed_at"],
+            "probs": {},
+        })
+        if (r["computed_at"] or "") > (entry["computed_at"] or ""):
+            entry["computed_at"] = r["computed_at"]
+        entry["probs"][r["person_id"]] = {
+            "p_title": r["p_title"], "p_podium": r["p_podium"],
+            "p_chapeau": r["p_chapeau"], "exp_pts": r["exp_pts"],
+        }
+    return [by_gw[g] for g in sorted(by_gw)]
+
+
+def _fr_num(x, d: int = 1) -> str:
+    """Nombre au format français (virgule décimale)."""
+    return f"{float(x):.{d}f}".replace(".", ",")
+
+
+def _odd_txt(o) -> str:
+    """Cote affichable : 1 décimale, « 100+ » au-delà."""
+    if o is None:
+        return "—"
+    return "100+" if o >= 100 else _fr_num(o, 1)
+
+
+def _odds_intro(data: dict) -> str:
+    """Phrase d'accroche charrieuse et déterministe (pas d'IA) selon l'état de la saison et les chiffres."""
+    mans = data.get("managers") or []
+    if not mans:
+        return "La machine n'a encore rien simulé : revenez quand les effectifs seront en base."
+    n_sims = f"{int(data.get('n_sims', 0)):,}".replace(",", " ")
+    status = data.get("status", "pre")
+    gw = int(data.get("played_gw") or 0)
+    ranked = sorted(mans, key=lambda m: -(m.get("p_title") or 0))
+    fav, second = ranked[0], (ranked[1] if len(ranked) > 1 else None)
+    chap = max(mans, key=lambda m: m.get("p_chapeau") or 0)
+    fav_cote, chap_cote = _odd_txt(fav.get("odd_title")), _odd_txt(chap.get("odd_chapeau"))
+    fav_pct = _fr_num(100 * (fav.get("p_title") or 0), 0)
+
+    # Favori d'avant J1 (premier point d'historique), pour signaler un retournement de veste
+    hist = data.get("history") or []
+    old_fav_pid = old_probs = None
+    if hist and hist[0].get("gw") == 0 and hist[0].get("probs"):
+        old_probs = hist[0]["probs"]
+        old_fav_pid = max(old_probs, key=lambda pid: old_probs[pid].get("p_title") or 0)
+    names = {m["pid"]: m["name"] for m in mans}
+
+    if status == "pre":
+        tight = second is not None and (fav.get("p_title") or 0) - (second.get("p_title") or 0) < 0.03
+        if tight:
+            return (f"Avant le premier coup de sifflet, la machine a fait tourner {n_sims} saisons et n'arrive "
+                    f"toujours pas à départager {fav['name']} (cote {fav_cote}) et {second['name']} "
+                    f"(cote {_odd_txt(second.get('odd_title'))}). En bas, c'est plus clair : {chap['name']} "
+                    f"est déjà en train d'essayer le chapeau (cote {chap_cote}).")
+        if (fav.get("p_title") or 0) >= 0.35:
+            return (f"Avant le premier coup de sifflet, la machine a fait tourner {n_sims} saisons et le verdict "
+                    f"est gênant pour les autres : {fav['name']} est l'ultra-favori à {fav_cote} ({fav_pct} % des "
+                    f"titres). {chap['name']}, lui, est déjà en train d'essayer le chapeau (cote {chap_cote}).")
+        return (f"Avant le premier coup de sifflet, la machine a fait tourner {n_sims} saisons : {fav['name']} "
+                f"part favori à {fav_cote}, {chap['name']} est déjà en train d'essayer le chapeau (cote {chap_cote}).")
+
+    ranked_real = sorted((m for m in mans if m.get("current_rank") is not None), key=lambda m: m["current_rank"])
+    leader = ranked_real[0] if ranked_real else fav
+    last = ranked_real[-1] if ranked_real else chap
+
+    if status == "done":
+        txt = (f"Saison terminée : {leader['name']} est champion ({leader.get('current_pts', 0)} pts) et "
+               f"{last['name']} repart avec le chapeau.")
+        if old_probs and leader["pid"] in old_probs:
+            p0 = old_probs[leader["pid"]].get("p_title") or 0
+            if old_fav_pid == leader["pid"]:
+                txt += f" La machine l'avait vu venir dès le départ ({_fr_num(100 * p0, 0)} % avant J1), aucun mérite."
+            elif p0 < 0.10:
+                txt += (f" Personne n'avait vu ça venir, la machine non plus ({_fr_num(100 * p0, 0)} % avant J1, "
+                        f"elle misait sur {names.get(old_fav_pid, '?')}).")
+            else:
+                txt += (f" Avant J1, la machine lui donnait {_fr_num(100 * p0, 0)} % et préférait "
+                        f"{names.get(old_fav_pid, '?')} : pas loin, mais pas ça.")
+        return txt
+
+    # live
+    txt = f"Après J{gw}, {leader['name']} mène le vrai classement ({leader.get('current_pts', 0)} pts)"
+    if leader["pid"] == fav["pid"]:
+        txt += f" et la machine ({n_sims} saisons simulées) est d'accord : champion à {fav_cote} ({fav_pct} %)."
+    else:
+        txt += (f", mais la machine ({n_sims} saisons simulées) n'y croit qu'à moitié et voit plutôt "
+                f"{fav['name']} champion à {fav_cote}.")
+    if old_fav_pid and old_fav_pid != fav["pid"]:
+        txt += f" Avant J1 elle misait sur {names.get(old_fav_pid, '?')} : retournement de veste assumé."
+    elif old_fav_pid == fav["pid"]:
+        txt += " Même favori qu'avant J1, elle ne change pas une équipe qui gagne."
+    if last["pid"] == chap["pid"]:
+        txt += f" {chap['name']} est bon dernier et la machine ne voit pas comment il s'en sort (cote chapeau {chap_cote})."
+    else:
+        txt += f" Pour le chapeau, {chap['name']} tient la corde (cote {chap_cote}), devant {last['name']} pourtant dernier aujourd'hui."
+    return txt
+
+
+def generate_cotes() -> None:
+    """cotes.html — cotes champion / chapeau de la saison en cours (Monte Carlo, odds_engine)."""
+    import os
+    from odds_engine import compute_odds
+    n_sims = int(os.environ.get("ODDS_N_SIMS", "3000"))   # ODDS_N_SIMS=500 pour un run rapide
+    with get_conn() as conn:
+        data = compute_odds(conn, n_sims=n_sims)
+        _ensure_odds_table(conn)
+        _save_odds_history(conn, data)                      # upsert (division_id, played_gw, pid)
+        data["history"] = _load_odds_history(conn, data["division_id"])
+    data["intro"] = _odds_intro(data)
+    html = BASE_DIR / "cotes.html"
+    previous = _read_const(html, "ODDS")
+
+    def strip(d):   # ignore les horodatages / durées pour détecter un vrai changement
+        d = {k: v for k, v in (d or {}).items() if k not in ("generated_at", "runtime_s")}
+        d["history"] = [{k: v for k, v in h.items() if k != "computed_at"} for h in (d.get("history") or [])]
+        return json.loads(json.dumps(d, ensure_ascii=False))
+
+    if previous and previous.get("managers") and strip(previous) == strip(data):
+        print(f"  ✓ cotes.html  ({data['label']}, inchangé — page non réécrite)")
+        return
+    inject_const(html, "ODDS", data)
+    print(f"  ✓ cotes.html  ({data['label']}, {data['status']}, {data['n_sims']} saisons, "
+          f"J{data['played_gw']}/{data['total_gw']}, {data.get('runtime_s') or 0:.0f}s)")
+
+
 # ── Chatte (buts IRL) ──────────────────────────────────────────────────────────
 # Méthode François : par division, on compare les buts IRL pris d'un joueur
 # au "buts pris si équitable" = (Σ buts marqués division − ses buts marqués) / (N−1).
@@ -2179,6 +2356,7 @@ PAGES: dict[str, callable] = {
     "bump":                     generate_bump,
     "bestteam":                 generate_bestteam,
     "chatte":                   generate_chatte,
+    "cotes":                    generate_cotes,
     "index":                    generate_index,
 }
 

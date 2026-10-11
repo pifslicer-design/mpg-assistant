@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotes — MPG Privé</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --blue:#4054CC; --green:#45C945; --red:#C0303A;
+  --grad:linear-gradient(135deg,#4054CC 0%,#45C945 100%);
+  --bg:#F4F6F8; --surface:#FFFFFF; --border:#D8DAE8;
+  --text:#1A1F2E; --muted:#959DAF;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);}
+
+header{background:var(--grad);padding:40px 24px 48px;text-align:center;position:relative;overflow:hidden;}
+header::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 50%,rgba(255,255,255,.08) 0%,transparent 60%);}
+.hbadge{display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 14px;border-radius:20px;margin-bottom:14px;}
+header h1{font-size:clamp(24px,4vw,40px);font-weight:900;color:#fff;letter-spacing:-.5px;}
+header p{margin-top:10px;font-size:15px;color:rgba(255,255,255,.85);font-weight:600;max-width:760px;margin-left:auto;margin-right:auto;line-height:1.5;}
+
+main{max-width:1000px;margin:-20px auto 40px;padding:0 20px;position:relative;z-index:1;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:0 2px 8px rgba(64,84,204,.06);margin-bottom:20px;}
+.card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+.section-title{font-size:14px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.card-note{font-size:12px;color:var(--muted);font-weight:600;margin-top:12px;line-height:1.5;}
+.empty{color:var(--muted);font-size:14px;font-weight:600;padding:12px 0;text-align:center;}
+
+/* ── TABLEAU ── */
+.table-wrap{overflow-x:auto;}
+table.odds{width:100%;border-collapse:collapse;font-size:13px;}
+table.odds th{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;text-align:right;white-space:nowrap;border-bottom:1.5px solid var(--border);user-select:none;}
+table.odds th.sortable{cursor:pointer;}
+table.odds th.sortable:hover{color:var(--blue);}
+table.odds th.sorted{color:var(--blue);}
+table.odds th .arr{font-size:9px;margin-left:3px;opacity:.9;}
+table.odds th:first-child,table.odds td:first-child{text-align:left;}
+table.odds td{padding:10px 10px;text-align:right;border-bottom:1px solid var(--bg);white-space:nowrap;vertical-align:middle;}
+table.odds tr:last-child td{border-bottom:none;}
+table.odds tr.fav td{background:rgba(64,84,204,.07);}
+table.odds tr.chap td{background:rgba(192,48,58,.06);}
+table.odds tr.fav td:first-child{box-shadow:inset 3px 0 0 var(--blue);}
+table.odds tr.chap td:first-child{box-shadow:inset 3px 0 0 var(--red);}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:middle;flex-shrink:0;}
+.mname{font-weight:800;font-size:14px;}
+.tname{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-left:17px;margin-top:1px;max-width:150px;overflow:hidden;text-overflow:ellipsis;}
+.odd-big{font-size:22px;font-weight:900;color:var(--blue);line-height:1;}
+.odd-mid{font-size:16px;font-weight:900;color:var(--red);line-height:1;}
+.sub{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-top:2px;}
+.pct{font-weight:800;}
+.rank-cell{font-weight:800;}
+.rank-cell .sub{font-weight:600;}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.4px;vertical-align:middle;margin-left:6px;}
+.tag-fav{background:#E8F0FD;color:var(--blue);}
+.tag-chap{background:#FDECEA;color:var(--red);}
+.legend-row{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted);font-weight:700;margin-top:12px;}
+.legend-row span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+.legend-row .lf::before{background:rgba(64,84,204,.25);}
+.legend-row .lc::before{background:rgba(192,48,58,.25);}
+.l-short{display:none;}
+@media(max-width:640px){
+  .hide-m,.tag,.tname,.sub-rank,.l-full{display:none;}
+  .l-short{display:inline;}
+  .card{padding:18px 14px;}
+  table.odds td,table.odds th{padding:8px 5px;}
+  table.odds th{font-size:10px;letter-spacing:.3px;}
+  .odd-big{font-size:19px;}
+  .odd-mid{font-size:15px;}
+  .mname{font-size:13px;}
+  .dot{margin-right:6px;}
+  table.odds th:first-child,table.odds td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);}
+  table.odds tr.fav td:first-child{background:#EEF1FB;}
+  table.odds tr.chap td:first-child{background:#FBEDEE;}
+}
+
+/* ── GRAPHE ── */
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.tab-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;font-family:inherit;}
+.tab-btn:hover{border-color:var(--blue);color:var(--blue);}
+.tab-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+.chart-wrap{overflow-x:auto;}
+svg#evo{width:100%;min-width:620px;display:block;}
+.el{fill:none;transition:stroke-width .12s,opacity .12s;}
+.ed{transition:opacity .12s;cursor:pointer;}
+.elab{dominant-baseline:middle;font-family:'Nunito',sans-serif;transition:opacity .12s;pointer-events:none;}
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:14px 0 0;}
+.leg{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:var(--surface);border:1.5px solid var(--border);color:var(--text);transition:opacity .2s,border-color .2s,background .2s;}
+.leg:hover{border-color:var(--blue);}
+.leg.active{background:var(--bg);border-color:var(--blue);}
+.leg.dim{opacity:.45;}
+.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+/* ── COMPOS ── */
+.compo-toggle{background:var(--bg);border:1.5px solid var(--border);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:800;color:var(--blue);cursor:pointer;font-family:inherit;transition:all .15s;}
+.compo-toggle:hover{border-color:var(--blue);}
+.compo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px;}
+@media(max-width:700px){.compo-grid{grid-template-columns:1fr;}}
+.compo{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--surface);}
+.compo-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.compo-name{font-size:15px;font-weight:900;}
+.compo-team{font-size:11px;color:var(--muted);font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.compo-form{font-size:16px;font-weight:900;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.compo-meta{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;line-height:1.5;}
+.line{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-top:1px solid var(--bg);}
+.pos-badge{display:inline-block;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;letter-spacing:.5px;flex-shrink:0;margin-top:2px;min-width:24px;text-align:center;}
+.pos-G{background:#FDECEA;color:#C0303A;}
+.pos-D{background:#E8F0FD;color:#4054CC;}
+.pos-M{background:#EDFAED;color:#2A7A2A;}
+.pos-A{background:#FFF4E0;color:#C08A00;}
+.line-players{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;}
+.pl{white-space:nowrap;font-weight:700;}
+.pl em{font-style:normal;color:var(--muted);font-weight:600;font-size:10px;margin-left:3px;}
+.pl b{color:var(--blue);font-weight:800;margin-left:4px;}
+.pl .warn{color:#C08A00;margin-left:3px;cursor:help;}
+
+/* ── MÉTHODE ── */
+.method{font-size:13px;line-height:1.65;color:var(--text);font-weight:600;}
+.method p+p{margin-top:8px;}
+.method .small{font-size:11px;color:var(--muted);font-weight:700;}
+
+footer{text-align:center;padding:28px;font-size:13px;color:var(--muted);font-weight:600;}
+footer a{color:var(--blue);text-decoration:none;font-weight:700;}
+footer span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800;}
+</style>
+</head>
+<body>
+<!-- NAV_START -->
+<style>
+  .site-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff;
+    border-bottom: 1px solid #D8DAE8;
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 32px;
+    height: 48px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 1px 4px rgba(64,84,204,0.08);
+  }
+  .snav-logo {
+    font-weight: 900; font-size: 15px; color: #4054CC;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .snav-groups { display: flex; gap: 24px; overflow-x: auto; }
+  .snav-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .snav-label { font-size: 13px; font-weight: 700; color: #959DAF; }
+  .snav-group a {
+    font-size: 13px; font-weight: 600; color: #1A1F2E;
+    text-decoration: none; padding: 2px 0;
+  }
+  .snav-group a:hover { color: #4054CC; }
+  .snav-group a.active { color: #4054CC; border-bottom: 2px solid #4054CC; }
+  .snav-sep { color: #D8DAE8; }
+  @media (max-width: 640px) {
+    .snav-groups { gap: 16px; }
+    .snav-label { display: none; }
+  }
+</style>
+<nav class="site-nav">
+  <a class="snav-logo" href="index.html">⚽ MPG</a>
+  <div class="snav-groups">
+    <div class="snav-group">
+      <span class="snav-label">🏆</span>
+      <a href="podiums.html">Podiums</a><span class="snav-sep">·</span>
+      <a href="hall_of_fame.html">Hall of Fame</a><span class="snav-sep">·</span>
+      <a href="hall_of_shame.html">Hall of Shame</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">📈</span>
+      <a href="classement_chronologique.html">Moyennes</a><span class="snav-sep">·</span>
+      <a href="classement_cumul.html">Cumulé</a><span class="snav-sep">·</span>
+      <a href="bump.html">Rangs</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚡</span>
+      <a href="streaks.html">Séries</a><span class="snav-sep">·</span>
+      <a href="records.html">Records</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🔍</span>
+      <a href="h2h.html">H2H</a><span class="snav-sep">·</span>
+      <a href="bonus_impact.html">Bonus</a><span class="snav-sep">·</span>
+      <a href="chatte.html">Chatte</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">⚽</span>
+      <a href="joueurs.html">Joueurs</a>
+    </div>
+    <div class="snav-group">
+      <span class="snav-label">🧠</span>
+      <a href="bestteam.html">Best Team</a><span class="snav-sep">·</span>
+      <a href="cotes.html">Cotes</a>
+    </div>
+  </div>
+</nav>
+<script>(function(){
+  var p = window.location.pathname.split('/').pop() || 'index.html';
+  document.querySelectorAll('.site-nav a[href]').forEach(function(a){
+    if(a.getAttribute('href') === p) a.classList.add('active');
+  });
+})();</script>
+<!-- NAV_END -->
+<header>
+  <div class="hbadge" id="hbadge">Cotes · simulation</div>
+  <h1>Cotes de la saison</h1>
+  <p id="intro">Qui finit champion, qui finit chapeau : la machine a fait tourner la saison des milliers de fois.</p>
+</header>
+
+<main>
+  <div class="card" id="emptyCard" style="display:none;">
+    <div class="empty">Pas encore de cotes calculées pour cette saison — <code>python3 generate_pages.py cotes</code>.</div>
+  </div>
+
+  <div class="card" id="tableCard">
+    <div class="card-head">
+      <div class="section-title" id="tableTitle">Cotes champion &amp; chapeau</div>
+      <div class="card-note" style="margin-top:0;">Cote = 1 / probabilité, sans marge · cliquer un en-tête pour trier</div>
+    </div>
+    <div class="table-wrap">
+      <table class="odds" id="oddsTable"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="legend-row"><span class="lf">Favori pour le titre</span><span class="lc">Chapeau le plus probable</span></div>
+  </div>
+
+  <div class="card" id="chartCard">
+    <div class="card-head">
+      <div class="section-title">Évolution des probabilités</div>
+      <div class="filter-tabs" id="metricTabs"></div>
+    </div>
+    <div class="chart-wrap"><svg id="evo" viewBox="0 0 900 380" preserveAspectRatio="xMinYMid meet"></svg></div>
+    <div class="legend" id="evoLegend"></div>
+    <div class="card-note" id="evoNote" style="display:none;"></div>
+  </div>
+
+  <div class="card" id="compoCard">
+    <div class="card-head">
+      <div class="section-title">Compos types</div>
+      <button class="compo-toggle" id="compoToggle" type="button">Voir les compos types</button>
+    </div>
+    <div class="card-note" style="margin-top:0;">XI le plus souvent aligné dans la simulation, note attendue par joueur · ⚠ = titulaire incertain</div>
+    <div class="compo-grid" id="compoGrid" style="display:none;"></div>
+  </div>
+
+  <div class="card" id="methodCard">
+    <div class="section-title" style="margin-bottom:12px;">Méthode</div>
+    <div class="method" id="methodText"></div>
+  </div>
+</main>
+
+<footer>
+  Simulation Monte Carlo · <a href="index.html">Accueil</a> · <span>MPG Assistant</span>
+</footer>
+
+<script>
+const ODDS={"division_id":"mpg_division_QU0SUZ6HQPB_19_1","label":"S19","season":19,"generated_at":"2026-10-09T19:02:10.188828+00:00","n_sims":3000,"seed":3256061829,"status":"pre","played_gw":0,"total_gw":14,"remaining_matches":56,"calendar_source":"aléatoire","runtime_s":7.5,"model":{"manager_coef":0.1,"manager_cap":0.25,"ratings":{"l1_season":2026,"n_gw":5,"cutoff_gw":null,"ref_season":2025,"ref_cutoff_gw":null,"blend":"hier","prior_w":7.0,"prior_k_rating":6.0,"prior_k_goals":8.0,"prior_k_play":4.0,"prior_w_new":3.0},"lineup":"sim","lineup_max_def":4,"goal_value":1.5,"priors":{"G":{"mu":5.527,"sigma":1.167,"goal_rate":0.0,"n":93},"D":{"mu":5.057,"sigma":0.871,"goal_rate":0.043,"n":439},"M":{"mu":5.26,"sigma":0.904,"goal_rate":0.068,"n":526},"A":{"mu":5.057,"sigma":0.934,"goal_rate":0.195,"n":343}},"delta_goal":1.422,"sim_stats":{"avg_goals_per_match":3.96,"real_goals_per_match":2.97,"virtual_goals_per_match":0.99,"draw_rate":0.2,"home_win_rate":0.4,"away_win_rate":0.4,"rotaldo_rate":0.0198,"starter_rating_mean":5.329,"rating_dist":{"1":0.0,"1.5":0.0,"2":0.2,"2.5":2.5,"3":1.6,"3.5":4.0,"4":8.2,"4.5":13.6,"5":17.5,"5.5":17.6,"6":14.2,"6.5":9.6,"7":5.7,"7.5":3.0,"8":1.4,"8.5":0.6,"9":0.3},"n_matches":168000},"backtest":{"label":"S18","division_id":"mpg_division_QU0SUZ6HQPB_18_1","n_sims":1000,"coef":0.1,"ratings_season":2025,"cutoff_gw":20,"champion":"François","chapeau":"Pierre","champion_rank":6,"chapeau_rank":7,"spearman":-0.265,"logloss_title":2.685,"logloss_chapeau":3.493,"logloss_naive":2.079,"mae_pts":5.85,"brier_rank":0.925,"sim_stats":{"avg_goals_per_match":4.22,"real_goals_per_match":3.13,"virtual_goals_per_match":1.1,"draw_rate":0.192,"home_win_rate":0.409,"away_win_rate":0.399,"rotaldo_rate":0.0229,"starter_rating_mean":5.298,"rating_dist":{"1":0.0,"1.5":0.1,"2":0.2,"2.5":3.0,"3":1.9,"3.5":4.4,"4":8.4,"4.5":13.3,"5":16.7,"5.5":17.0,"6":14.0,"6.5":9.6,"7":5.7,"7.5":3.0,"8":1.5,"8.5":0.6,"9":0.4},"n_matches":56000},"managers":[{"pid":"nico","name":"Nico","p_title":0.2684,"p_chapeau":0.0234,"exp_pts":23.0,"exp_rank":3.12,"formation":"4-3-3","real_pts":14,"real_rank":6},{"pid":"pierre","name":"Pierre","p_title":0.2117,"p_chapeau":0.0304,"exp_pts":22.3,"exp_rank":3.44,"formation":"4-3-3","real_pts":12,"real_rank":8},{"pid":"damien","name":"Damien","p_title":0.1698,"p_chapeau":0.0722,"exp_pts":21.1,"exp_rank":3.94,"formation":"4-3-3","real_pts":28,"real_rank":2},{"pid":"marc","name":"Marc","p_title":0.126,"p_chapeau":0.0782,"exp_pts":20.5,"exp_rank":4.18,"formation":"4-3-3","real_pts":17,"real_rank":5},{"pid":"raph","name":"Raph","p_title":0.1011,"p_chapeau":0.0842,"exp_pts":19.8,"exp_rank":4.46,"formation":"4-3-3","real_pts":23,"real_rank":3},{"pid":"francois","name":"François","p_title":0.0682,"p_chapeau":0.1379,"exp_pts":18.7,"exp_rank":4.93,"formation":"4-3-3","real_pts":30,"real_rank":1},{"pid":"greg","name":"Greg","p_title":0.0294,"p_chapeau":0.2684,"exp_pts":16.2,"exp_rank":5.9,"formation":"4-3-3","real_pts":17,"real_rank":4},{"pid":"manu","name":"Manu","p_title":0.0254,"p_chapeau":0.3053,"exp_pts":15.8,"exp_rank":6.04,"formation":"4-3-3","real_pts":14,"real_rank":7}]}},"managers":[{"pid":"raph","name":"Raph","color":"#C0303A","team_name":"San Chapo FC","p_title":0.2282,"p_podium":0.5671,"p_chapeau":0.0474,"odd_title":4.4,"odd_chapeau":21.1,"exp_pts":22.0,"exp_rank":3.47,"exp_gf":29.2,"exp_ga":24.9,"rank_dist":[0.2282,0.1869,0.152,0.1237,0.1064,0.0804,0.0751,0.0474],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1550.9,"squad_size":23,"strength":5.46,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_59957","name":"Anthony Lopes","pos":"G","club":"SCO","exp_rating":5.85,"p_play":0.942,"goal_rate":0.0,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_483078","name":"Flávio Nazinho","pos":"D","club":"ASM","exp_rating":5.49,"p_play":0.831,"goal_rate":0.104,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_468266","name":"Saud Abdulhamid","pos":"D","club":"RCL","exp_rating":5.36,"p_play":0.501,"goal_rate":0.187,"n_obs":1,"n_ref":25},{"pid":"mpg_championship_player_520403","name":"Vanderson","pos":"D","club":"ASM","exp_rating":5.29,"p_play":0.665,"goal_rate":0.009,"n_obs":5,"n_ref":14},{"pid":"mpg_championship_player_546635","name":"B. Locko","pos":"D","club":"BRE","exp_rating":5.09,"p_play":0.773,"goal_rate":0.007,"n_obs":5,"n_ref":21},{"pid":"mpg_championship_player_168568","name":"C. Tolisso","pos":"M","club":"OL","exp_rating":5.97,"p_play":0.911,"goal_rate":0.261,"n_obs":5,"n_ref":30},{"pid":"mpg_championship_player_115961","name":"A. Thomasson","pos":"M","club":"REN","exp_rating":5.34,"p_play":0.942,"goal_rate":0.135,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_427420","name":"G. Reyna","pos":"M","club":"STR","exp_rating":5.41,"p_play":0.831,"goal_rate":0.119,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_551976","name":"P. Pagis","pos":"A","club":"PFC","exp_rating":5.84,"p_play":0.88,"goal_rate":0.271,"n_obs":5,"n_ref":28},{"pid":"mpg_championship_player_168539","name":"L. Ajorque","pos":"A","club":"BRE","exp_rating":5.27,"p_play":0.942,"goal_rate":0.223,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_592515","name":"R. Labeau Lascary","pos":"A","club":"AJA","exp_rating":5.1,"p_play":0.82,"goal_rate":0.21,"n_obs":4,"n_ref":27}],"bench":{"G":1,"D":4,"M":4,"A":3},"xi_goal_rate":1.53,"lineup_scores":{"3-4-3":1.375,"3-5-2":1.373,"4-3-3":1.499,"4-4-2":1.306,"4-5-1":1.171}},{"pid":"nico","name":"Nico","color":"#2E6A99","team_name":"Puntagliera","p_title":0.1806,"p_podium":0.4902,"p_chapeau":0.0761,"odd_title":5.5,"odd_chapeau":13.1,"exp_pts":21.1,"exp_rank":3.89,"exp_gf":31.5,"exp_ga":29.1,"rank_dist":[0.1806,0.158,0.1516,0.1293,0.1067,0.1067,0.091,0.0761],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1481.5,"squad_size":21,"strength":5.38,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_102836","name":"B. Samba","pos":"G","club":"REN","exp_rating":5.43,"p_play":0.858,"goal_rate":0.0,"n_obs":4,"n_ref":32},{"pid":"mpg_championship_player_221987","name":"M. Udol","pos":"D","club":"RCL","exp_rating":5.25,"p_play":0.972,"goal_rate":0.102,"n_obs":5,"n_ref":34},{"pid":"mpg_championship_player_549737","name":"T. Le Bris","pos":"D","club":"FCL","exp_rating":5.18,"p_play":0.893,"goal_rate":0.038,"n_obs":5,"n_ref":28},{"pid":"mpg_championship_player_651819","name":"A. Kouassi","pos":"D","club":"FCL","exp_rating":5.11,"p_play":0.926,"goal_rate":0.035,"n_obs":5,"n_ref":31},{"pid":"mpg_championship_player_140040","name":"P. Frankowski","pos":"D","club":"REN","exp_rating":4.99,"p_play":0.742,"goal_rate":0.112,"n_obs":5,"n_ref":19},{"pid":"mpg_championship_player_95434","name":"F. Thauvin","pos":"M","club":"RCL","exp_rating":5.98,"p_play":0.957,"goal_rate":0.414,"n_obs":5,"n_ref":33},{"pid":"mpg_championship_player_592867","name":"T. Jørgensen","pos":"M","club":"TFC","exp_rating":5.55,"p_play":0.831,"goal_rate":0.196,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_193539","name":"V. Rongier","pos":"M","club":"REN","exp_rating":5.52,"p_play":0.926,"goal_rate":0.121,"n_obs":5,"n_ref":31},{"pid":"mpg_championship_player_247400","name":"A. Gouiri","pos":"A","club":"OM","exp_rating":5.53,"p_play":0.788,"goal_rate":0.519,"n_obs":5,"n_ref":22},{"pid":"mpg_championship_player_483320","name":"Igor Paixão","pos":"A","club":"OM","exp_rating":5.3,"p_play":0.87,"goal_rate":0.127,"n_obs":4,"n_ref":30},{"pid":"mpg_championship_player_515168","name":"F. Ivanovic","pos":"A","club":"RCL","exp_rating":5.32,"p_play":0.581,"goal_rate":0.324,"n_obs":3,"n_ref":0}],"bench":{"G":1,"D":3,"M":4,"A":2},"xi_goal_rate":1.99,"lineup_scores":{"3-4-3":1.383,"3-5-2":1.399,"4-3-3":1.521,"4-4-2":1.458,"4-5-1":1.419}},{"pid":"francois","name":"François","color":"#1E5C3A","team_name":"Chien Chaud","p_title":0.1649,"p_podium":0.4536,"p_chapeau":0.088,"odd_title":6.1,"odd_chapeau":11.4,"exp_pts":20.7,"exp_rank":4.07,"exp_gf":28.2,"exp_ga":26.3,"rank_dist":[0.1649,0.146,0.1426,0.1283,0.113,0.1167,0.1004,0.088],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1533.8,"squad_size":31,"strength":5.45,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_212873","name":"D. Greif","pos":"G","club":"OL","exp_rating":5.78,"p_play":0.869,"goal_rate":0.0,"n_obs":4,"n_ref":29},{"pid":"mpg_championship_player_459633","name":"F. Bacher","pos":"D","club":"OL","exp_rating":5.3,"p_play":0.831,"goal_rate":0.104,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_672279","name":"X. Mandza","pos":"D","club":"NIC","exp_rating":5.12,"p_play":0.831,"goal_rate":0.027,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_222695","name":"J. Teze","pos":"D","club":"ASM","exp_rating":5.25,"p_play":0.624,"goal_rate":0.029,"n_obs":1,"n_ref":33},{"pid":"mpg_championship_player_503543","name":"S. Baidoo","pos":"D","club":"RCL","exp_rating":5.49,"p_play":0.387,"goal_rate":0.076,"n_obs":0,"n_ref":23},{"pid":"mpg_championship_player_161950","name":"A. Golovin","pos":"M","club":"ASM","exp_rating":5.64,"p_play":0.834,"goal_rate":0.098,"n_obs":5,"n_ref":25},{"pid":"mpg_championship_player_213940","name":"L. Blas","pos":"M","club":"REN","exp_rating":5.31,"p_play":0.942,"goal_rate":0.081,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_551150","name":"João Neves","pos":"M","club":"PSG","exp_rating":5.53,"p_play":0.699,"goal_rate":0.122,"n_obs":4,"n_ref":21},{"pid":"mpg_championship_player_445970","name":"L. Sinayoko","pos":"A","club":"PFC","exp_rating":5.79,"p_play":0.942,"goal_rate":0.531,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_232223","name":"F. Balogun","pos":"A","club":"ASM","exp_rating":5.26,"p_play":0.591,"goal_rate":0.335,"n_obs":1,"n_ref":30},{"pid":"mpg_championship_player_573062","name":"M. Godo","pos":"A","club":"STR","exp_rating":5.5,"p_play":0.503,"goal_rate":0.321,"n_obs":0,"n_ref":28}],"bench":{"G":2,"D":6,"M":5,"A":7},"xi_goal_rate":1.72,"lineup_scores":{"3-4-3":1.444,"3-5-2":1.3,"4-3-3":1.448,"4-4-2":1.351,"4-5-1":1.115}},{"pid":"pierre","name":"Pierre","color":"#2A8FA0","team_name":"Lulu FC","p_title":0.119,"p_podium":0.358,"p_chapeau":0.1143,"odd_title":8.4,"odd_chapeau":8.7,"exp_pts":19.5,"exp_rank":4.53,"exp_gf":27.6,"exp_ga":27.7,"rank_dist":[0.119,0.1213,0.1177,0.133,0.1263,0.1386,0.1297,0.1143],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1425.9,"squad_size":20,"strength":5.53,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_508479","name":"F. Jörgensen","pos":"G","club":"STR","exp_rating":5.61,"p_play":0.831,"goal_rate":0.0,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_622748","name":"Z. Athekame","pos":"D","club":"OL","exp_rating":5.71,"p_play":0.831,"goal_rate":0.18,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_550090","name":"D. Coppola","pos":"D","club":"PFC","exp_rating":5.38,"p_play":0.938,"goal_rate":0.01,"n_obs":5,"n_ref":13},{"pid":"mpg_championship_player_244560","name":"R. Perraud","pos":"D","club":"LIL","exp_rating":5.24,"p_play":0.911,"goal_rate":0.051,"n_obs":5,"n_ref":30},{"pid":"mpg_championship_player_141109","name":"G. Lloris","pos":"D","club":"BRE","exp_rating":5.29,"p_play":0.812,"goal_rate":0.023,"n_obs":4,"n_ref":29},{"pid":"mpg_championship_player_446090","name":"C. Cásseres","pos":"M","club":"TFC","exp_rating":5.99,"p_play":0.94,"goal_rate":0.038,"n_obs":5,"n_ref":31},{"pid":"mpg_championship_player_199666","name":"J. Makengo","pos":"M","club":"FCL","exp_rating":5.53,"p_play":0.97,"goal_rate":0.151,"n_obs":5,"n_ref":31},{"pid":"mpg_championship_player_585597","name":"L. Camara","pos":"M","club":"ASM","exp_rating":5.9,"p_play":0.819,"goal_rate":0.065,"n_obs":5,"n_ref":24},{"pid":"mpg_championship_player_468658","name":"E. Lepaul","pos":"A","club":"REN","exp_rating":5.56,"p_play":0.972,"goal_rate":0.563,"n_obs":5,"n_ref":34},{"pid":"mpg_championship_player_532112","name":"A. Sbaï","pos":"A","club":"SCO","exp_rating":5.46,"p_play":0.928,"goal_rate":0.164,"n_obs":5,"n_ref":25},{"pid":"mpg_championship_player_219438","name":"O. Dembélé","pos":"A","club":"PSG","exp_rating":5.13,"p_play":0.705,"goal_rate":0.245,"n_obs":4,"n_ref":22}],"bench":{"G":1,"D":4,"M":3,"A":1},"xi_goal_rate":1.49,"lineup_scores":{"3-4-3":1.455,"3-5-2":1.314,"4-3-3":1.511,"4-4-2":1.482,"4-5-1":1.35}},{"pid":"greg","name":"Greg","color":"#D4643A","team_name":"Cup","p_title":0.1064,"p_podium":0.3574,"p_chapeau":0.1193,"odd_title":9.4,"odd_chapeau":8.4,"exp_pts":19.4,"exp_rank":4.55,"exp_gf":27.2,"exp_ga":27.4,"rank_dist":[0.1064,0.1213,0.1297,0.136,0.1343,0.1267,0.1263,0.1193],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1491.8,"squad_size":24,"strength":5.42,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_584845","name":"R. Risser","pos":"G","club":"RCL","exp_rating":5.49,"p_play":0.957,"goal_rate":0.0,"n_obs":5,"n_ref":33},{"pid":"mpg_championship_player_116406","name":"Marquinhos","pos":"D","club":"PSG","exp_rating":5.28,"p_play":0.672,"goal_rate":0.259,"n_obs":5,"n_ref":14},{"pid":"mpg_championship_player_209171","name":"C. Arcus","pos":"D","club":"SCO","exp_rating":5.27,"p_play":0.85,"goal_rate":0.089,"n_obs":5,"n_ref":26},{"pid":"mpg_championship_player_465206","name":"Nuno Mendes","pos":"D","club":"PSG","exp_rating":5.53,"p_play":0.507,"goal_rate":0.121,"n_obs":2,"n_ref":20},{"pid":"mpg_championship_player_448102","name":"W. Pacho","pos":"D","club":"PSG","exp_rating":5.23,"p_play":0.814,"goal_rate":0.007,"n_obs":5,"n_ref":23},{"pid":"mpg_championship_player_437858","name":"Vitinha","pos":"M","club":"PSG","exp_rating":6.04,"p_play":0.896,"goal_rate":0.108,"n_obs":5,"n_ref":29},{"pid":"mpg_championship_player_212701","name":"D. Zakaria","pos":"M","club":"ASM","exp_rating":5.47,"p_play":0.819,"goal_rate":0.046,"n_obs":5,"n_ref":24},{"pid":"mpg_championship_player_555894","name":"M. Akliouche","pos":"M","club":"PSG","exp_rating":5.24,"p_play":0.926,"goal_rate":0.098,"n_obs":5,"n_ref":31},{"pid":"mpg_championship_player_224444","name":"F. Torres","pos":"A","club":"PSG","exp_rating":5.39,"p_play":0.831,"goal_rate":0.428,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_564992","name":"E. Nuamah","pos":"A","club":"OL","exp_rating":5.43,"p_play":0.67,"goal_rate":0.363,"n_obs":4,"n_ref":3},{"pid":"mpg_championship_player_209049","name":"D. Namaso","pos":"A","club":"AJA","exp_rating":5.29,"p_play":0.924,"goal_rate":0.153,"n_obs":5,"n_ref":30}],"bench":{"G":2,"D":3,"M":4,"A":4},"xi_goal_rate":1.67,"lineup_scores":{"3-4-3":1.345,"3-5-2":1.229,"4-3-3":1.381,"4-4-2":1.224,"4-5-1":1.248}},{"pid":"damien","name":"Damien","color":"#C08A00","team_name":"Stade Malherbe Milan","p_title":0.0807,"p_podium":0.2904,"p_chapeau":0.159,"odd_title":12.4,"odd_chapeau":6.3,"exp_pts":18.4,"exp_rank":4.98,"exp_gf":25.8,"exp_ga":27.5,"rank_dist":[0.0807,0.1044,0.1054,0.115,0.139,0.1323,0.1643,0.159],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1543.2,"squad_size":24,"strength":5.45,"formation":"4-4-2","xi":[{"pid":"mpg_championship_player_546172","name":"G. Restes","pos":"G","club":"TFC","exp_rating":5.33,"p_play":0.889,"goal_rate":0.0,"n_obs":4,"n_ref":34},{"pid":"mpg_championship_player_596121","name":"I. Ganiou","pos":"D","club":"RCL","exp_rating":5.46,"p_play":0.709,"goal_rate":0.176,"n_obs":3,"n_ref":23},{"pid":"mpg_championship_player_512126","name":"O. Camara","pos":"D","club":"SCO","exp_rating":5.39,"p_play":0.942,"goal_rate":0.02,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_624764","name":"P. Katseris","pos":"D","club":"FCL","exp_rating":5.42,"p_play":0.696,"goal_rate":0.033,"n_obs":5,"n_ref":16},{"pid":"mpg_championship_player_512253","name":"Alexsandro","pos":"D","club":"LIL","exp_rating":5.46,"p_play":0.589,"goal_rate":0.012,"n_obs":5,"n_ref":9},{"pid":"mpg_championship_player_484842","name":"H. Haraldsson","pos":"M","club":"LIL","exp_rating":5.74,"p_play":0.942,"goal_rate":0.208,"n_obs":5,"n_ref":32},{"pid":"mpg_championship_player_465954","name":"P. Sulc","pos":"M","club":"OL","exp_rating":5.6,"p_play":0.865,"goal_rate":0.192,"n_obs":5,"n_ref":27},{"pid":"mpg_championship_player_645598","name":"G. Yassine","pos":"M","club":"STR","exp_rating":5.53,"p_play":0.831,"goal_rate":0.183,"n_obs":5,"n_ref":12},{"pid":"mpg_championship_player_570810","name":"D. Doué","pos":"M","club":"PSG","exp_rating":5.47,"p_play":0.804,"goal_rate":0.142,"n_obs":5,"n_ref":23},{"pid":"mpg_championship_player_426342","name":"Mousa Al Tamari","pos":"A","club":"REN","exp_rating":5.31,"p_play":0.957,"goal_rate":0.108,"n_obs":5,"n_ref":33},{"pid":"mpg_championship_player_440668","name":"K. Kvaratskhelia","pos":"A","club":"PSG","exp_rating":5.27,"p_play":0.88,"goal_rate":0.155,"n_obs":5,"n_ref":28}],"bench":{"G":1,"D":5,"M":2,"A":5},"xi_goal_rate":1.23,"lineup_scores":{"3-4-3":1.276,"3-5-2":1.2,"4-3-3":1.265,"4-4-2":1.293,"4-5-1":1.204}},{"pid":"manu","name":"Manu","color":"#7A1A1E","team_name":"PIMPAMRAMI","p_title":0.0618,"p_podium":0.2462,"p_chapeau":0.1989,"odd_title":16.2,"odd_chapeau":5.0,"exp_pts":17.8,"exp_rank":5.26,"exp_gf":26.8,"exp_ga":30.2,"rank_dist":[0.0618,0.0797,0.1047,0.113,0.1327,0.1503,0.159,0.1989],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1481.2,"squad_size":23,"strength":5.4,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_68675","name":"L. Hrádecky","pos":"G","club":"ASM","exp_rating":5.65,"p_play":0.711,"goal_rate":0.0,"n_obs":5,"n_ref":17},{"pid":"mpg_championship_player_588181","name":"Tiago Santos","pos":"D","club":"LIL","exp_rating":5.3,"p_play":0.721,"goal_rate":0.175,"n_obs":5,"n_ref":15},{"pid":"mpg_championship_player_93264","name":"E. Dier","pos":"D","club":"ASM","exp_rating":5.45,"p_play":0.589,"goal_rate":0.13,"n_obs":5,"n_ref":9},{"pid":"mpg_championship_player_221095","name":"J. Clauss","pos":"D","club":"NIC","exp_rating":5.06,"p_play":0.911,"goal_rate":0.021,"n_obs":5,"n_ref":30},{"pid":"mpg_championship_player_210494","name":"N. Aguerd","pos":"D","club":"OM","exp_rating":5.05,"p_play":0.72,"goal_rate":0.033,"n_obs":5,"n_ref":16},{"pid":"mpg_championship_player_559827","name":"K. Doumbia","pos":"M","club":"BRE","exp_rating":5.94,"p_play":0.819,"goal_rate":0.434,"n_obs":5,"n_ref":24},{"pid":"mpg_championship_player_511182","name":"I. Kebbal","pos":"M","club":"PFC","exp_rating":6.01,"p_play":0.896,"goal_rate":0.234,"n_obs":5,"n_ref":29},{"pid":"mpg_championship_player_212325","name":"P. Lees-Melou","pos":"M","club":"PFC","exp_rating":5.64,"p_play":0.819,"goal_rate":0.028,"n_obs":5,"n_ref":24},{"pid":"mpg_championship_player_477682","name":"C. Tengstedt","pos":"A","club":"TFC","exp_rating":5.26,"p_play":0.581,"goal_rate":0.415,"n_obs":3,"n_ref":0},{"pid":"mpg_championship_player_499360","name":"J. Ortega","pos":"A","club":"STR","exp_rating":5.03,"p_play":0.831,"goal_rate":0.197,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_634422","name":"K. Abdallah","pos":"A","club":"OM","exp_rating":4.99,"p_play":0.831,"goal_rate":0.197,"n_obs":5,"n_ref":0}],"bench":{"G":1,"D":4,"M":4,"A":3},"xi_goal_rate":1.86,"lineup_scores":{"3-4-3":1.299,"3-5-2":1.145,"4-3-3":1.376,"4-4-2":1.282,"4-5-1":1.242}},{"pid":"marc","name":"Marc","color":"#1A3D50","team_name":"FC Miller","p_title":0.0584,"p_podium":0.2372,"p_chapeau":0.1969,"odd_title":17.1,"odd_chapeau":5.1,"exp_pts":17.8,"exp_rank":5.25,"exp_gf":25.6,"exp_ga":28.8,"rank_dist":[0.0584,0.0824,0.0964,0.1217,0.1416,0.1483,0.1543,0.1969],"current_pts":0,"current_rank":null,"played":0,"wins":0,"draws":0,"losses":0,"gf":0,"ga":0,"elo":1491.6,"squad_size":18,"strength":5.37,"formation":"4-3-3","xi":[{"pid":"mpg_championship_player_231875","name":"Y. Diouf","pos":"G","club":"NIC","exp_rating":5.52,"p_play":0.85,"goal_rate":0.0,"n_obs":5,"n_ref":26},{"pid":"mpg_championship_player_199170","name":"M. Niakhaté","pos":"D","club":"OL","exp_rating":5.47,"p_play":0.858,"goal_rate":0.006,"n_obs":4,"n_ref":32},{"pid":"mpg_championship_player_538078","name":"N. Ngoy","pos":"D","club":"LIL","exp_rating":5.23,"p_play":0.896,"goal_rate":0.021,"n_obs":5,"n_ref":29},{"pid":"mpg_championship_player_422480","name":"M. Talbi","pos":"D","club":"FCL","exp_rating":5.23,"p_play":0.896,"goal_rate":0.005,"n_obs":5,"n_ref":29},{"pid":"mpg_championship_player_475344","name":"Abner Vinícius","pos":"D","club":"OL","exp_rating":5.21,"p_play":0.766,"goal_rate":0.063,"n_obs":4,"n_ref":26},{"pid":"mpg_championship_player_729203","name":"A. Bourabaa","pos":"M","club":"LEM","exp_rating":5.6,"p_play":0.831,"goal_rate":0.273,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_234516","name":"S. Szymanski","pos":"M","club":"REN","exp_rating":5.43,"p_play":0.864,"goal_rate":0.132,"n_obs":4,"n_ref":16},{"pid":"mpg_championship_player_561736","name":"L. Calodat","pos":"M","club":"LEM","exp_rating":5.37,"p_play":0.831,"goal_rate":0.119,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_442793","name":"L. Mafouta","pos":"A","club":"LEM","exp_rating":5.44,"p_play":0.831,"goal_rate":0.351,"n_obs":5,"n_ref":0},{"pid":"mpg_championship_player_433979","name":"C. Archer","pos":"A","club":"AJA","exp_rating":5.43,"p_play":0.581,"goal_rate":0.415,"n_obs":3,"n_ref":0},{"pid":"mpg_championship_player_569020","name":"P. Brunner","pos":"A","club":"ASM","exp_rating":5.14,"p_play":0.558,"goal_rate":0.394,"n_obs":5,"n_ref":7}],"bench":{"G":1,"D":2,"M":3,"A":1},"xi_goal_rate":1.78,"lineup_scores":{"3-4-3":1.223,"3-5-2":1.088,"4-3-3":1.268,"4-4-2":1.226,"4-5-1":1.046}}],"history":[{"gw":0,"label":"Avant J1","computed_at":"2026-10-09T19:02:10.188828+00:00","probs":{"damien":{"p_title":0.0807,"p_podium":0.2904,"p_chapeau":0.159,"exp_pts":18.4},"francois":{"p_title":0.1649,"p_podium":0.4536,"p_chapeau":0.088,"exp_pts":20.7},"greg":{"p_title":0.1064,"p_podium":0.3574,"p_chapeau":0.1193,"exp_pts":19.4},"manu":{"p_title":0.0618,"p_podium":0.2462,"p_chapeau":0.1989,"exp_pts":17.8},"marc":{"p_title":0.0584,"p_podium":0.2372,"p_chapeau":0.1969,"exp_pts":17.8},"nico":{"p_title":0.1806,"p_podium":0.4902,"p_chapeau":0.0761,"exp_pts":21.1},"pierre":{"p_title":0.119,"p_podium":0.358,"p_chapeau":0.1143,"exp_pts":19.5},"raph":{"p_title":0.2282,"p_podium":0.5671,"p_chapeau":0.0474,"exp_pts":22.0}}}],"intro":"Avant le premier coup de sifflet, la machine a fait tourner 3 000 saisons : Raph part favori à 4,4, Manu est déjà en train d'essayer le chapeau (cote 5,0)."};
+(function(){
+const D = ODDS || {};
+const M = Array.isArray(D.managers) ? D.managers : [];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fr(x, d){ if (x == null || isNaN(x)) return '—'; return Number(x).toFixed(d).replace('.', ','); }
+function frInt(n){ return Number(n || 0).toLocaleString('fr-FR'); }
+function pct(p, d){ return p == null ? '—' : fr(p * 100, d == null ? 1 : d) + ' %'; }
+function odd(o){ if (o == null || isNaN(o)) return {txt:'—', title:''}; if (o >= 100) return {txt:'100+', title:'cote exacte : ' + fr(o, 1)}; return {txt: fr(o, 1), title:''}; }
+function oddHtml(o, cls){ const r = odd(o); return `<span class="${cls}"${r.title ? ` title="${esc(r.title)}"` : ''}>${r.txt}</span>`; }
+function ordinal(n){ return n === 1 ? '1er' : n + 'e'; }
+const byPid = {}; M.forEach(m => byPid[m.pid] = m);
+const colorOf = pid => (byPid[pid] && byPid[pid].color) || '#959DAF';
+const nameOf  = pid => (byPid[pid] && byPid[pid].name)  || pid;
+const status = D.status || 'pre';
+const playedGw = D.played_gw || 0;
+const totalGw = D.total_gw || 14;
+const statusFr = status === 'pre' ? 'avant J1' : status === 'done' ? 'saison terminée' : `après J${playedGw}`;
+
+// ── Header ──
+document.getElementById('hbadge').textContent = M.length
+  ? `${D.label || ''} · ${frInt(D.n_sims)} saisons simulées · ${statusFr}`
+  : 'Cotes · en attente de simulation';
+if (D.intro) document.getElementById('intro').textContent = D.intro;
+
+if (!M.length) {
+  document.getElementById('emptyCard').style.display = '';
+  ['tableCard', 'chartCard', 'compoCard', 'methodCard'].forEach(id => document.getElementById(id).style.display = 'none');
+  return;
+}
+
+const favPid  = M.reduce((a, m) => (a == null || m.p_title   > byPid[a].p_title)   ? m.pid : a, null);
+const chapPid = M.reduce((a, m) => (a == null || m.p_chapeau > byPid[a].p_chapeau) ? m.pid : a, null);
+
+// ── Tableau ──
+const COLS = [
+  {key:'name',         label:'Manager',       num:false},
+  {key:'odd_title',    label:'Cote champion', short:'Champion', num:true, asc:true},
+  {key:'p_title',      label:'Titre',         num:true},
+  {key:'p_podium',     label:'Podium',        num:true, cls:'hide-m'},
+  {key:'odd_chapeau',  label:'Cote chapeau',  short:'Chapeau', num:true, asc:true},
+  {key:'exp_pts',      label:'Pts attendus',  short:'Pts', num:true},
+  {key:'current_rank', label:'Classement',    short:'Class.', num:true, asc:true},
+  {key:'formation',    label:'Compo',         num:false, cls:'hide-m'},
+];
+let sortKey = null, sortAsc = true;
+const thead = document.querySelector('#oddsTable thead');
+const tbody = document.querySelector('#oddsTable tbody');
+
+function renderHead(){
+  thead.innerHTML = '<tr>' + COLS.map(c => {
+    const cls = [c.cls || '', c.num ? 'sortable' : '', sortKey === c.key ? 'sorted' : ''].join(' ').trim();
+    const arr = sortKey === c.key ? `<span class="arr">${sortAsc ? '▲' : '▼'}</span>` : '';
+    const lab = c.short ? `<span class="l-full">${c.label}</span><span class="l-short">${c.short}</span>` : c.label;
+    return `<th class="${cls}" data-key="${c.key}">${lab}${arr}</th>`;
+  }).join('') + '</tr>';
+  thead.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+    const c = COLS.find(x => x.key === th.dataset.key);
+    if (sortKey === c.key) sortAsc = !sortAsc; else { sortKey = c.key; sortAsc = !!c.asc; }
+    renderHead(); renderBody();
+  }));
+}
+function rows(){
+  const r = [...M];
+  if (sortKey) r.sort((a, b) => {
+    const va = a[sortKey] == null ? Infinity : a[sortKey], vb = b[sortKey] == null ? Infinity : b[sortKey];
+    return sortAsc ? va - vb : vb - va;
+  });
+  return r;
+}
+function renderBody(){
+  tbody.innerHTML = rows().map(m => {
+    const cls = [m.pid === favPid ? 'fav' : '', m.pid === chapPid ? 'chap' : ''].join(' ').trim();
+    const tags = (m.pid === favPid ? '<span class="tag tag-fav">Favori</span>' : '') + (m.pid === chapPid ? '<span class="tag tag-chap">Chapeau</span>' : '');
+    let rank = '—';
+    if (status !== 'pre' && m.current_rank != null) {
+      const bilan = `${m.wins || 0}V ${m.draws || 0}N ${m.losses || 0}D · ${m.gf || 0}-${m.ga || 0}`;
+      rank = `<span class="rank-cell">${ordinal(m.current_rank)}<span class="sub">${m.current_pts || 0} pts · ${bilan}</span></span>`;
+    }
+    return `<tr class="${cls}">
+      <td><span class="dot" style="background:${esc(m.color)}"></span><span class="mname">${esc(m.name)}</span>${tags}<span class="tname" title="${esc(m.team_name || '')}">${esc(m.team_name || '')}</span></td>
+      <td>${oddHtml(m.odd_title, 'odd-big')}</td>
+      <td class="pct">${pct(m.p_title)}</td>
+      <td class="pct hide-m">${pct(m.p_podium)}</td>
+      <td>${oddHtml(m.odd_chapeau, 'odd-mid')}<span class="sub">${pct(m.p_chapeau)}</span></td>
+      <td title="rang moyen simulé : ${fr(m.exp_rank, 2)}"><span class="pct">${fr(m.exp_pts, 1)}</span><span class="sub sub-rank">rang moy. ${fr(m.exp_rank, 2)}</span></td>
+      <td>${rank}</td>
+      <td class="hide-m" style="font-weight:800;">${esc(m.formation || '—')}</td>
+    </tr>`;
+  }).join('');
+}
+renderHead(); renderBody();
+
+// ── Graphe d'évolution ──
+const METRICS = [
+  {id:'title',   key:'p_title',   label:'Titre'},
+  {id:'podium',  key:'p_podium',  label:'Podium'},
+  {id:'chapeau', key:'p_chapeau', label:'Chapeau'},
+];
+let metric = METRICS[0], activePid = null;
+let hist = Array.isArray(D.history) && D.history.length ? D.history.slice() : [{
+  gw: playedGw, label: playedGw === 0 ? 'Avant J1' : `Après J${playedGw}`,
+  probs: Object.fromEntries(M.map(m => [m.pid, {p_title:m.p_title, p_podium:m.p_podium, p_chapeau:m.p_chapeau, exp_pts:m.exp_pts}])),
+}];
+hist = hist.filter(h => h && h.probs).sort((a, b) => a.gw - b.gw);
+const gwLabel = gw => gw === 0 ? 'Avant J1' : 'J' + gw;
+const gwsWithData = new Set(hist.map(h => h.gw));
+const svg = document.getElementById('evo');
+const ns = 'http://www.w3.org/2000/svg';
+const mk = (t, a, p) => { const e = document.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); if (p) p.appendChild(e); return e; };
+const fam = "'Nunito',sans-serif";
+let els = {};
+
+function series(pid){
+  return hist.filter(h => h.probs[pid] && h.probs[pid][metric.key] != null).map(h => ({gw:h.gw, v:h.probs[pid][metric.key] * 100, label:h.label || gwLabel(h.gw)}));
+}
+function niceMax(v){ for (const c of [10, 15, 20, 25, 30, 40, 50, 60, 75, 100]) if (c >= v) return c; return 100; }
+
+function renderChart(){
+  svg.innerHTML = ''; els = {};
+  const W = 900, H = 380, LP = 50, RP = 100, TP = 18, BP = 44;
+  const cW = W - LP - RP, cH = H - TP - BP;
+  const all = M.map(m => ({m, pts: series(m.pid)}));
+  const maxV = Math.max(1, ...all.flatMap(s => s.pts.map(p => p.v)));
+  const yMax = niceMax(maxV * 1.08);
+  const xP = gw => LP + gw / Math.max(totalGw, 1) * cW;
+  const yP = v => TP + (1 - v / yMax) * cH;
+  // grille horizontale
+  const nT = 5;
+  for (let i = 0; i <= nT; i++) {
+    const v = yMax * i / nT, y = yP(v);
+    mk('line', {x1:LP, y1:y, x2:W - RP, y2:y, stroke:i === 0 ? '#D8DAE8' : '#EDF0F5', 'stroke-width':'1'}, svg);
+    mk('text', {x:LP - 8, y, 'font-size':'11', fill:'#B0B8D0', 'text-anchor':'end', 'dominant-baseline':'middle', 'font-weight':'700', 'font-family':fam}, svg).textContent = fr(v, 0) + ' %';
+  }
+  // axe x : journées
+  for (let gw = 0; gw <= totalGw; gw++) {
+    const x = xP(gw), has = gwsWithData.has(gw);
+    mk('line', {x1:x, y1:TP, x2:x, y2:H - BP, stroke:has ? '#E0E4EE' : '#F1F3F7', 'stroke-width':'1', 'stroke-dasharray':has ? '' : '3,3'}, svg);
+    mk('text', {x, y:H - BP + 16, 'font-size':gw === 0 ? '9.5' : '10.5', fill:has ? '#4054CC' : '#B0B8D0', 'text-anchor':'middle', 'font-weight':has ? '800' : '600', 'font-family':fam}, svg).textContent = gwLabel(gw);
+  }
+  // courbes
+  const single = all.every(s => s.pts.length <= 1);
+  all.forEach(({m, pts}) => {
+    if (!pts.length) { els[m.pid] = {line:null, dots:[], lbl:null}; return; }
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + xP(p.gw).toFixed(1) + ' ' + yP(p.v).toFixed(1)).join(' ');
+    const line = pts.length > 1 ? mk('path', {d, class:'el', stroke:m.color, 'stroke-width':'2.5', opacity:'0.85', 'stroke-linejoin':'round', 'data-pid':m.pid}, svg) : null;
+    els[m.pid] = {line, dots:[], lbl:null, last:pts[pts.length - 1]};
+  });
+  // points
+  all.forEach(({m, pts}) => {
+    pts.forEach(p => {
+      const c = mk('circle', {cx:xP(p.gw).toFixed(1), cy:yP(p.v).toFixed(1), r:single ? 7 : 4.5, fill:m.color, stroke:'#fff', 'stroke-width':'2', class:'ed', 'data-pid':m.pid}, svg);
+      mk('title', {}, c).textContent = `${m.name} · ${p.label} · ${metric.label} ${fr(p.v, 1)} %`;
+      els[m.pid].dots.push(c);
+    });
+  });
+  // étiquettes à droite du dernier point, anti-chevauchement
+  const labs = all.filter(s => s.pts.length).map(s => ({pid:s.m.pid, name:s.m.name, color:s.m.color, x:xP(s.pts[s.pts.length - 1].gw), y:yP(s.pts[s.pts.length - 1].v), v:s.pts[s.pts.length - 1].v}))
+    .sort((a, b) => a.y - b.y);
+  const minGap = 13;
+  for (let i = 1; i < labs.length; i++) if (labs[i].y < labs[i - 1].y + minGap) labs[i].y = labs[i - 1].y + minGap;
+  const over = labs.length ? labs[labs.length - 1].y - (H - BP) : 0;
+  if (over > 0) labs.forEach(l => l.y -= over);
+  for (let i = labs.length - 2; i >= 0; i--) if (labs[i].y > labs[i + 1].y - minGap) labs[i].y = labs[i + 1].y - minGap;
+  labs.forEach(l => {
+    const t = mk('text', {x:(l.x + (single ? 11 : 8)).toFixed(1), y:l.y.toFixed(1), 'font-size':'11.5', 'font-weight':'800', fill:l.color, class:'elab', 'text-anchor':'start', 'data-pid':l.pid}, svg);
+    t.textContent = `${l.name} ${fr(l.v, 1)} %`;
+    els[l.pid].lbl = t;
+  });
+  const note = document.getElementById('evoNote');
+  if (single) { note.style.display = ''; note.textContent = 'Un seul point pour l’instant : le graphe se remplira journée après journée, à chaque recalcul des cotes.'; }
+  else { note.style.display = ''; note.textContent = `${hist.length} points de calcul · chaque point = probabilité recalculée après la journée indiquée.`; }
+  hl(activePid);
+}
+function hl(pid){
+  Object.entries(els).forEach(([id, e]) => {
+    const on = !pid || id === pid;
+    if (e.line) { e.line.style.opacity = on ? '0.9' : '0.08'; e.line.style.strokeWidth = on ? (pid ? '4' : '2.5') : '1.5'; }
+    e.dots.forEach(d => d.style.opacity = on ? '1' : '0.1');
+    if (e.lbl) e.lbl.style.opacity = on ? '1' : '0.12';
+  });
+  document.querySelectorAll('.leg').forEach(el => { el.classList.toggle('active', el.dataset.pid === pid); el.classList.toggle('dim', !!pid && el.dataset.pid !== pid); });
+}
+svg.addEventListener('mouseover', e => { if (!activePid && e.target.dataset && e.target.dataset.pid) hl(e.target.dataset.pid); });
+svg.addEventListener('mouseout',  e => { if (!activePid && e.target.dataset && e.target.dataset.pid) hl(null); });
+svg.addEventListener('click', e => {
+  const pid = e.target.dataset ? e.target.dataset.pid : null;
+  if (!pid) { activePid = null; } else { activePid = activePid === pid ? null : pid; }
+  hl(activePid);
+});
+const leg = document.getElementById('evoLegend');
+M.forEach(m => {
+  const item = document.createElement('div');
+  item.className = 'leg'; item.dataset.pid = m.pid;
+  item.innerHTML = `<span class="leg-dot" style="background:${esc(m.color)}"></span>${esc(m.name)}`;
+  item.addEventListener('click', () => { activePid = activePid === m.pid ? null : m.pid; hl(activePid); });
+  leg.appendChild(item);
+});
+const tabs = document.getElementById('metricTabs');
+METRICS.forEach(mt => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'tab-btn' + (mt === metric ? ' active' : ''); b.textContent = mt.label;
+  b.addEventListener('click', () => { metric = mt; tabs.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); renderChart(); });
+  tabs.appendChild(b);
+});
+renderChart();
+
+// ── Compos types ──
+const grid = document.getElementById('compoGrid');
+const btn = document.getElementById('compoToggle');
+let compoBuilt = false;
+function buildCompos(){
+  grid.innerHTML = M.map(m => {
+    const xi = Array.isArray(m.xi) ? m.xi : [];
+    const lines = ['G', 'D', 'M', 'A'].map(pos => {
+      const pl = xi.filter(p => p.pos === pos);
+      if (!pl.length) return '';
+      return `<div class="line"><span class="pos-badge pos-${pos}">${pos}</span><div class="line-players">` + pl.map(p => {
+        const warn = (p.p_play != null && p.p_play < 0.6) ? `<span class="warn" title="Titulaire incertain : aligné dans ${pct(p.p_play, 0)} des saisons simulées">⚠</span>` : '';
+        const tip = `${esc(p.name)} (${esc(p.club || '')}) · note attendue ${fr(p.exp_rating, 2)} · titulaire ${pct(p.p_play, 0)}` + (p.n_obs != null ? ` · ${p.n_obs} match${p.n_obs > 1 ? 's' : ''} L1` : '') + (p.goal_rate ? ` · ${fr(p.goal_rate, 2)} but/match` : '');
+        return `<span class="pl" title="${tip}">${esc(p.name)}<em>${esc(p.club || '')}</em><b>${fr(p.exp_rating, 1)}</b>${warn}</span>`;
+      }).join('') + '</div></div>';
+    }).join('');
+    const bench = m.bench ? ['G', 'D', 'M', 'A'].map(k => `${k}${m.bench[k] || 0}`).join(' ') : '—';
+    return `<div class="compo">
+      <div class="compo-head"><span class="dot" style="background:${esc(m.color)};margin-right:0;"></span><span class="compo-name" style="color:${esc(m.color)}">${esc(m.name)}</span><span class="compo-team">${esc(m.team_name || '')}</span><span class="compo-form">${esc(m.formation || '—')}</span></div>
+      <div class="compo-meta">XI moyen ${fr(m.strength, 2)} · ELO ${fr(m.elo, 0)} · ${m.squad_size || xi.length} joueurs · banc ${bench}</div>
+      ${lines || '<div class="empty">XI indisponible</div>'}
+    </div>`;
+  }).join('');
+}
+btn.addEventListener('click', () => {
+  const open = grid.style.display === 'none';
+  if (open && !compoBuilt) { buildCompos(); compoBuilt = true; }
+  grid.style.display = open ? '' : 'none';
+  btn.textContent = open ? 'Masquer les compos types' : 'Voir les compos types';
+});
+
+// ── Méthode ──
+(function(){
+  const mo = D.model || {}, r = mo.ratings || {}, ss = mo.sim_stats || {};
+  const parts = [];
+  let p1 = `${frInt(D.n_sims)} saisons simulées : notes et buts L1 tirés au sort pour chaque joueur`;
+  if (r.l1_season) p1 += ` (saison ${r.l1_season}${r.n_gw != null ? ` J${r.n_gw}` : ''}${r.ref_season ? `, lissée avec ${r.ref_season}` : ''})`;
+  p1 += `, compo optimale par manager, buts virtuels par le moteur MPG (règle domicile), bonus défense, remplaçants automatiques, ajustement ELO plafonné (coef ${fr(mo.manager_coef, 2)}${mo.manager_cap != null ? `, plafond ${fr(mo.manager_cap, 2)}` : ''}). Capitaine et bonus ignorés. Cote = 1 / probabilité, sans marge.`;
+  if (D.calendar_source === 'aléatoire') p1 += ' Calendrier : ordre des journées tiré au sort.';
+  else if (D.calendar_source) p1 += ` Calendrier : ${esc(D.calendar_source)}.`;
+  if (status === 'live') p1 += ` Après J${playedGw}, le classement réel sert de point de départ et seuls les ${D.remaining_matches != null ? D.remaining_matches : ''} matchs restants sont simulés.`;
+  parts.push(`<p>${p1}</p>`);
+  if (ss.avg_goals_per_match != null) parts.push(`<p class="small">Dans la simulation : ${fr(ss.avg_goals_per_match, 2)} buts par match, ${pct(ss.home_win_rate)} de victoires à domicile, ${pct(ss.draw_rate)} de nuls, ${pct(ss.away_win_rate)} à l’extérieur (historique de la ligue : 4,39 · 45,2 % · 18,2 % · 36,6 %).</p>`);
+  const bt = mo.backtest;
+  if (bt && typeof bt === 'object') {
+    const pick = keys => { for (const k of keys) if (bt[k] != null) return bt[k]; return null; };
+    const kc = pick(['champion_rank', 'champ_rank', 'real_champion_rank', 'title_rank']);
+    const kh = pick(['chapeau_rank', 'real_chapeau_rank', 'last_rank']);
+    const rho = pick(['rho', 'spearman', 'rank_corr', 'corr']);
+    const lbl = bt.label || bt.division_label || 'S18';
+    const bits = [];
+    if (kc != null) bits.push(`champion réel classé ${ordinal(kc)} des favoris`);
+    if (kh != null) bits.push(`chapeau réel classé ${ordinal(kh)}`);
+    if (rho != null) bits.push(`corrélation de rang ${fr(rho, 2)}`);
+    if (bits.length) parts.push(`<p class="small">Backtest ${esc(lbl)} : ${bits.join(', ')}.</p>`);
+  }
+  if (D.generated_at) {
+    const dt = new Date(D.generated_at);
+    const when = isNaN(dt) ? esc(D.generated_at) : dt.toLocaleString('fr-FR', {day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'});
+    parts.push(`<p class="small">Calculé le ${when}${D.runtime_s != null ? ` en ${fr(D.runtime_s, 0)} s` : ''} · ${D.remaining_matches != null ? `${D.remaining_matches} matchs à jouer` : ''}${D.played_gw != null ? ` · J${playedGw}/${totalGw}` : ''}.</p>`);
+  }
+  document.getElementById('methodText').innerHTML = parts.join('');
+})();
+})();
+</script>
+</body>
+</html>
